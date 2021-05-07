@@ -4,5 +4,5 @@ Utility functions for reading [PageXML](https://www.primaresearch.org/tools/PAGE
 ## Installing
 
 ```commandline
-pip install -u pip install git+https://github.com/knaw-huc/pagexml
+pip install git+https://github.com/knaw-huc/pagexml
 ```
