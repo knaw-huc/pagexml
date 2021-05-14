@@ -14,7 +14,7 @@ def parse_points(points: Union[str, List[Tuple[int, int]]]) -> List[Tuple[int, i
     """Parse a string of PageXML image coordinates into a list of coordinates."""
     if isinstance(points, str):
         points = [point.split(',') for point in points.split(' ')]
-        return [(int(point[0]), int(point[1])) for point in points]
+        return [(int(point[0]), int(point[1])) for point in points if len(point) == 2]
     elif isinstance(points, list):
         if len(points) == 0:
             raise IndexError("point list cannot be empty")
@@ -135,15 +135,18 @@ def compute_baseline_distances(baseline1: Baseline, baseline2: Baseline,
     :return: a list of vertical distances based on horizontal overlap
     :rtype: List[int]
     """
-    b1_points = interpolate_baseline_points(baseline1.points, step=step)
-    b2_points = interpolate_baseline_points(baseline2.points, step=step)
-    distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
-                          if curr_x in b2_points])
-    if len(distances) == 0:
-        avg1 = average_baseline_height(baseline1)
-        avg2 = average_baseline_height(baseline2)
-        distances = np.array([abs(avg1 - avg2)])
-    return distances
+    if (baseline1 == None or baseline2 == None):
+        return np.array([])
+    else:
+        b1_points = interpolate_baseline_points(baseline1.points, step=step)
+        b2_points = interpolate_baseline_points(baseline2.points, step=step)
+        distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
+                              if curr_x in b2_points])
+        if len(distances) == 0:
+            avg1 = average_baseline_height(baseline1)
+            avg2 = average_baseline_height(baseline2)
+            distances = np.array([abs(avg1 - avg2)])
+        return distances
 
 
 def average_baseline_height(baseline: Baseline) -> int:
