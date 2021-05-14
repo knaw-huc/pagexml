@@ -61,7 +61,7 @@ def parse_textline(textline: dict) -> PageXMLTextLine:
                            doc_id=textline['@id'] if '@id' in textline else None,
                            metadata=parse_custom_metadata(textline) if '@custom' in textline else None,
                            coords=parse_coords(textline['Coords']),
-                           baseline=parse_baseline(textline.get('Baseline')),
+                           baseline=parse_baseline(textline['Baseline']) if 'Baseline' in textline else None,
                            text=text,
                            words=parse_line_words(textline))
     return line
@@ -171,10 +171,12 @@ def parse_page_reading_order(page_json: dict) -> dict:
         if isinstance(order_dict['OrderedGroup']['RegionRefIndexed'], list):
             group_list = order_dict['OrderedGroup']['RegionRefIndexed']
             for region_ref in group_list:
-                reading_order[int(region_ref['@index'])] = region_ref['@regionRef']
+                if ('@regionRef' in region_ref):
+                    reading_order[int(region_ref['@index'])] = region_ref['@regionRef']
         else:
             group_item = order_dict['OrderedGroup']['RegionRefIndexed']
-            reading_order[int(group_item['@index'])] = group_item['@regionRef']
+            if ('@regionRef' in group_item):
+                reading_order[int(group_item['@index'])] = group_item['@regionRef']
     return reading_order
 
 
