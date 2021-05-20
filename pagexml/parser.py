@@ -12,7 +12,7 @@ from pagexml.model.physical_document_model import PageXMLScan, PageXMLTextLine, 
 def parse_coords(coords: dict) -> Union[Coords, None]:
     if coords is None:
         return None
-    if '@points' in coords:
+    if '@points' in coords and coords['@points'] != '':
         return Coords(points=coords['@points'])
     else:
         return None
