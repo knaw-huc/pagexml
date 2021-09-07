@@ -181,7 +181,7 @@ def parse_page_reading_order(page_json: dict) -> dict:
 
 
 def read_pagexml_file(pagexml_file: str) -> str:
-    with open(pagexml_file, 'rt') as fh:
+    with open(pagexml_file, 'rt', encoding='utf-8') as fh:
         return fh.read()
 
 
