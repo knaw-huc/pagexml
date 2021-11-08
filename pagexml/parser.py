@@ -176,11 +176,11 @@ def parse_page_reading_order(page_json: dict) -> dict:
         if isinstance(order_dict['OrderedGroup']['RegionRefIndexed'], list):
             group_list = order_dict['OrderedGroup']['RegionRefIndexed']
             for region_ref in group_list:
-                if ('@regionRef' in region_ref):
+                if '@regionRef' in region_ref:
                     reading_order[int(region_ref['@index'])] = region_ref['@regionRef']
         else:
             group_item = order_dict['OrderedGroup']['RegionRefIndexed']
-            if ('@regionRef' in group_item):
+            if '@regionRef' in group_item:
                 reading_order[int(group_item['@index'])] = group_item['@regionRef']
     return reading_order
 

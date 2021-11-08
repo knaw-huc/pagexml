@@ -174,7 +174,7 @@ def average_baseline_height(baseline: Baseline) -> int:
     xcoords = [p[0] for p in baseline.points]
     left_x = min(xcoords)
     right_x = max(xcoords)
-    if (left_x != right_x):
+    if left_x != right_x:
       return int(total_avg / (right_x - left_x))
     else:
         return int(total_avg)
