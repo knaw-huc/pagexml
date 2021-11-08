@@ -8,7 +8,7 @@ with open('README.md', encoding='utf8') as f:
 
 setup(
     name='pagexml',
-    version='0.0.1',
+    version='0.0.2',
 
     description='Utility functions for reading PageXML files',
     long_description=readme,
