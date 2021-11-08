@@ -57,14 +57,19 @@ def parse_textline(textline: dict) -> PageXMLTextLine:
         text = textline['TextEquiv']['PlainText']
     else:
         text = None
-    line = PageXMLTextLine(xheight=int(textline['@xheight']) if '@xheight' in textline else None,
-                           doc_id=textline['@id'] if '@id' in textline else None,
-                           metadata=parse_custom_metadata(textline) if '@custom' in textline else None,
-                           coords=parse_coords(textline['Coords']),
-                           baseline=parse_baseline(textline['Baseline']) if 'Baseline' in textline else None,
-                           text=text,
-                           words=parse_line_words(textline))
-    return line
+    return PageXMLTextLine(
+        xheight=int(textline['@xheight']) if '@xheight' in textline else None,
+        doc_id=textline['@id'] if '@id' in textline else None,
+        metadata=parse_custom_metadata(textline)
+        if '@custom' in textline
+        else None,
+        coords=parse_coords(textline['Coords']),
+        baseline=parse_baseline(textline['Baseline'])
+        if 'Baseline' in textline
+        else None,
+        text=text,
+        words=parse_line_words(textline),
+    )
 
 
 def parse_textline_list(textline_list: list) -> List[PageXMLTextLine]:
@@ -150,7 +155,7 @@ def parse_page_metadata(metadata_json: dict) -> dict:
             metadata[field] = metadata_json[field]
         elif metadata_json[field].isdigit():
             metadata[field] = int(metadata_json[field])
-        elif metadata_json[field]:
+        else:
             metadata[field] = metadata_json[field]
     return metadata
 
@@ -216,5 +221,9 @@ def parse_pagexml_json(scan_json: dict) -> PageXMLScan:
         reading_order = parse_page_reading_order(scan_json)
     else:
         reading_order = {}
-    scan_doc = PageXMLScan(metadata=metadata, coords=coords, text_regions=text_regions, reading_order=reading_order)
-    return scan_doc
+    return PageXMLScan(
+        metadata=metadata,
+        coords=coords,
+        text_regions=text_regions,
+        reading_order=reading_order,
+    )
