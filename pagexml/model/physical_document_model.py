@@ -44,9 +44,7 @@ def line_starts_with_big_capital(line: PageXMLTextLine) -> bool:
         return False
     lowest_point = find_lowest_point(line)
     # The lowest point should be left-aligned with the sentence.
-    if lowest_point[0] - line.baseline.left > 100:
-        return False
-    return True
+    return lowest_point[0] - line.baseline.left <= 100
 
 
 def find_lowest_point(line: PageXMLTextLine) -> Tuple[int, int]:
@@ -135,18 +133,17 @@ def compute_baseline_distances(baseline1: Baseline, baseline2: Baseline,
     :return: a list of vertical distances based on horizontal overlap
     :rtype: List[int]
     """
-    if (baseline1 == None or baseline2 == None):
+    if baseline1 is None or baseline2 is None:
         return np.array([])
-    else:
-        b1_points = interpolate_baseline_points(baseline1.points, step=step)
-        b2_points = interpolate_baseline_points(baseline2.points, step=step)
-        distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
-                              if curr_x in b2_points])
-        if len(distances) == 0:
-            avg1 = average_baseline_height(baseline1)
-            avg2 = average_baseline_height(baseline2)
-            distances = np.array([abs(avg1 - avg2)])
-        return distances
+    b1_points = interpolate_baseline_points(baseline1.points, step=step)
+    b2_points = interpolate_baseline_points(baseline2.points, step=step)
+    distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
+                          if curr_x in b2_points])
+    if len(distances) == 0:
+        avg1 = average_baseline_height(baseline1)
+        avg2 = average_baseline_height(baseline2)
+        distances = np.array([abs(avg1 - avg2)])
+    return distances
 
 
 def average_baseline_height(baseline: Baseline) -> int:
@@ -170,18 +167,17 @@ def average_baseline_height(baseline: Baseline) -> int:
     total_width = (baseline.points[-1][0] - baseline.points[0][0])
     if total_width != 0:
         return int(total_avg / total_width)
+    # this should not happen, but if it does we need to calculate the average differently, to avoid a division by zero error
+    print(f"total_avg={total_avg}")
+    print(f"baseline={baseline}")
+    print(f"baseline.points[-1][0]={baseline.points[-1][0]}")
+    xcoords = [p[0] for p in baseline.points]
+    left_x = min(xcoords)
+    right_x = max(xcoords)
+    if (left_x != right_x):
+      return int(total_avg / (right_x - left_x))
     else:
-        # this should not happen, but if it does we need to calculate the average differently, to avoid a division by zero error
-        print(f"total_avg={total_avg}")
-        print(f"baseline={baseline}")
-        print(f"baseline.points[-1][0]={baseline.points[-1][0]}")
-        xcoords = [p[0] for p in baseline.points]
-        left_x = min(xcoords)
-        right_x = max(xcoords)
-        if (left_x != right_x):
-          return int(total_avg / (right_x - left_x))
-        else:
-            return int(total_avg)
+        return int(total_avg)
 
 
 def get_textregion_line_distances(text_region: PageXMLTextRegion) -> List[np.ndarray]:
@@ -355,10 +351,13 @@ class Coords:
 
     def __init__(self, points: Union[str, List[Tuple[int, int]]]):
         self.points: List[Tuple[int, int]] = parse_points(points)
-        self.point_string = " ".join([",".join([str(point[0]), str(point[1])]) for point in self.points])
+        self.point_string = " ".join(
+            ",".join([str(point[0]), str(point[1])]) for point in self.points
+        )
+
         self.x = min([point[0] for point in self.points])
-        self.y = min([point[1] for point in self.points])
-        self.w = max([point[0] for point in self.points]) - self.x
+        self.y = min(point[1] for point in self.points)
+        self.w = max(point[0] for point in self.points) - self.x
         self.h = max([point[1] for point in self.points]) - self.y
         self.type = "coords"
 
@@ -468,9 +467,12 @@ def vertical_overlap(coords1: Coords, coords2: Coords) -> int:
 
 
 def same_column(line1: PageXMLDoc, line2: PageXMLDoc) -> bool:
-    if 'scan_id' in line1.metadata and 'scan_id' in line2.metadata:
-        if line1.metadata['scan_id'] != line2.metadata['scan_id']:
-            return False
+    if (
+        'scan_id' in line1.metadata
+        and 'scan_id' in line2.metadata
+        and line1.metadata['scan_id'] != line2.metadata['scan_id']
+    ):
+        return False
     if 'column_id' in line1.metadata and 'column_id' in line2.metadata:
         return line1.metadata['column_id'] == line2.metadata['column_id']
     else:
@@ -523,8 +525,8 @@ class StructureDoc:
         self.id = doc_id
         self.type = doc_type
         self.main_type = 'doc'
-        self.metadata = metadata if metadata else {}
-        self.reading_order: Dict[int, str] = reading_order if reading_order else {}
+        self.metadata = metadata or {}
+        self.reading_order: Dict[int, str] = reading_order or {}
         self.parent: Union[StructureDoc, None] = None
 
     def set_parent(self, parent: StructureDoc):
@@ -624,8 +626,8 @@ class LogicalStructureDoc(StructureDoc):
                  metadata: Dict[str, any] = None, lines: List[PageXMLTextLine] = None,
                  text_regions: List[PageXMLTextRegion] = None, reading_order: Dict[int, str] = None):
         super().__init__(doc_id, doc_type, metadata, reading_order=reading_order)
-        self.lines: List[PageXMLTextLine] = lines if lines else []
-        self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions else []
+        self.lines: List[PageXMLTextLine] = lines or []
+        self.text_regions: List[PageXMLTextRegion] = text_regions or []
         self.logical_parent: Union[StructureDoc, None] = None
 
     def set_logical_parent(self, parent: StructureDoc):
@@ -685,7 +687,7 @@ class PageXMLTextLine(PageXMLDoc):
         self.text: Union[None, str] = text
         self.xheight: Union[None, int] = xheight
         self.baseline: Union[None, Baseline] = baseline
-        self.words: List[PageXMLWord] = words if words else []
+        self.words: List[PageXMLWord] = words or []
         self.metadata['type'] = 'line'
         self.set_as_parent(self.words)
         if doc_type:
@@ -740,11 +742,7 @@ class PageXMLTextLine(PageXMLDoc):
         if horizontal_overlap(self.coords, other.coords) > 40:
             # print("TOO MUCH HORIZONTAL OVERLAP", horizontal_overlap(self.coords, other.coords))
             return False
-        if self.baseline.top > other.baseline.bottom + 10:
-            # print("VERTICAL BASELINE GAP TOO BIG")
-            return False
-        else:
-            return True
+        return self.baseline.top <= other.baseline.bottom + 10
 
 
 class PageXMLTextRegion(PageXMLDoc):
@@ -757,8 +755,8 @@ class PageXMLTextRegion(PageXMLDoc):
         super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
                          coords=coords, reading_order=reading_order)
         self.main_type = 'text_region'
-        self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions else []
-        self.lines: List[PageXMLTextLine] = lines if lines else []
+        self.text_regions: List[PageXMLTextRegion] = text_regions or []
+        self.lines: List[PageXMLTextLine] = lines or []
         self.orientation: Union[None, float] = orientation
         if self.reading_order:
             self.set_text_regions_in_reader_order()
@@ -796,7 +794,7 @@ class PageXMLTextRegion(PageXMLDoc):
     def get_text_regions_in_reading_order(self):
         if not self.reading_order:
             return self.text_regions
-        tr_ids = {region_id for _index, region_id in sorted(self.reading_order.items(), key=lambda x: x[0])}
+        tr_ids = [region_id for _index, region_id in sorted(self.reading_order.items(), key=lambda x: x[0])]
         tr_map = {}
         for text_region in self.text_regions:
             if text_region.id not in tr_ids:
@@ -887,8 +885,7 @@ class PageXMLColumn(PageXMLTextRegion):
 
     @property
     def stats(self):
-        stats = super().stats
-        return stats
+        return super().stats
 
 
 class PageXMLPage(PageXMLTextRegion):
@@ -901,8 +898,8 @@ class PageXMLPage(PageXMLTextRegion):
         super().__init__(doc_id=doc_id, doc_type="page", metadata=metadata, coords=coords, lines=lines,
                          text_regions=text_regions, reading_order=reading_order)
         self.main_type = 'page'
-        self.columns: List[PageXMLColumn] = columns if columns else []
-        self.extra: List[PageXMLTextRegion] = extra if extra else []
+        self.columns: List[PageXMLColumn] = columns or []
+        self.extra: List[PageXMLTextRegion] = extra or []
         self.set_parentage()
         self.set_as_parent(self.columns)
         self.set_as_parent(self.extra)
@@ -959,8 +956,8 @@ class PageXMLScan(PageXMLTextRegion):
         super().__init__(doc_id=doc_id, doc_type="scan", metadata=metadata, coords=coords, lines=lines,
                          text_regions=text_regions, reading_order=reading_order)
         self.main_type = 'scan'
-        self.pages: List[PageXMLPage] = pages if pages else []
-        self.columns: List[PageXMLColumn] = columns if columns else []
+        self.pages: List[PageXMLPage] = pages or []
+        self.columns: List[PageXMLColumn] = columns or []
         self.set_parentage()
         self.set_as_parent(self.pages)
         self.set_as_parent(self.columns)
@@ -1044,16 +1041,16 @@ def sort_lines_in_reading_order(doc: PageXMLDoc) -> Generator[PageXMLTextLine]:
                 if 'column_id' in text_region.metadata and 'column_id' not in curr_line.metadata:
                     curr_line.metadata['column_id'] = text_region.metadata['column_id']
                 prev_line = stacked_lines[-1][-1]
-                if curr_line.is_below(prev_line):
+                if (
+                    curr_line.is_below(prev_line)
+                    or not curr_line.is_below(prev_line)
+                    and not curr_line.is_next_to(prev_line)
+                ):
                     stacked_lines.append([curr_line])
-                elif curr_line.is_next_to(prev_line):
-                    stacked_lines[-1].append(curr_line)
                 else:
-                    stacked_lines.append([curr_line])
-
+                    stacked_lines[-1].append(curr_line)
         for lines in stacked_lines:
-            for line in sorted(lines, key=lambda x: x.coords.left):
-                yield line
+            yield from sorted(lines, key=lambda x: x.coords.left)
 
 
 def line_ends_with_word_break(curr_line: PageXMLTextLine, next_line: PageXMLTextLine,
@@ -1061,7 +1058,7 @@ def line_ends_with_word_break(curr_line: PageXMLTextLine, next_line: PageXMLText
     if not next_line or not next_line.text:
         # if the next line has no text, it has no first word to join with the last word of the current line
         return False
-    if not curr_line.text[-1] in string.punctuation:
+    if curr_line.text[-1] not in string.punctuation:
         # if the current line does not end with punctuation, we assume, the last word is not hyphenated
         return False
     match = re.search(r"(\w+)\W+$", curr_line.text)
@@ -1103,19 +1100,29 @@ def line_ends_with_word_break(curr_line: PageXMLTextLine, next_line: PageXMLText
 
 
 def json_to_pagexml_word(json_doc: dict) -> PageXMLWord:
-    word = PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                       text=json_doc['text'])
-    return word
+    return PageXMLWord(
+        doc_id=json_doc['id'],
+        doc_type=json_doc['type'],
+        metadata=json_doc['metadata'],
+        text=json_doc['text'],
+    )
 
 
 def json_to_pagexml_line(json_doc: dict) -> PageXMLTextLine:
     words = [json_to_pagexml_word(word) for word in json_doc['words']] if 'words' in json_doc else []
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
     try:
-        line = PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                               coords=Coords(json_doc['coords']), baseline=Baseline(json_doc['baseline']),
-                               text=json_doc['text'], words=words, reading_order=reading_order)
-        return line
+        return PageXMLTextLine(
+            doc_id=json_doc['id'],
+            doc_type=json_doc['type'],
+            metadata=json_doc['metadata'],
+            coords=Coords(json_doc['coords']),
+            baseline=Baseline(json_doc['baseline']),
+            text=json_doc['text'],
+            words=words,
+            reading_order=reading_order,
+        )
+
     except TypeError:
         print(json_doc['baseline'])
         raise
@@ -1139,10 +1146,15 @@ def json_to_pagexml_column(json_doc: dict) -> PageXMLColumn:
     lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
 
-    column = PageXMLColumn(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           coords=Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
-                           reading_order=reading_order)
-    return column
+    return PageXMLColumn(
+        doc_id=json_doc['id'],
+        doc_type=json_doc['type'],
+        metadata=json_doc['metadata'],
+        coords=Coords(json_doc['coords']),
+        text_regions=text_regions,
+        lines=lines,
+        reading_order=reading_order,
+    )
 
 
 def json_to_pagexml_page(json_doc: dict) -> PageXMLPage:
@@ -1155,11 +1167,17 @@ def json_to_pagexml_page(json_doc: dict) -> PageXMLPage:
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
 
     coords = Coords(json_doc['coords']) if 'coords' in json_doc else None
-    page = PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                       coords=coords, extra=extra, columns=columns,
-                       text_regions=text_regions, lines=lines,
-                       reading_order=reading_order)
-    return page
+    return PageXMLPage(
+        doc_id=json_doc['id'],
+        doc_type=json_doc['type'],
+        metadata=json_doc['metadata'],
+        coords=coords,
+        extra=extra,
+        columns=columns,
+        text_regions=text_regions,
+        lines=lines,
+        reading_order=reading_order,
+    )
 
 
 def json_to_pagexml_scan(json_doc: dict) -> PageXMLScan:
@@ -1170,10 +1188,17 @@ def json_to_pagexml_scan(json_doc: dict) -> PageXMLScan:
     lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
 
-    scan = PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                       coords=Coords(json_doc['coords']), pages=pages, columns=columns,
-                       text_regions=text_regions, lines=lines, reading_order=reading_order)
-    return scan
+    return PageXMLScan(
+        doc_id=json_doc['id'],
+        doc_type=json_doc['type'],
+        metadata=json_doc['metadata'],
+        coords=Coords(json_doc['coords']),
+        pages=pages,
+        columns=columns,
+        text_regions=text_regions,
+        lines=lines,
+        reading_order=reading_order,
+    )
 
 
 def json_to_pagexml_doc(json_doc: dict) -> PageXMLDoc:
