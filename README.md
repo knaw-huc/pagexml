@@ -21,6 +21,6 @@ pip install pagexml-tools
 
 ----
 
-[USAGE](https://pagexml-tools.readthedocs.io/en/latest/) |
+[USAGE](https://pagexml.readthedocs.io/en/latest/) |
 [CONTRIBUTING](CONTRIBUTING.md) |
 [LICENSE](LICENSE)
