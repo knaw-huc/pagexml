@@ -18,4 +18,4 @@ instead of the default
 poetry version
 ```
 
-as `poetry run version` also updates the `__version__` variable in [`annorepo/__init__.py`](annorepo/__init__.py)
+as `poetry run version` also updates the `__version__` variable in [`pagexml/__init__.py`](pagexml/__init__.py)

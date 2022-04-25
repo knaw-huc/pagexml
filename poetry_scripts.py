@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-project_init_file = 'annorepo/__init__.py'
+project_init_file = 'pagexml/__init__.py'
 
 
 def hello(who=None):
