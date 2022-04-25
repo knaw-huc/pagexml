@@ -5,19 +5,22 @@
 
 Utility functions for reading [PageXML](https://www.primaresearch.org/tools/PAGELibraries) files
 
-## Installing
+## installing
+
+### using poetry
 
 ```commandline
-pip install git+https://github.com/knaw-huc/pagexml
+poetry add pagexml-tools
 ```
 
-## Usage
+### using pip
 
-```python
-from pagexml.parser import parse_pagexml_file
-from pagexml.model.physical_document_model import pretty_print_textregion
-
-filepath = 'example.xml'
-scan = parse_pagexml_file(filepath)
-pretty_print_textregion(scan, print_stats=True)
+```commandline
+pip install pagexml-tools
 ```
+
+----
+
+[USAGE](https://pagexml-tools.readthedocs.io/en/latest/) |
+[CONTRIBUTING](CONTRIBUTING.md) |
+[LICENSE](LICENSE)

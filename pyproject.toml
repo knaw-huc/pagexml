@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "pagexml-tools"
+version = "0.1.0"
+description = "Utility functions for reading PageXML files"
+authors = ["Marijn Koolen <marijn.koolen@huygens.knaw.nl>","Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://github.com/knaw-huc/pagexml"
+repository = "https://github.com/knaw-huc/pagexml"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+packages = [{ include = "pagexml" }]
+
+[tool.poetry.dependencies]
+python = "^3.8,<3.11"
+icecream = "^2.1.2"
+python-dateutil = "^2.8.2"
+xmltodict = "^0.12.0"
+numpy = "^1.22.3"
+scipy = "^1.8.0"
+
+[tool.poetry.dev-dependencies]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/knaw-huc/pagexml/issues"
+
+[tool.poetry.scripts]
+version = 'poetry_scripts:version'
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
