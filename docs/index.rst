@@ -3,7 +3,7 @@
 |pt|
 ===============
 
-Some tools for working with pagexml <https://www.primaresearch.org/tools/PAGELibraries> files.
+Some tools for working with `pagexml <https://www.primaresearch.org/tools/PAGELibraries>`_ files.
 
 
 Installation
