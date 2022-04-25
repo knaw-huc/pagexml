@@ -175,7 +175,7 @@ def average_baseline_height(baseline: Baseline) -> int:
     left_x = min(xcoords)
     right_x = max(xcoords)
     if left_x != right_x:
-      return int(total_avg / (right_x - left_x))
+        return int(total_avg / (right_x - left_x))
     else:
         return int(total_avg)
 
@@ -468,9 +468,9 @@ def vertical_overlap(coords1: Coords, coords2: Coords) -> int:
 
 def same_column(line1: PageXMLDoc, line2: PageXMLDoc) -> bool:
     if (
-        'scan_id' in line1.metadata
-        and 'scan_id' in line2.metadata
-        and line1.metadata['scan_id'] != line2.metadata['scan_id']
+            'scan_id' in line1.metadata
+            and 'scan_id' in line2.metadata
+            and line1.metadata['scan_id'] != line2.metadata['scan_id']
     ):
         return False
     if 'column_id' in line1.metadata and 'column_id' in line2.metadata:
@@ -1042,9 +1042,9 @@ def sort_lines_in_reading_order(doc: PageXMLDoc) -> Generator[PageXMLTextLine]:
                     curr_line.metadata['column_id'] = text_region.metadata['column_id']
                 prev_line = stacked_lines[-1][-1]
                 if (
-                    curr_line.is_below(prev_line)
-                    or not curr_line.is_below(prev_line)
-                    and not curr_line.is_next_to(prev_line)
+                        curr_line.is_below(prev_line)
+                        or not curr_line.is_below(prev_line)
+                        and not curr_line.is_next_to(prev_line)
                 ):
                     stacked_lines.append([curr_line])
                 else:
