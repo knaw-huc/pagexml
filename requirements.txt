@@ -1,5 +1,0 @@
-icecream==2.1.1
-numpy==1.21.1
-python_dateutil==2.8.2
-scipy==1.7.0
-xmltodict==0.12.0
