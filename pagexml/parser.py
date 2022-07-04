@@ -32,8 +32,10 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
     for word_dict in textline["Word"]:
         if isinstance(word_dict["TextEquiv"]["Unicode"], str):
             unicode_string = word_dict["TextEquiv"]["Unicode"]
-        else:
+        elif isinstance(word_dict["TextEquiv"]["Unicode"], dict):
             unicode_string = word_dict["TextEquiv"]["Unicode"]['#text']
+        else:
+            unicode_string = ""
         try:
             word = PageXMLWord(text=unicode_string,
                                doc_id=word_dict['@id'] if '@id' in word_dict else None,

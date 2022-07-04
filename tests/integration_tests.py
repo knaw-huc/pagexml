@@ -3,7 +3,7 @@ import traceback
 
 from icecream import ic
 
-from pagexml.model.physical_document_model import pretty_print_textregion
+from pagexml.helper.pagexml_helper import pretty_print_textregion
 from pagexml.parser import parse_pagexml_file
 
 

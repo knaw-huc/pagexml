@@ -446,17 +446,6 @@ class PageXMLTextLine(PageXMLDoc):
         else:
             return True
 
-    def concat(self, other: PageXMLTextLine) -> PageXMLTextLine:
-        merged_coords = coords_list_to_hull_coords([self.coords, other.coords])
-        merged_text = ' '.join([self.text, other.text])
-        merged_baseline = Baseline(self.baseline.points + other.baseline.points)
-        merged_words = None
-        if self.words and other.words:
-            merged_words = self.words + other.words
-        return PageXMLTextLine(doc_id=self.id, coords=merged_coords,
-                               baseline=merged_baseline, text=merged_text,
-                               words=merged_words, metadata=self.metadata)
-
 
 class PageXMLTextRegion(PageXMLDoc):
 
@@ -605,10 +594,6 @@ class PageXMLColumn(PageXMLTextRegion):
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
-        # if self.lines:
-        #     doc_json['lines'] = [line.json for line in self.lines]
-        # if self.text_regions:
-        #     doc_json['text_regions'] = [text_region.json for text_region in self.text_regions]
         doc_json['stats'] = self.stats
         return doc_json
 
