@@ -1,6 +1,7 @@
-import re
+from typing import Generator, List, Dict, Union
 from datetime import datetime
-from typing import List, Dict, Union
+import glob
+import re
 
 import xmltodict
 from dateutil.parser import parse as date_parse
@@ -29,10 +30,8 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
     if isinstance(textline["Word"], dict):
         textline["Word"] = [textline["Word"]]
     for word_dict in textline["Word"]:
-        if isinstance(word_dict["TextEquiv"]["Unicode"], str):
-            unicode_string = word_dict["TextEquiv"]["Unicode"]
-        elif isinstance(word_dict["TextEquiv"]["Unicode"], dict):
-            unicode_string = word_dict["TextEquiv"]["Unicode"]['#text']
+        if "TextEquiv" in word_dict:
+            unicode_string = parse_text_equiv(word_dict["TextEquiv"])
         else:
             unicode_string = ""
         try:
@@ -48,17 +47,28 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
     return words
 
 
-def parse_textline(textline: dict) -> PageXMLTextLine:
-    if 'TextEquiv' not in textline:
-        text = None
-    elif isinstance(textline['TextEquiv'], str):
-        text = textline['TextEquiv']
-    elif 'Unicode' in textline['TextEquiv']:
-        text = textline['TextEquiv']['Unicode']
-    elif 'PlainText' in textline['TextEquiv']:
-        text = textline['TextEquiv']['PlainText']
+def parse_text_equiv(text_equiv: dict) -> Union[str, None]:
+    if isinstance(text_equiv, str):
+        return text_equiv
+    elif isinstance(text_equiv, dict):
+        if 'Unicode' in text_equiv:
+            text_equiv = text_equiv['Unicode']
+        elif 'PlainText' in text_equiv:
+            text_equiv = text_equiv['PlainText']
+        else:
+            return None
+        if isinstance(text_equiv, dict):
+            return text_equiv['#text']
+        elif isinstance(text_equiv, str):
+            return text_equiv
+        else:
+            return None
     else:
-        text = None
+        return None
+
+
+def parse_textline(textline: dict) -> PageXMLTextLine:
+    text = parse_text_equiv(textline['TextEquiv']) if 'TextEquiv' in textline else None
     return PageXMLTextLine(
         xheight=int(textline['@xheight']) if '@xheight' in textline else None,
         doc_id=textline['@id'] if '@id' in textline else None,
@@ -117,6 +127,8 @@ def parse_textregion(text_region_dict: dict) -> PageXMLTextRegion:
     if text_region.metadata and 'type' in text_region.metadata:
         text_region.add_type(text_region.metadata['type'])
     for child in text_region_dict:
+        if child == 'TextEquiv':
+            text_region.text = parse_text_equiv(text_region_dict[child])
         if child == 'TextLine':
             if isinstance(text_region_dict['TextLine'], list):
                 text_region.lines = parse_textline_list(text_region_dict['TextLine'])
@@ -187,24 +199,9 @@ def parse_page_reading_order(page_json: dict) -> dict:
     return reading_order
 
 
-def read_pagexml_file(pagexml_file: str) -> str:
-    with open(pagexml_file, 'rt', encoding='utf-8') as fh:
-        return fh.read()
-
-
-def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None) -> PageXMLScan:
-    """Read PageXML from file (or passed separately if read from elsewhere, e.g. tarball)
-    and return a PageXMLScan object."""
-    if not pagexml_data:
-        pagexml_data = read_pagexml_file(pagexml_file)
-    scan_json = xmltodict.parse(pagexml_data)
-    scan_doc = parse_pagexml_json(scan_json)
-    scan_doc.metadata['filename'] = pagexml_file
-    return scan_doc
-
-
-def parse_pagexml_json(scan_json: dict) -> PageXMLScan:
+def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> PageXMLScan:
     """Parse a JSON/xmltodict representation of a PageXML file and return a PageXMLScan object."""
+    doc_id = pagexml_file
     coords, text_regions = None, None
     metadata = {}
     if 'Metadata' in scan_json['PcGts'] and scan_json['PcGts']['Metadata']:
@@ -212,6 +209,8 @@ def parse_pagexml_json(scan_json: dict) -> PageXMLScan:
     if 'xmlns' in scan_json['PcGts']:
         metadata['namespace'] = scan_json['PcGts']['xmlns']
     scan_json = scan_json['PcGts']['Page']
+    if '@imageFilename' in scan_json and scan_json['@imageFilename'] is not None:
+        doc_id = scan_json['@imageFilename']
     if scan_json['@imageWidth'] != '0' and scan_json['@imageHeight'] != '0':
         coords = parse_page_image_size(scan_json)
     if 'TextRegion' in scan_json:
@@ -224,8 +223,52 @@ def parse_pagexml_json(scan_json: dict) -> PageXMLScan:
     else:
         reading_order = {}
     return PageXMLScan(
+        doc_id=doc_id,
         metadata=metadata,
         coords=coords,
         text_regions=text_regions,
         reading_order=reading_order,
     )
+
+
+def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
+    """Return the content of a PageXML file as text string."""
+    with open(pagexml_file, 'rt', encoding=encoding) as fh:
+        return fh.read()
+
+
+def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
+                       encoding: str = 'utf-8') -> PageXMLScan:
+    """Read PageXML from file (or passed separately if read from elsewhere, e.g. tarball)
+    and return a PageXMLScan object."""
+    if not pagexml_data:
+        pagexml_data = read_pagexml_file(pagexml_file, encoding=encoding)
+    scan_json = xmltodict.parse(pagexml_data)
+    scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+    scan_doc.metadata['filename'] = pagexml_file
+    return scan_doc
+
+
+def parse_pagexml_files(pagexml_files: List[str],
+                        ignore_errors: bool = False,
+                        encoding: str = 'utf-8') -> Generator[PageXMLScan, None, None]:
+    """Parse a list of PageXML files and return each as a PageXMLScan object."""
+    for pagexml_file in pagexml_files:
+        try:
+            yield parse_pagexml_file(pagexml_file, encoding=encoding)
+        except (KeyError, AttributeError, IndexError, ValueError, TypeError):
+            if ignore_errors:
+                print(f'Skipping file with parser error: {pagexml_file}')
+                continue
+            else:
+                raise
+
+
+def read_pagexml_dirs(pagexml_dirs: str) -> List[str]:
+    """Return a list of all (Page)XML files within a list of directories."""
+    pagexml_files = []
+    if isinstance(pagexml_dirs, str):
+        pagexml_dirs = [pagexml_dirs]
+    for pagexml_dir in pagexml_dirs:
+        pagexml_files += glob.glob(pagexml_dir + "**/*.xml", recursive=True)
+    return pagexml_files
