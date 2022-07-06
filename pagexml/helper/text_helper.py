@@ -1,12 +1,12 @@
-from typing import Dict, List, Tuple, Union, Generator, Iterable
-import re
 import gzip
 import math
+import re
 from collections import Counter, defaultdict
 from itertools import combinations
+from typing import Dict, List, Tuple, Union, Generator, Iterable
 
-import pagexml.parser as parser
 import pagexml.model.physical_document_model as pdm
+import pagexml.parser as parser
 
 
 class SkipGram:
@@ -42,10 +42,10 @@ def text2skipgrams(text: str, ngram_size: int = 2, skip_size: int = 2) -> Genera
     :rtype: Generator[tuple]"""
     if ngram_size <= 0 or skip_size < 0:
         raise ValueError('ngram_size must be a positive integer, skip_size must be a positive integer or zero')
-    indexes = [i for i in range(0, ngram_size+skip_size)]
-    skipgram_combinations = [combination for combination in combinations(indexes[1:], ngram_size-1)]
-    for offset in range(0, len(text)-1):
-        window = text[offset:offset+ngram_size+skip_size]
+    indexes = [i for i in range(0, ngram_size + skip_size)]
+    skipgram_combinations = [combination for combination in combinations(indexes[1:], ngram_size - 1)]
+    for offset in range(0, len(text) - 1):
+        window = text[offset:offset + ngram_size + skip_size]
         for skipgram, skipgram_length in insert_skips(window, skipgram_combinations):
             yield SkipGram(skipgram, offset, skipgram_length)
 

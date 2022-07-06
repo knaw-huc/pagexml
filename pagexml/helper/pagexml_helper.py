@@ -1,16 +1,16 @@
-from typing import Dict, Generator, List, Tuple, Union
-from collections import Counter
 import copy
-import re
 import gzip
+import re
 import string
+from collections import Counter
+from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 
-import pagexml.model.physical_document_model as pdm
 import pagexml.analysis.layout_stats as summarise
 import pagexml.analysis.text_stats as text_stats
 import pagexml.helper.text_helper as text_helper
+import pagexml.model.physical_document_model as pdm
 
 
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
@@ -319,7 +319,7 @@ def read_line_format_file(line_format_files: Union[str, List[str]]) -> Generator
 def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
                    end_word: str, merge_word: str, line_break_char: str = '-') -> str:
     line_text = line.text
-    if len(line_text) >= 2 and line_text.endswith(line_break_char*2):
+    if len(line_text) >= 2 and line_text.endswith(line_break_char * 2):
         # remove the redundant line break char
         line_text = line_text[:-1]
     if do_merge:

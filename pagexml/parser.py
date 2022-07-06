@@ -1,7 +1,7 @@
-from typing import Generator, List, Dict, Union
-from datetime import datetime
 import glob
 import re
+from datetime import datetime
+from typing import Generator, List, Dict, Union
 
 import xmltodict
 from dateutil.parser import parse as date_parse

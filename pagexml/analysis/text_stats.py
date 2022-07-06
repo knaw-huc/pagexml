@@ -1,7 +1,7 @@
-from typing import List, Set, Tuple, Union
+import re
 from collections import Counter
 from collections import defaultdict
-import re
+from typing import List, Set, Tuple, Union
 
 import pagexml.helper.text_helper as text_helper
 

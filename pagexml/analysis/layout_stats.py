@@ -1,6 +1,6 @@
-from typing import Dict, Generator, List, Tuple, Union
 from collections import Counter
 from collections import defaultdict
+from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 

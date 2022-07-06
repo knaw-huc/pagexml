@@ -1,6 +1,7 @@
 from __future__ import annotations
-from typing import Dict, List, Set, Tuple, Union
+
 from collections import defaultdict
+from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 from scipy.spatial import ConvexHull
