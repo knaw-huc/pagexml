@@ -1,8 +1,8 @@
 import unittest
 
+import pagexml.model.physical_document_model as pdm
 from pagexml.helper.pagexml_helper import pretty_print_textregion
 from pagexml.parser import parse_pagexml_file
-import pagexml.model.physical_document_model as pdm
 
 
 class PageXMLTestCase(unittest.TestCase):
@@ -17,7 +17,12 @@ class PageXMLTestCase(unittest.TestCase):
         # example has 2 text regions, 39 text lines and 155 words
         file = 'data/example.xml'
         scan = parse_pagexml_file(file)
+        self.assertEqual(scan.stats['pages'], 0)
+        self.assertEqual(scan.stats['text_regions'], 2)
+        self.assertEqual(scan.stats['columns'], 0)
+        self.assertEqual(scan.stats['lines'], 39)
         self.assertEqual(scan.stats['words'], 155)
+        self.assertEqual(scan.stats['extra'], 0)
 
 
 if __name__ == '__main__':
