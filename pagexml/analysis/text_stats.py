@@ -1,20 +1,128 @@
-from typing import List, Set, Tuple, Union
+from typing import Dict, Iterable, List, Set, Tuple, Union
 from collections import Counter
 from collections import defaultdict
 import re
+import string
 
+from pagexml.model.physical_document_model import PageXMLScan
 import pagexml.helper.text_helper as text_helper
+
+
+def get_line_text(text_line: Union[str, Dict[str, any]]) -> Union[str, None]:
+    """Convenience function to return the text str of a text line, regardless of whether text_line
+    is a str or a dictionary or a NoneType."""
+    if isinstance(text_line, str):
+        return text_line
+    elif text_line is None:
+        return None
+    elif isinstance(text_line, dict):
+        if 'text' in text_line:
+            return text_line['text']
+        else:
+            raise KeyError("text_line dict has no 'text' property.")
+    else:
+        raise TypeError("text_line must be a string or a dictionary with a 'text' property")
+
+
+class LineCharAnalyser:
+
+    def __init__(self, text_lines: List[str] = None):
+        """A character frequency analyser of a list of text lines. Four frequencies are calculated:
+        - all_freq: the overall frequency of a character
+        - start_freq: the frequency of a character as the first character in a text line
+        - mid_freq: the frequency of a character in the middle of in a text line (so neither as the first or
+        last character of a line)
+        - end_freq: the frequency of a character as the last character in a text line
+
+        """
+        self.all_freq = Counter()
+        self.mid_freq = Counter()
+        self.start_freq = Counter()
+        self.end_freq = Counter()
+        self.all_frac = Counter()
+        self.mid_frac = Counter()
+        self.start_frac = Counter()
+        self.end_frac = Counter()
+        self.stats = {
+            'total_all_chars': 0,
+            'total_mid_chars': 0,
+            'total_end_chars': 0,
+            'total_start_chars': 0
+        }
+        self.analyse_line_chars(text_lines)
+
+    def analyse_line_chars(self, text_lines):
+        """Analyse the frequency of characters at the start, middle and end of a text line,
+        for a given list of text lines."""
+        print('analysing line characters')
+        for text_line in text_lines:
+            line_text = get_line_text(text_line)
+            if line_text is None or len(line_text) == 0:
+                continue
+            self.all_freq.update(line_text)
+            first_char = line_text[0]
+            self.start_freq.update([first_char])
+            if len(line_text) > 1:
+                last_char = line_text[-1]
+                self.end_freq.update([last_char])
+                mid_chars = line_text[1:-1]
+                self.mid_freq.update(mid_chars)
+        self._set_stats()
+
+    def _set_stats(self):
+        print('setting character statistics')
+        self.stats['total_all_chars'] = sum(self.all_freq.values())
+        self.stats['total_end_chars'] = sum(self.end_freq.values())
+        self.stats['total_mid_chars'] = sum(self.mid_freq.values())
+        self.stats['total_start_chars'] = sum(self.start_freq.values())
+        all_total = sum(self.all_freq.values())
+        start_total = sum(self.start_freq.values())
+        mid_total = sum(self.mid_freq.values())
+        end_total = sum(self.end_freq.values())
+        for char, all_freq in self.all_freq.most_common():
+            self.all_frac[char] = self.all_freq[char] / all_total
+            self.start_frac[char] = self.start_freq[char] / start_total
+            self.mid_frac[char] = self.mid_freq[char] / mid_total
+            self.end_frac[char] = self.end_freq[char] / end_total
+
+    def get_stats(self):
+        """Return statistics on the frequency of characters occuring at the start, middle and end of
+        a text line."""
+        stats = defaultdict(list)
+        for char, all_freq in self.all_freq.most_common():
+            stats['char'].append(char)
+            stats['all_freq'].append(self.all_freq[char])
+            stats['all_frac'].append(self.all_frac[char])
+            stats['start_freq'].append(self.start_freq[char])
+            stats['start_frac'].append(self.start_frac[char])
+            stats['start_rel_frac'].append(self.start_frac[char] / self.all_frac[char])
+            stats['mid_freq'].append(self.mid_freq[char])
+            stats['mid_frac'].append(self.mid_frac[char])
+            stats['mid_rel_frac'].append(self.mid_frac[char] / self.all_frac[char])
+            stats['end_freq'].append(self.end_freq[char])
+            stats['end_frac'].append(self.end_frac[char])
+            stats['end_rel_frac'].append(self.end_frac[char] / self.all_frac[char])
+        return stats
 
 
 class LineBreakDetector:
 
-    def __init__(self, min_bigram_word_freq: int = 5, line_break_char: str = '-'):
+    def __init__(self, min_bigram_word_freq: int = 5, line_break_chars: str = '-'):
+        """A line break detector class that uses corpus statistics and a configurable list
+        of line break characters to determine, for two subsequent lines, whether the first line ends
+        with a line break (a word break off mid-word on the first line and continued on the second line.
+
+        :param min_bigram_word_freq: the minimum frequency of word bigrams to be considered common bigrams
+        :type min_bigram_word_freq: int
+        :param line_break_chars: a list of characters that can occur as line breaks.
+        :type line_break_chars: str
+        """
         self.mid_freq = Counter()
         self.end_freq = Counter()
         self.start_freq = Counter()
         self.all_freq = Counter()
         self.mid_bigram_freq = Counter()
-        self.line_break_char = line_break_char
+        self.line_break_chars = line_break_chars
         self.typical_start_merged_with = defaultdict(Counter)
         self.typical_end_merged_with = defaultdict(Counter)
         self.common_start_merged_with = defaultdict(Counter)
@@ -30,6 +138,7 @@ class LineBreakDetector:
         self.min_bigram_word_freq = min_bigram_word_freq
 
     def reset_counters(self):
+        """Reset all the counters."""
         self.mid_freq = Counter()
         self.end_freq = Counter()
         self.start_freq = Counter()
@@ -49,6 +158,7 @@ class LineBreakDetector:
         self.common_non_merge_ends = set()
 
     def print_counter_stats(self):
+        """Print overall statistics on the vocabulary derived from the analysed text lines."""
         line_count = sum(self.start_freq.values())
         print("number of lines:", line_count)
         # print("number of non-empty lines:", sum(self.start_freq.values()))
@@ -65,24 +175,30 @@ class LineBreakDetector:
         print(f'Number of common merge line ends: {len(self.common_merge_ends)}')
         print(f'Number of common merge line starts: {len(self.common_merge_starts)}')
 
-    def set_counters(self, line_reader: text_helper.LineReader):
+    def set_counters(self, lines: Iterable[any]):
+        """Gather corpus statistics for a list of text lines on words at the start, middle and end
+        of a text line, and on word bigrams in the middle of a line.
+
+        :param lines: an iterable for text lines (either strings or dictionaries with a 'text' property
+        :type lines: Iterable[any]
+        """
         print('Step 1: setting unigram counters')
-        self._set_unigram_counters(line_reader)
+        self._set_unigram_counters(lines)
         print('Step 2: setting bigram counter')
-        self._set_bigram_counter(line_reader)
+        self._set_bigram_counter(lines)
         print('Step 3: setting common merge counters')
-        self._set_merged_with(line_reader)
+        self._set_merged_with(lines)
         print('Step 4: setting typical line ends and starts')
         self._set_typical_start_ends()
         print('Step 5: setting common line ends and starts')
         self._set_common_start_ends()
 
-    def _set_unigram_counters(self, line_reader: text_helper.LineReader):
+    def _set_unigram_counters(self, lines: Iterable[Union[str, Dict[str, str]]]):
         li = 0
-        for li, line in enumerate(line_reader):
+        for li, line in enumerate(lines):
             if line["text"] is None:
                 continue
-            words = text_helper.get_line_words(line["text"], line_break_char=self.line_break_char)
+            words = text_helper.get_line_words(line["text"], line_break_chars=self.line_break_chars)
             start_words, mid_words, end_words = text_helper.split_line_words(words)
             self.mid_freq.update(mid_words)
             self.start_freq.update(start_words)
@@ -93,12 +209,12 @@ class LineBreakDetector:
               f'\tall: {len(self.all_freq): >8} types'
               f'\t{sum(self.all_freq.values()): >8} tokens')
 
-    def _set_bigram_counter(self, line_reader: text_helper.LineReader):
+    def _set_bigram_counter(self, lines: Iterable[Union[str, Dict[str, str]]]):
         li = 0
-        for li, line in enumerate(line_reader):
+        for li, line in enumerate(lines):
             if line["text"] is None:
                 continue
-            words = text_helper.get_line_words(line["text"], line_break_char=self.line_break_char)
+            words = text_helper.get_line_words(line["text"], line_break_chars=self.line_break_chars)
             start_words, mid_words, end_words = text_helper.split_line_words(words)
             for i in range(0, len(mid_words) - 2):
                 if self.mid_freq[mid_words[i]] < self.min_bigram_word_freq or \
@@ -107,14 +223,15 @@ class LineBreakDetector:
                 self.mid_bigram_freq.update([(mid_words[i], mid_words[i + 1])])
         print(li + 1, f'lines processed\tall: {len(self.mid_bigram_freq)} bigrams')
 
-    def _set_merged_with(self, line_reader: text_helper.LineReader, min_common_freq: int = 1000) -> None:
+    def _set_merged_with(self, lines: Iterable[Union[str, Dict[str, str]]],
+                         min_common_freq: int = 1000) -> None:
         prev_words = []
         typical_start_words, typical_end_words = get_typical_start_end_words(self)
         li = 0
-        for li, line in enumerate(line_reader):
+        for li, line in enumerate(lines):
             if line["text"] is None:
                 continue
-            words = text_helper.get_line_words(line["text"], line_break_char=self.line_break_char)
+            words = text_helper.get_line_words(line["text"], line_break_chars=self.line_break_chars)
             if len(prev_words) == 0 or len(words) == 0:
                 pass
             else:
@@ -123,11 +240,11 @@ class LineBreakDetector:
                 merge_word = end_word + start_word
                 reduce_word = text_helper.remove_hyphen(end_word) + start_word
                 merge_word = merge_word if self.mid_freq[merge_word] > self.mid_freq[reduce_word] else reduce_word
-                if merge_word[-1] == '-':
+                if merge_word[-1] in self.line_break_chars:
                     # when the line start word ends with a hyphen, e.g. 'geval-' + 'len-' -> 'gevallen'
                     if self.mid_freq[merge_word[-1]] > self.mid_freq[merge_word]:
                         merge_word = merge_word[:-1]
-                if end_word != '-' and self.mid_freq[merge_word] > 1:
+                if end_word not in self.line_break_chars and self.mid_freq[merge_word] > 1:
                     if start_word in typical_start_words:
                         self.typical_start_merged_with[start_word].update([(end_word, merge_word)])
                     if end_word in typical_end_words:
@@ -202,40 +319,83 @@ def show_line_break_context(lbd: LineBreakDetector, end_word: str, start_word: s
 
 def determine_line_break(lbd: LineBreakDetector, curr_words: List[str],
                          prev_words: List[str]) -> Tuple[bool, Union[str, None]]:
+    """Determine for a current line and previous line (as lists of words) whether the first line ends with a line break.
+
+    :param lbd: a line break detector object
+    :type lbd: LineBreakDetector
+    :param curr_words: a list of words for the current line to be merged with the previous line
+    :type curr_words: List[str]
+    :param prev_words: a list of words for the previous line to be merged with the current line
+    :type prev_words: List[str]
+    :return: a flag whether the previous line ends in a line break and the merged word composed of
+    the previous line's last word and current line's first word (or None if the words should not be merged)
+    :rtype: Union[str, None]
+    """
     if len(prev_words) == 0 or len(curr_words) == 0:
+        # print('includes non-word')
         return False, None
     end_word = prev_words[-1]
     start_word = curr_words[0]
     merge_word = end_word + start_word
-    reduce_word = text_helper.remove_hyphen(end_word) + start_word
+    reduce_word = text_helper.remove_line_break_chars(end_word, lbd.line_break_chars) + start_word
+    # print('reduce_word', reduce_word)
     merge_word = merge_word if lbd.all_freq[merge_word] > lbd.all_freq[reduce_word] else reduce_word
+    # print('merge_word', merge_word)
     bigram_freq = lbd.mid_bigram_freq[(end_word, start_word)]
-    if end_word.endswith('-'):
+    if end_word[-1] in lbd.line_break_chars:
         bigram_freq = lbd.mid_bigram_freq[(end_word[:-1], start_word)]
+        print(end_word, lbd.all_freq[end_word], start_word, lbd.all_freq[start_word], (end_word[:-1], start_word),
+              merge_word, lbd.mid_freq[merge_word], 'bigram_freq:', bigram_freq)
     if has_non_merge_word(lbd, end_word, start_word):
+        print('has_none_merge_word', end_word, start_word)
         return False, None
     if end_start_are_bigram(lbd, merge_word, bigram_freq, factor=5):
+        print('end_start_are_bigram', end_word, start_word)
         return False, None
     elif start_is_titleword(start_word):
         if end_start_are_hyphenated_compound(lbd, end_word, start_word, merge_word):
             merge_word = end_word + start_word
+            # print('end_start_are_hyphenated_compound', end_word, start_word)
+            print('end_start_are_hyphenated_compound', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+                  merge_word, lbd.mid_freq[merge_word])
             return True, merge_word
         elif start_word_has_incorrect_titlecase(lbd, end_word, start_word, factor=10):
+            # print('start_word_has_incorrect_titlecase', end_word, start_word)
+            print('start_word_has_incorrect_titlecase', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+                  merge_word, lbd.mid_freq[merge_word])
             return True, merge_word
         else:
+            print('start_word_is_titleword', end_word, start_word)
             return False, None
     elif has_common_merge_end(lbd, end_word, start_word):
+        # print('has_common_merge_end', end_word, start_word, merge_word)
+        print('has_common_merge_end', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+              merge_word, lbd.mid_freq[merge_word])
         return True, merge_word
     elif has_line_break_symbol(lbd, end_word, start_word, merge_word):
+        # print('has_line_break_symbol', end_word, start_word, merge_word)
+        print('has_line_break_symbol', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+              merge_word, lbd.mid_freq[merge_word])
         return True, merge_word
     if end_start_are_bigram(lbd, merge_word, bigram_freq, factor=2):
+        print('end_start_are_bigram', end_word, start_word)
         return False, None
-    if one_is_common_word(lbd, end_word, start_word, common_freq=1000):
+    if end_is_common_word(lbd, end_word, start_word, common_freq=1000):
+        print('end_is_common_word', end_word, start_word)
         return False, None
     elif merge_is_more_common(lbd, end_word, start_word, merge_word):
+        # print('merge_is_more_common', end_word, start_word)
+        print('merge_is_more_common', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+              merge_word, lbd.mid_freq[merge_word])
         return True, merge_word
-    else:
+    elif end_word[-1] in lbd.line_break_chars:
+        # print('merge_line_break', end_word, start_word, merge_word)
+        print('merge line break', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word],
+              merge_word, lbd.mid_freq[merge_word])
+        return True, merge_word
         # show_line_break_context(lbd, end_word, start_word, merge_word)
+    else:
+        print('OTHER', end_word, lbd.mid_freq[end_word], start_word, lbd.mid_freq[start_word], merge_word, lbd.mid_freq[merge_word])
         return False, None
 
 
@@ -255,9 +415,11 @@ def merge_is_more_common(lbd, end_word, start_word, merge_word):
         return False
 
 
-def one_is_common_word(lbd: LineBreakDetector, end_word: str,
+def end_is_common_word(lbd: LineBreakDetector, end_word: str,
                        start_word: str, common_freq: int = 100) -> bool:
-    return lbd.all_freq[end_word] >= common_freq or lbd.all_freq[start_word] >= common_freq
+    # return lbd.all_freq[end_word] >= common_freq or lbd.all_freq[start_word] >= common_freq
+    print(end_word, lbd.mid_freq[end_word], common_freq)
+    return lbd.mid_freq[end_word] >= common_freq
 
 
 def has_line_break_symbol(lbd, end_word, start_word, merge_word):
@@ -387,3 +549,55 @@ def get_typical_start_end_words(lbd: LineBreakDetector,
                 lbd.end_freq[end_word] / lbd.all_freq[end_word] > threshold:
             typical_end_words.add(end_word)
     return typical_start_words, typical_end_words
+
+
+def get_scan_words(scan: PageXMLScan, use_re_word_boundaries: bool = False) -> List[str]:
+    """Return a list of words that are part of a PageXML scan object.
+
+    :param scan: a PageXML scan object
+    :type scan: PageXMLScan
+    :param use_re_word_boundaries: whether to split words of a line using RegEx word boundaries
+    :type use_re_word_boundaries: bool
+    :return: a list of all words on a scan
+    :rtype: List[str]
+    """
+    lines = [line for tr in scan.text_regions for line in tr.get_lines() if line.text is not None]
+    if use_re_word_boundaries:
+        return [w for line in lines for w in re.split(r'\b', line.text) if w != ' ' and w != '']
+    else:
+        return [w for line in lines for w in line.text.split(' ')]
+
+
+def get_word_cat_stats(words, stop_words=None, max_word_length: int = 30,
+                       word_length_bin_size: int = 5):
+    """Calculate word type statistics for the word of a given PageXML scan.
+
+    :param words: a list of words on a scan
+    :type words: List[str]
+    :param stop_words: a list of stopwords
+    :type stop_words: List[str]
+    :param max_word_length: the maximum length of words to be considered a regular word
+    :type max_word_length: int (default 30 characters)
+    :param word_length_bin_size: bin size for grouping words within a character length interval
+    :type word_length_bin_size: int (default per 5 characters)
+    """
+    puncs = set(string.punctuation)
+    num_oversized_words = len([w for w in words if len(w) > max_word_length])
+    word_length_freq = Counter([len(w) for w in words if len(w) <= max_word_length])
+    word_cat_stats = {
+        'num_words': len(words),
+        'num_number_words': len([w for w in words if w.isdigit()]),
+        'num_title_words': len([w for w in words if w.istitle()]),
+        'num_non_title_words': len([w for w in words if w.istitle() is False]),
+        'num_stop_words': len([w for w in words if w in stop_words]) if stop_words is not None else None,
+        'num_punctuation_words': len([w for w in words if all(j in puncs for j in w)]),
+        'num_oversized_words': num_oversized_words
+    }
+    word_length_bin = word_length_bin_size
+    word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
+    for wl in range(1, max_word_length+1):
+        if wl == word_length_bin:
+            word_length_bin += word_length_bin_size
+            word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
+        word_cat_stats[f'num_words_length_{word_length_bin}'] += word_length_freq[wl]
+    return word_cat_stats

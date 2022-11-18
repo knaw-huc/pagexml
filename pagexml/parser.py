@@ -232,8 +232,18 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
 
 def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
                        encoding: str = 'utf-8') -> PageXMLScan:
-    """Read PageXML from file (or passed separately if read from elsewhere, e.g. tarball)
-    and return a PageXMLScan object."""
+    """Read PageXML from file (or content of file passed separately if read from elsewhere,
+    e.g. tarball) and return a PageXMLScan object.
+
+    :param pagexml_file: filepath to a PageXML file
+    :type pagexml_file: str
+    :param pagexml_data: string representation of PageXML document (corresponding to the content of pagexml_file)
+    :type pagexml_data: str
+    :param encoding: the encoding of the file (default utf-8)
+    :type encoding: str
+    :return: a PageXMLScan object
+    :rtype: PageXMLScan
+    """
     if not pagexml_data:
         pagexml_data = read_pagexml_file(pagexml_file, encoding=encoding)
     scan_json = xmltodict.parse(pagexml_data)

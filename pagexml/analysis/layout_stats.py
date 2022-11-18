@@ -4,6 +4,7 @@ from collections import defaultdict
 
 import numpy as np
 
+import pagexml.parser as pagexml_parser
 import pagexml.model.physical_document_model as pdm
 
 
@@ -382,7 +383,15 @@ def compute_scans_stats(scans: List[pdm.PageXMLScan], stats: Dict[str, Dict[str,
     return stats
 
 
-def compute_pagexml_stats(docs: List[pdm.PageXMLDoc]):
+def compute_pagexml_stats(docs: List[pdm.PageXMLDoc]) -> Dict[str, Dict[str, Counter]]:
+    """Compute statistics on the numbers of PageXML elements that are part of a given
+    list of PageXMLDoc objects.
+
+    :param docs: a list of PageXMLDoc objects
+    :type docs: List[PageXMLDoc]
+    :return: A nested dictionary of statistic per PageXML element type
+    :rtype: Dict[str, Dict[str, Counter]]
+    """
     stats = defaultdict(lambda: defaultdict(Counter))
     type_docs = defaultdict(list)
     for doc in docs:
@@ -400,3 +409,92 @@ def compute_pagexml_stats(docs: List[pdm.PageXMLDoc]):
             compute_lines_stats(type_docs[doc_type], stats)
     return stats
 
+
+def get_line_widths(pagexml_files: List[str], line_width_bin_size: int = 50) -> List[int]:
+    """Return a list of line widths for the lines in a list of PageXML files.
+
+    :param pagexml_files: a list of PageXML filepaths
+    :type pagexml_files: List[str]
+    :param line_width_bin_size: the bin size for grouping lines (default is 50 pixels)
+    :type line_width_bin_size: int
+    :return: a list of line widths
+    :rtype: List[int]
+    """
+    line_widths = []
+    for inv_file in pagexml_files:
+        scan = pagexml_parser.parse_pagexml_file(pagexml_file=inv_file)
+        line_widths += [int(line.coords.w / line_width_bin_size) * line_width_bin_size for line in scan.get_lines()]
+    return line_widths
+
+
+def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int = 50,
+                                    min_ratio: float = 0.5) -> List[int]:
+    """Find the minima in the distribution of line widths relative to the peaks in the distribution.
+    These minima represent the boundaries between clusters of lines within the same line width
+    intervals.
+
+    :param line_widths: a list of PageXML text line widths
+    :type line_widths: List[int]
+    :param line_bin_size: the bin size for grouping lines to establish the line width distribution (default 50 pixels)
+    :type line_bin_size: int
+    :param min_ratio: the minimum ratio between a peak frequency and it's neighbouring minimum to determine
+    if the minimum is a category boundary
+    :type min_ratio: float
+    :return: A list of category boundary points
+    :rtype: List[int]
+    """
+    width_freq = Counter(line_widths)
+    boundary_points = []
+    total_widths = sum(width_freq.values())
+    max_width = max(width_freq.keys())
+    max_freq = max(width_freq.values())
+    curr_max_freq = 0
+    curr_min_freq = max_freq + 1
+    curr_max_width = None
+    curr_min_width = None
+    prev_freq = 0
+
+    for w in range(0, max_width + 1, line_bin_size):
+        f = width_freq[w]
+        if f > curr_max_freq:
+            curr_max_freq = f
+            curr_max_width = w
+        if f < prev_freq and f < curr_min_freq:
+            curr_min_freq = f
+            curr_min_width = w
+        if f > prev_freq and f > curr_min_freq:
+            if (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
+                boundary_points.append((curr_min_width, curr_min_freq))
+                curr_max_freq = 0
+                curr_max_width = 0
+                curr_min_freq = max_freq + 1
+        # print(w, f, prev_freq, curr_min_freq, curr_max_freq, boundary_points)
+        prev_freq = f
+    return [bp[0] for bp in boundary_points]
+
+
+def categorise_line_width(line: pdm.PageXMLTextLine, boundary_points: List[int]) -> int:
+    """Categorise a line based on its width and a list of line width boundary points."""
+    for bi, boundary_point in enumerate(boundary_points):
+        if boundary_point > line.coords.w:
+            return bi
+    return len(boundary_points)
+
+
+def get_line_width_stats(lines: List[pdm.PageXMLTextLine], boundary_points: List[int]) -> Counter:
+    """Return a Counter object with statistics of the number of lines categorised according
+    to a list of category break points (line widths that are the boundary between categories
+    of line width).
+
+    :param lines: A list of PageXML text lines
+    :type lines: List[PageXMLTextLine]
+    :param boundary_points: A list of line width category boundary points
+    :type boundary_points: List[int]
+    :return: A counter with the number of lines per line width interval
+    :rtype: Counter
+    """
+    line_width_stats = Counter()
+    for line_width_cat in range(0, len(boundary_points) + 1):
+        line_width_stats[line_width_cat] = 0
+    line_width_stats.update([categorise_line_width(line, boundary_points) for line in lines])
+    return line_width_stats

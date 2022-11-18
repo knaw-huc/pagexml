@@ -308,23 +308,44 @@ def write_pagexml_to_line_format(pagexml_docs: List[pdm.PageXMLTextRegion], outp
                 fh.write(f"{doc_id}\t{line_id}\t{line_text}\n")
 
 
-def read_line_format_file(line_format_files: Union[str, List[str]]) -> Generator[Tuple[str, str, str], None, None]:
+def read_line_format_file(line_format_files: Union[str, List[str]],
+                          headers: List[str] = None) -> Generator[Tuple[str, str, str], None, None]:
     if isinstance(line_format_files, str):
         line_format_files = [line_format_files]
     for line_format_file in line_format_files:
         with gzip.open(line_format_file, 'rt') as fh:
-            for line in fh:
-                yield line.strip().split('\t')
+            for li, line in enumerate(fh):
+                row = line.strip().split('\t')
+                if headers is None:
+                    yield row
+                else:
+                    if len(row) > len(headers):
+                        raise IndexError(f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
+                                         f"has {len(row)} columns")
+                    yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
+
+
+class LineIterable:
+
+    def __init__(self, line_format_files: Union[str, List[str]], headers: List[str] = None):
+        self.line_format_files = line_format_files
+        self.headers = headers
+
+    def __iter__(self):
+        line_iterator = read_line_format_file(line_format_files=self.line_format_files,
+                                              headers=self.headers)
+        for line in line_iterator:
+            yield line
 
 
 def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
-                   end_word: str, merge_word: str, line_break_char: str = '-') -> str:
+                   end_word: str, merge_word: str, line_break_chars: str = '-') -> str:
     line_text = line.text
-    if len(line_text) >= 2 and line_text.endswith(line_break_char*2):
+    if len(line_text) >= 2 and line_text[-1] in line_break_chars and line_text[-2] in line_break_chars:
         # remove the redundant line break char
         line_text = line_text[:-1]
     if do_merge:
-        if line_text[-1] == line_break_char and merge_word.startswith(end_word) is False:
+        if line_text[-1] in line_break_chars and merge_word.startswith(end_word) is False:
             # the merge word does not contain a line break char, so remove it from the line
             # before adding it to the text
             line_text = line_text[:-1]
@@ -333,10 +354,10 @@ def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
             # well, so leave it in.
             line_text = line.text
     else:
-        # no need to meed so add line with trailing whitespace
-        if line_text[-1] == line_break_char and len(line_text) >= 2 and line_text[-2] != ' ':
+        # no need to merge so add line with trailing whitespace
+        if line_text[-1] in line_break_chars and len(line_text) >= 2 and line_text[-2] != ' ':
             # the line break char at the end is trailing, so disconnect it from the preceding word
-            line_text = line_text[:-1] + f' {line_break_char} '
+            line_text = line_text[:-1] + f' {line_text[-1]} '
         else:
             line_text = line_text + ' '
     return line_text
@@ -353,12 +374,24 @@ def make_line_range(text: str, line: pdm.PageXMLTextLine, line_text: str) -> Dic
 
 def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                           lbd: text_stats.LineBreakDetector) -> Tuple[Union[str, None], List[Dict[str, any]]]:
+    """Turn the text lines in a region into a single paragraph of text, with a list of line ranges
+    that indicates how the text of each line corresponds to character offsets in the paragraph.
+
+    :param lines: a list of PageXML text lines belonging to the same text region
+    :type lines: List[PageXMLTextLine]
+    :param lbd: a line break detector object
+    :type lbd: LineBreakDetector
+    :return: a paragraph of text and a list of line ranges that indicates how the text of each line
+    corresponds to character offsets in the paragraph.
+    :rtype: Tuple[str, List[Dict[str, any]]
+    """
     text = ''
     line_ranges = []
     if len(lines) == 0:
         return None, []
     prev_line = lines[0]
-    prev_words = text_helper.get_line_words(prev_line.text) if prev_line.text else []
+    prev_words = text_helper.get_line_words(prev_line.text, line_break_chars=lbd.line_break_chars) \
+        if prev_line.text else []
     if len(lines) > 1:
         for curr_line in lines[1:]:
             if curr_line.text is None:
@@ -368,10 +401,13 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                 prev_line_text = prev_line.text if prev_line.text else ''
             else:
                 curr_words = text_helper.get_line_words(curr_line.text,
-                                                       line_break_char=lbd.line_break_char)
+                                                        line_break_chars=lbd.line_break_chars)
                 if prev_line.text is not None:
                     do_merge, merge_word = text_stats.determine_line_break(lbd, curr_words, prev_words)
-                    prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word)
+                    # print(do_merge, merge_word)
+                    prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word,
+                                                    line_break_chars=lbd.line_break_chars)
+                    # print(prev_line_text)
                 else:
                     prev_line_text = ''
             line_range = make_line_range(text, prev_line, prev_line_text)
@@ -388,7 +424,18 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
 
 
 def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = False,
-                line_break_char: str = '-'):
+                line_break_char: str = '-') -> pdm.PageXMLTextLine:
+    """Returns a PageXMLTextline object that is the merge of a list of PageXMLTextlines.
+
+    :param lines: a list of PageXML text lines
+    :type lines: List[PageXMLTextline]
+    :param remove_line_break: flag indicating whether line break characters should be removed
+    :type remove_line_break: bool
+    :param line_break_char: the character that is used as a line break
+    :type line_break_char: str
+    :return: a PageXML text line object
+    :rtype: PageXMLTextline
+    """
     coords = pdm.parse_derived_coords(lines)
     text = ''
     for li, curr_line in enumerate(lines):

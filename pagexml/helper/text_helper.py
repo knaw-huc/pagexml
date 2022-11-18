@@ -10,6 +10,8 @@ import pagexml.model.physical_document_model as pdm
 
 
 class SkipGram:
+    """A skipgram object containing the skipgram string, its offset in the text and
+    the length of the string in the text (including the skips)."""
 
     def __init__(self, skipgram_string: str, offset: int, skipgram_length: int):
         self.string = skipgram_string
@@ -42,15 +44,17 @@ def text2skipgrams(text: str, ngram_size: int = 2, skip_size: int = 2) -> Genera
     :rtype: Generator[tuple]"""
     if ngram_size <= 0 or skip_size < 0:
         raise ValueError('ngram_size must be a positive integer, skip_size must be a positive integer or zero')
-    indexes = [i for i in range(0, ngram_size+skip_size)]
-    skipgram_combinations = [combination for combination in combinations(indexes[1:], ngram_size-1)]
-    for offset in range(0, len(text)-1):
-        window = text[offset:offset+ngram_size+skip_size]
+    indexes = [i for i in range(0, ngram_size + skip_size)]
+    skipgram_combinations = [combination for combination in combinations(indexes[1:], ngram_size - 1)]
+    for offset in range(0, len(text) - 1):
+        window = text[offset:offset + ngram_size + skip_size]
         for skipgram, skipgram_length in insert_skips(window, skipgram_combinations):
             yield SkipGram(skipgram, offset, skipgram_length)
 
 
 class LineReader:
+    """A Line Reader class that turns a list of PageXML files, PageXML objects, or a PageXML line file
+    into an iterable over the lines."""
 
     def __init__(self, pagexml_files: Union[str, List[str]] = None,
                  pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
@@ -87,7 +91,7 @@ class LineReader:
             self.pagexml_docs = parser.parse_pagexml_files(self.pagexml_files)
         for pagexml_doc in self.pagexml_docs:
             for line in pagexml_doc.get_lines():
-                yield {"id": line.id, "text": line.text}
+                yield {"doc_id": pagexml_doc.id, "id": line.id, "text": line.text}
 
 
 # SPLIT_PATTERN = r'[ \.,\!\?\(\)\[\]\{\}"\':;]+'
@@ -95,21 +99,41 @@ class LineReader:
 #     return [word for word in re.split(split_pattern, line) if word != '']
 
 
-def get_line_words(line, line_break_char: str = '-'):
+def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: str = '-') -> List[str]:
+    """Return a list of the words for a given line.
+
+    :param line: a line of text (string or PageXMLTextline)
+    :type line: Union[str, PageXMLTextline]
+    :param line_break_chars: a string of one or more line break characters
+    :type line_break_chars: str
+    :return: a list of words
+    :rtype: List[str]
+    """
     new_terms = []
-    if line.endswith(f'{line_break_char}{line_break_char}'):
-        line = line[:-1]
-    elif line.endswith(f' {line_break_char}'):
-        line = line[:-2] + line_break_char
+    if line is None or line == '':
+        return new_terms
+    if line[-1] in line_break_chars and len(line) >= 2:
+        if line[-2] in line_break_chars:
+            line = line[:-1]
+        elif line[-2] == ' ':
+            line = line[:-2] + line[-1]
+    # if line.endswith(f'{line_break_chars}{line_break_chars}'):
+    #     line = line[:-1]
+    # elif line.endswith(f' {line_break_chars}'):
+    #     line = line[:-2] + line_break_chars
     terms = [term for term in re.split(r'\b', line) if term != '']
     for ti, term in enumerate(terms):
         if ti == 0:
             new_terms.append(term)
         else:
             prev_term = terms[ti - 1]
-            if term[0] == line_break_char and prev_term[0].isalpha():
+            # if term[0] == '-' and prev_term[0].isalpha():
+            #     new_terms[-1] = new_terms[-1] + term.strip()
+            # elif term[0].isalpha() and prev_term[-1] == '-':
+            #     new_terms[-1] = new_terms[-1] + term
+            if term[0] in line_break_chars and prev_term[0].isalpha():
                 new_terms[-1] = new_terms[-1] + term.strip()
-            elif term[0].isalpha() and prev_term[-1] == line_break_char:
+            elif term[0].isalpha() and prev_term[-1] in line_break_chars:
                 new_terms[-1] = new_terms[-1] + term
             elif term == ' ':
                 continue
@@ -118,12 +142,21 @@ def get_line_words(line, line_break_char: str = '-'):
     return new_terms
 
 
-def get_page_lines_words(page: pdm.PageXMLPage) -> Generator[List[str], None, None]:
+def get_page_lines_words(page: pdm.PageXMLPage, line_break_chars='-') -> Generator[List[str], None, None]:
+    """Return a generator object yielding lists of words per line of a PageXML Page.
+
+    :param page: a PageXML page object
+    :type page: PageXMLPage
+    :param line_break_chars: a string of one or more line break characters
+    :type line_break_chars: str
+    :return: a generator object yielding a list of words per page line
+    :rtype: Generator[List[str], None, None]
+    """
     for line in page.get_lines():
         if line.text is None:
             continue
         try:
-            words = get_line_words(line.text)
+            words = get_line_words(line.text, line_break_chars=line_break_chars)
         except TypeError:
             print(line.text)
             raise
@@ -140,6 +173,14 @@ def split_line_words(words: List[str]) -> Tuple[List[str], List[str], List[str]]
     return start_words, mid_words, end_words
 
 
+def remove_line_break_chars(word: str, line_break_chars='-=:') -> str:
+    if word[-1] in line_break_chars:
+        if len(word) >= 2 and word[-2] in line_break_chars:
+            return word[:-2]
+        return word[:-1]
+    return word
+
+
 def remove_hyphen(word: str) -> str:
     if word[-1] in {'-', '=', ':', }:
         if len(word) >= 2 and word[-2:] == '--':
@@ -152,7 +193,23 @@ def find_term_in_context(term: str,
                          line_reader: LineReader,
                          max_hits: int = -1,
                          context_size: int = 3,
-                         ignorecase: bool = True):
+                         ignorecase: bool = True) -> Union[Generator[str, None, None], None]:
+    """Find a term and its context in text lines from a line reader iterable.
+    The term can include wildcard symbol at either the start or end of the term, or both.
+
+    :param term: a term to find in a list of lines
+    :type: str
+    :param line_reader: an iterable for a list of lines
+    :type line_reader: LineReader
+    :param max_hits: the maximum number of term matches to return
+    :type max_hits: int
+    :param context_size: the number of words before and after each term to return as context
+    :type context_size: int
+    :param ignorecase: flag to indicate whether case should be ignored
+    :type ignorecase: bool
+    :return: a generator yield occurrences of the term with its context
+    :type: Generator[str, None, None]
+    """
     pre_regex = r'(\w+\W+){,' + f'{context_size}' + r'}\b('
     post_regex = r')\b(\W+\w+){,' + f'{context_size}' + '}'
     pre_width = context_size * 10
@@ -163,6 +220,8 @@ def find_term_in_context(term: str,
     if term.endswith('*'):
         match_term = match_term[:-1] + r'\w*'
     for doc in line_reader:
+        if 'text' not in doc or doc['text'] is None:
+            continue
         if ignorecase:
             re_gen = re.finditer(pre_regex + match_term + post_regex, doc['text'], re.IGNORECASE)
         else:
@@ -176,7 +235,7 @@ def find_term_in_context(term: str,
                 'pre': pre,
                 'post': post,
                 'context': f"{pre: >{pre_width}}{main}{post}",
-                'doc_id': doc["doc_id"]
+                'doc_id': doc['doc_id']
             }
             num_contexts += 1
             yield context
@@ -190,6 +249,7 @@ def vector_length(skipgram_freq):
 
 
 class Vocabulary:
+    """A Vocabulary class to map terms to identifiers."""
 
     def __init__(self):
         self.term_id = {}
@@ -237,6 +297,7 @@ def get_skip_coocs(seq_ids: List[str], skip_size: int = 1) -> Generator[Tuple[in
 
 
 class SkipCooccurrence:
+    """A class to count the co-occurrence frequency of word skipgrams."""
 
     def __init__(self, vocabulary: Vocabulary, skip_size: int = 1):
         self.cooc_freq = defaultdict(int)
@@ -265,6 +326,21 @@ class SkipgramSimilarity:
 
     def __init__(self, ngram_length: int = 3, skip_length: int = 0, terms: List[str] = None,
                  max_length_diff: int = 2):
+        """A class to index terms by their character skipgrams and to find similar terms for a given
+        input term based on the cosine similarity of their skipgram overlap.
+
+        :param ngram_length: the number of characters per ngram
+        :type ngram_length: int
+        :param skip_length: the maximum number of characters to skip
+        :type skip_length: int
+        :param terms: a list of terms
+        :type terms: List[str]
+        :param max_length_diff: the maximum difference in length between a search term and a term in the
+        index to be considered a match. This is an efficiency parameter to reduce the number of candidate
+        similar terms to ones that are roughly similar in length to the search term.
+        :type max_length_diff: int
+        :
+        """
         self.ngram_length = ngram_length
         self.skip_length = skip_length
         self.vocabulary = Vocabulary()
@@ -280,6 +356,13 @@ class SkipgramSimilarity:
         self.skipgram_index = defaultdict(lambda: defaultdict(Counter))
 
     def index_terms(self, terms: List[str], reset_index: bool = True):
+        """Index a list of terms.
+
+        :param terms: a list of term to index
+        :type terms: List[str]
+        :param reset_index: whether to reset the index before indexing or to keep the existing index
+        :type reset_index: bool
+        """
         if reset_index is True:
             self._reset_index()
         self.vocabulary.index_terms(terms)
@@ -321,6 +404,16 @@ class SkipgramSimilarity:
         return dot_product
 
     def rank_similar(self, term: str, top_n: int = 10):
+        """Return a ranked list of similar terms from the index for a given input term,
+        based on their character skipgram cosine similarity.
+
+        :param term: a term (any string) to match against the indexed terms
+        :type term: str
+        :param top_n: the number of highest ranked terms to return
+        :type top_n: int (default 10)
+        :return: a ranked list of terms and their similarity scores
+        :rtype: List[Tuple[str, float]]
+        """
         dot_product = self._compute_dot_product(term)
         top_terms = []
         for term_id in sorted(dot_product, key=lambda t: dot_product[t], reverse=True):

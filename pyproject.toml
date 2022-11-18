@@ -19,7 +19,6 @@ packages = [{ include = "pagexml" }]
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.11"
-icecream = "^2.1.2"
 python-dateutil = "^2.8.2"
 xmltodict = "^0.12.0"
 numpy = "^1.22.3"
