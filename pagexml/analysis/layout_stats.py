@@ -21,7 +21,7 @@ def same_column(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc) -> bool:
     else:
         # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
         # Note: this doesn't work for short adjacent lines within the same column
-        return pdm.horizontal_overlap(element1.coords, element2.coords) > (element1.coords.w / 2)
+        return pdm.get_horizontal_overlap(element1.coords, element2.coords) > (element1.coords.w / 2)
 
 
 def get_baseline_y(line: pdm.PageXMLTextLine) -> List[int]:
@@ -410,20 +410,30 @@ def compute_pagexml_stats(docs: List[pdm.PageXMLDoc]) -> Dict[str, Dict[str, Cou
     return stats
 
 
-def get_line_widths(pagexml_files: List[str], line_width_bin_size: int = 50) -> List[int]:
+def get_line_widths(pagexml_files: List[str] = None,
+                    pagexml_docs: List[pdm.PageXMLTextRegion] = None,
+                    line_width_bin_size: int = 50) -> List[int]:
     """Return a list of line widths for the lines in a list of PageXML files.
 
     :param pagexml_files: a list of PageXML filepaths
     :type pagexml_files: List[str]
+    :param pagexml_docs: a list of PageXML document objects
+    :type pagexml_docs: List[PageXMLTextRegion]
     :param line_width_bin_size: the bin size for grouping lines (default is 50 pixels)
     :type line_width_bin_size: int
     :return: a list of line widths
     :rtype: List[int]
     """
     line_widths = []
-    for inv_file in pagexml_files:
-        scan = pagexml_parser.parse_pagexml_file(pagexml_file=inv_file)
-        line_widths += [int(line.coords.w / line_width_bin_size) * line_width_bin_size for line in scan.get_lines()]
+    if pagexml_files is not None:
+        for inv_file in pagexml_files:
+            scan = pagexml_parser.parse_pagexml_file(pagexml_file=inv_file)
+            lines = scan.get_lines()
+            line_widths += [int(line.coords.w / line_width_bin_size) * line_width_bin_size for line in lines]
+    elif pagexml_docs is not None:
+        for pagexml_doc in pagexml_docs:
+            lines = pagexml_doc.get_lines()
+            line_widths += [int(line.coords.w / line_width_bin_size) * line_width_bin_size for line in lines]
     return line_widths
 
 

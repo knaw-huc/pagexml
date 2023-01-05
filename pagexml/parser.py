@@ -30,6 +30,8 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
     if isinstance(textline["Word"], dict):
         textline["Word"] = [textline["Word"]]
     for word_dict in textline["Word"]:
+        if 'TextEquiv' not in word_dict or word_dict['TextEquiv'] is None:
+            continue
         if isinstance(word_dict["TextEquiv"]["Unicode"], str):
             unicode_string = word_dict["TextEquiv"]["Unicode"]
         elif isinstance(word_dict["TextEquiv"]["Unicode"], dict):
@@ -247,7 +249,11 @@ def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
     if not pagexml_data:
         pagexml_data = read_pagexml_file(pagexml_file, encoding=encoding)
     scan_json = xmltodict.parse(pagexml_data)
-    scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+    try:
+        scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+    except BaseException:
+        print(f'Error parsing file {pagexml_file}')
+        raise
     scan_doc.metadata['filename'] = pagexml_file
     return scan_doc
 

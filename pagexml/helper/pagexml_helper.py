@@ -309,11 +309,15 @@ def write_pagexml_to_line_format(pagexml_docs: List[pdm.PageXMLTextRegion], outp
 
 
 def read_line_format_file(line_format_files: Union[str, List[str]],
-                          headers: List[str] = None) -> Generator[Tuple[str, str, str], None, None]:
+                          headers: List[str] = None,
+                          has_header: bool = False) -> Generator[Tuple[str, str, str], None, None]:
     if isinstance(line_format_files, str):
         line_format_files = [line_format_files]
     for line_format_file in line_format_files:
         with gzip.open(line_format_file, 'rt') as fh:
+            if has_header is True or headers is None:
+                header_line = next(fh)
+                headers = header_line.strip().split('\t')
             for li, line in enumerate(fh):
                 row = line.strip().split('\t')
                 if headers is None:

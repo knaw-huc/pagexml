@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Union, Generator, Iterable
+from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
 import re
 import gzip
 import math
@@ -58,10 +58,12 @@ class LineReader:
 
     def __init__(self, pagexml_files: Union[str, List[str]] = None,
                  pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
-                 pagexml_line_file: Union[str, List[str]] = None):
+                 pagexml_line_file: Union[str, List[str]] = None,
+                 line_file_headers: List[str] = None):
         self.pagexml_files = []
         self.pagexml_docs = []
         self.pagexml_line_file = []
+        self.line_file_headers = line_file_headers
         if pagexml_line_file:
             if isinstance(pagexml_line_file, list):
                 self.pagexml_line_file = pagexml_line_file
@@ -77,16 +79,18 @@ class LineReader:
 
     def __iter__(self) -> Generator[Dict[str, str], None, None]:
         if self.pagexml_line_file:
-            for line_file in self.pagexml_line_file:
-                with gzip.open(line_file, 'rt') as fh:
-                    for li, line in enumerate(fh):
-                        try:
-                            doc_id, line_id, line_text = line.strip().split('\t', 2)
-                            yield {"doc_id": doc_id, "line_id": line_id, "text": line_text}
-                        except ValueError:
-                            print(f"line {li} in file {self.pagexml_line_file}:")
-                            print(line)
-                            raise
+            for li, line in enumerate(read_lines_from_line_files(self.pagexml_line_file)):
+                if self.line_file_headers is not None:
+                    cols = line.strip().split('\t')
+                    yield {header: cols[hi] for hi, header in enumerate(self.line_file_headers)}
+                else:
+                    try:
+                        doc_id, line_id, line_text = line.strip().split('\t', 2)
+                        yield {"doc_id": doc_id, "line_id": line_id, "text": line_text}
+                    except ValueError:
+                        print(f"line {li} in file {self.pagexml_line_file}:")
+                        print(line)
+                        raise
         if len(self.pagexml_files) > 0:
             self.pagexml_docs = parser.parse_pagexml_files(self.pagexml_files)
         for pagexml_doc in self.pagexml_docs:
@@ -94,12 +98,19 @@ class LineReader:
                 yield {"doc_id": pagexml_doc.id, "id": line.id, "text": line.text}
 
 
+def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, None, None]:
+    for line_file in pagexml_line_files:
+        with gzip.open(line_file, 'rt') as fh:
+            for line in fh:
+                yield line
+
+
 # SPLIT_PATTERN = r'[ \.,\!\?\(\)\[\]\{\}"\':;]+'
 # def get_line_words(line, split_pattern: str = SPLIT_PATTERN) -> List[str]:
 #     return [word for word in re.split(split_pattern, line) if word != '']
 
 
-def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: str = '-') -> List[str]:
+def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: Union[str, Set[str]] = '-') -> List[str]:
     """Return a list of the words for a given line.
 
     :param line: a line of text (string or PageXMLTextline)
@@ -173,12 +184,15 @@ def split_line_words(words: List[str]) -> Tuple[List[str], List[str], List[str]]
     return start_words, mid_words, end_words
 
 
-def remove_line_break_chars(word: str, line_break_chars='-=:') -> str:
-    if word[-1] in line_break_chars:
-        if len(word) >= 2 and word[-2] in line_break_chars:
-            return word[:-2]
-        return word[:-1]
-    return word
+def remove_line_break_chars(end_word: str, start_word: str, line_break_chars='-=:') -> str:
+    if end_word[-1] in line_break_chars:
+        if len(end_word) >= 2 and end_word[-2] in line_break_chars:
+            end_word = end_word[:-2]
+        else:
+            end_word = end_word[:-1]
+    if start_word[0] in line_break_chars:
+        start_word = start_word[1:]
+    return end_word + start_word
 
 
 def remove_hyphen(word: str) -> str:
@@ -403,7 +417,7 @@ class SkipgramSimilarity:
             dot_product[term_id] = dot_product[term_id] / (term_vl * self.vector_length[term_id])
         return dot_product
 
-    def rank_similar(self, term: str, top_n: int = 10):
+    def rank_similar(self, term: str, top_n: int = 10, score_cutoff: float = 0.5):
         """Return a ranked list of similar terms from the index for a given input term,
         based on their character skipgram cosine similarity.
 
@@ -411,12 +425,16 @@ class SkipgramSimilarity:
         :type term: str
         :param top_n: the number of highest ranked terms to return
         :type top_n: int (default 10)
+        :param score_cutoff: the minimum similarity score after which to cutoff the ranking
+        :type score_cutoff: float
         :return: a ranked list of terms and their similarity scores
         :rtype: List[Tuple[str, float]]
         """
         dot_product = self._compute_dot_product(term)
         top_terms = []
         for term_id in sorted(dot_product, key=lambda t: dot_product[t], reverse=True):
+            if dot_product[term_id] < score_cutoff:
+                break
             term = self.vocabulary.id_term[term_id]
             top_terms.append((term, dot_product[term_id]))
             if len(top_terms) == top_n:
