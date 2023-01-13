@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Dict, List, Set, Tuple, Union
 from collections import defaultdict
+import json
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -300,8 +301,11 @@ def parse_derived_coords(document_list: list) -> Coords:
 
 
 def coords_list_to_hull_coords(coords_list):
+    print(coords_list)
     points = np.array([point for coords in coords_list for point in coords.points])
+    print(points)
     edges = points_to_hull_edges(points)
+    print(edges)
     hull_points = edges_to_hull_points(edges)
     return Coords(hull_points)
 
@@ -468,6 +472,12 @@ class PageXMLWord(PageXMLDoc):
         if doc_type:
             self.add_type(doc_type)
 
+    def __repr__(self):
+        content_string = f"id={self.id}, type={self.type}, text={self.text}"
+        if self.conf is not None:
+            content_string += f", conf={self.conf}"
+        return f"{self.__class__.__name__}({content_string})"
+
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
@@ -495,6 +505,10 @@ class PageXMLTextLine(PageXMLDoc):
         self.set_as_parent(self.words)
         if doc_type:
             self.add_type(doc_type)
+
+    def __repr__(self):
+        content_string = f"id={self.id}, type={self.type}, text={self.text}"
+        return f"{self.__class__.__name__}({content_string})"
 
     def __lt__(self, other: PageXMLTextLine):
         """For sorting text lines. Assumptions: reading from left to right,
@@ -581,6 +595,11 @@ class PageXMLTextRegion(PageXMLDoc):
             self.set_text_regions_in_reader_order()
         if doc_type:
             self.add_type(doc_type)
+
+    def __repr__(self):
+        stats = json.dumps(self.stats)
+        content_string = f"\n\tid={self.id}, \n\ttype={self.type}, \n\tstats={stats}"
+        return f"{self.__class__.__name__}({content_string}\n)"
 
     def __lt__(self, other: PageXMLTextRegion):
         """For sorting text regions. Assumptions: reading from left to right,

@@ -8,7 +8,7 @@ import pagexml.parser as pagexml_parser
 import pagexml.model.physical_document_model as pdm
 
 
-def same_column(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc) -> bool:
+def in_same_column(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc) -> bool:
     """Check if two PageXML elements are part of the same column."""
     if (
             'scan_id' in element1.metadata
@@ -21,7 +21,7 @@ def same_column(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc) -> bool:
     else:
         # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
         # Note: this doesn't work for short adjacent lines within the same column
-        return pdm.get_horizontal_overlap(element1.coords, element2.coords) > (element1.coords.w / 2)
+        return pdm.get_horizontal_overlap(element1, element2) > (element1.coords.w / 2)
 
 
 def get_baseline_y(line: pdm.PageXMLTextLine) -> List[int]:
@@ -194,7 +194,7 @@ def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np
         if ti + 1 < len(text_regions):
             # check if the next textregion is directly below the current one
             next_tr = text_regions[ti + 1]
-            above_next_tr = same_column(curr_tr, next_tr)
+            above_next_tr = in_same_column(curr_tr, next_tr)
         for li, curr_line in enumerate(curr_tr.lines):
             next_line = None
             if li + 1 < len(curr_tr.lines):

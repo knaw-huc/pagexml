@@ -6,7 +6,42 @@ from collections import Counter, defaultdict
 from itertools import combinations
 
 import pagexml.parser as parser
+import pagexml.helper.file_helper as file_helper
 import pagexml.model.physical_document_model as pdm
+
+
+def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, None, None]:
+    for line_file in pagexml_line_files:
+        with gzip.open(line_file, 'rt') as fh:
+            for line in fh:
+                yield line
+
+
+def get_line_format_json(page_doc: pdm.PageXMLTextRegion,
+                         use_outer_textregions: bool = False) -> Generator[Dict[str, any], None, None]:
+    if page_doc.num_text_regions == 0 and page_doc.num_lines > 0:
+        trs = [page_doc]
+    elif use_outer_textregions is True:
+        trs = page_doc.text_regions
+    else:
+        trs = page_doc.get_inner_text_regions()
+    for tr in trs:
+        for line in tr.get_lines():
+            yield {
+                'page_doc_id': page_doc.id,
+                'textregion_id': tr.id,
+                'line_id': line.id,
+                'text': line.text
+            }
+    return None
+
+
+def get_line_format_tsv(page_doc: pdm.PageXMLTextRegion,
+                        headers: List[str],
+                        use_outer_textregions: bool = False) -> Generator[List[str], None, None]:
+    for line_json in get_line_format_json(page_doc, use_outer_textregions=use_outer_textregions):
+        line_list = [line_json[header] for header in headers]
+        yield [val if val is not None else '' for val in line_list]
 
 
 class SkipGram:
@@ -52,57 +87,128 @@ def text2skipgrams(text: str, ngram_size: int = 2, skip_size: int = 2) -> Genera
             yield SkipGram(skipgram, offset, skipgram_length)
 
 
+def make_list(var) -> list:
+    return var if isinstance(var, list) else [var]
+
+
 class LineReader:
-    """A Line Reader class that turns a list of PageXML files, PageXML objects, or a PageXML line file
-    into an iterable over the lines."""
 
     def __init__(self, pagexml_files: Union[str, List[str]] = None,
                  pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
-                 pagexml_line_file: Union[str, List[str]] = None,
-                 line_file_headers: List[str] = None):
+                 pagexml_line_files: Union[str, List[str]] = None,
+                 line_file_headers: List[str] = None,
+                 has_header: bool = True,
+                 use_outer_textregions: bool = False,
+                 groupby: str = None):
+        """A Line Reader class that turns a list of PageXML files, PageXML objects,
+        or a PageXML line file into an iterable over the lines.
+
+        :param pagexml_files: an optional list of PageXML filenames
+        :type pagexml_files: List[str]
+        :param pagexml_docs: an optional list of PageXMLDoc objects
+        :type pagexml_docs: List[PageXMLDoc]
+        :param pagexml_line_files: an optional list of PageXML line files
+        :type pagexml_line_files: List[str]
+        :param line_file_headers: an optional list of column headers to use for headerless line files
+        :type line_file_headers: List[str]
+        :param has_header: whether the pagexml_line_files have a header line
+        :type has_header: bool
+        :param use_outer_textregions: use ID of outer text regions (when True) otherwise ID of inner
+        text regions
+        :type use_outer_textregions: bool
+        :param groupby: group lines by 'page_doc_id' or 'textregion_id'
+        :type groupby: str
+        """
         self.pagexml_files = []
         self.pagexml_docs = []
-        self.pagexml_line_file = []
+        self.pagexml_line_files = []
         self.line_file_headers = line_file_headers
-        if pagexml_line_file:
-            if isinstance(pagexml_line_file, list):
-                self.pagexml_line_file = pagexml_line_file
-            else:
-                self.pagexml_line_file = [pagexml_line_file]
-        if pagexml_files is None and pagexml_docs is None and pagexml_line_file is None:
+        self.has_header = has_header
+        self.use_outer_textregions = use_outer_textregions
+        self.groupby = groupby
+        if pagexml_files is None and pagexml_docs is None and pagexml_line_files is None:
             raise TypeError(f"MUST use one of the following optional arguments: "
                             f"'pagexml_files', 'pagexml_docs' or 'pagexml_line_file'.")
+        if pagexml_line_files:
+            self.pagexml_line_files = make_list(pagexml_line_files)
         if pagexml_files:
-            self.pagexml_files = [pagexml_files] if isinstance(pagexml_files, str) else pagexml_files
-        elif pagexml_docs:
-            self.pagexml_docs = [pagexml_docs] if isinstance(pagexml_docs, pdm.PageXMLDoc) else pagexml_docs
+            self.pagexml_files = make_list(pagexml_files)
+        if pagexml_docs:
+            self.pagexml_docs = make_list(pagexml_docs)
 
     def __iter__(self) -> Generator[Dict[str, str], None, None]:
-        if self.pagexml_line_file:
-            for li, line in enumerate(read_lines_from_line_files(self.pagexml_line_file)):
-                if self.line_file_headers is not None:
-                    cols = line.strip().split('\t')
-                    yield {header: cols[hi] for hi, header in enumerate(self.line_file_headers)}
-                else:
-                    try:
-                        doc_id, line_id, line_text = line.strip().split('\t', 2)
-                        yield {"doc_id": doc_id, "line_id": line_id, "text": line_text}
-                    except ValueError:
-                        print(f"line {li} in file {self.pagexml_line_file}:")
-                        print(line)
-                        raise
-        if len(self.pagexml_files) > 0:
-            self.pagexml_docs = parser.parse_pagexml_files(self.pagexml_files)
-        for pagexml_doc in self.pagexml_docs:
-            for line in pagexml_doc.get_lines():
-                yield {"doc_id": pagexml_doc.id, "id": line.id, "text": line.text}
-
-
-def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, None, None]:
-    for line_file in pagexml_line_files:
-        with gzip.open(line_file, 'rt') as fh:
-            for line in fh:
+        if self.groupby is None:
+            for line in self._iter():
                 yield line
+        else:
+            lines = []
+            prev_id = None
+            for line in self._iter():
+                if line[self.groupby] != prev_id:
+                    if len(lines) > 0:
+                        yield lines
+                    lines = []
+                lines.append(line)
+                prev_id = line[self.groupby]
+            if len(lines) > 0:
+                yield lines
+
+    def _iter(self):
+        if self.pagexml_line_files:
+            for line in self._iter_from_line_file():
+                yield line
+        if len(self.pagexml_files) > 0:
+            pagexml_doc_iterator = parser.parse_pagexml_files(self.pagexml_files)
+            self._iter_from_pagexml_docs(pagexml_doc_iterator)
+        if len(self.pagexml_docs) > 0:
+            self._iter_from_pagexml_docs(self.pagexml_docs)
+
+    def _iter_from_pagexml_docs(self, pagexml_doc_iterator):
+        for pagexml_doc in pagexml_doc_iterator:
+            for line in get_line_format_json(pagexml_doc, use_outer_textregions=self.use_outer_textregions):
+                yield line
+
+    def _iter_from_line_file(self):
+        line_iterator = read_lines_from_line_files(self.pagexml_line_files)
+        if self.has_header is True:
+            header_line = next(line_iterator)
+            self.line_file_headers = header_line.strip().split('\t')
+        elif self.line_file_headers is None:
+            self.line_file_headers = [
+                'doc_id', 'textregion_id', 'line_id', 'text'
+            ]
+        num_splits = len(self.line_file_headers) - 1
+        for li, line in enumerate(line_iterator):
+            try:
+                cols = line.strip().split('\t', num_splits)
+                yield {header: cols[hi] for hi, header in enumerate(self.line_file_headers)}
+            except ValueError:
+                print(f"line {li} in file {self.pagexml_line_files}:")
+                print(line)
+                raise
+
+
+def make_page_extractor(archive_file: str,
+                        show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
+    """Convenience function to return a generator that yield a PageXMLScan object per PageXML file
+    in a zip/tar archive file."""
+    for page_fileinfo, page_data in file_helper.read_page_archive_file(archive_file,
+                                                                       show_progress=show_progress):
+        scan = parser.parse_pagexml_file(pagexml_file=page_fileinfo['archived_filename'], pagexml_data=page_data)
+        yield scan
+
+
+def make_line_format_file(page_docs: Iterable[pdm.PageXMLTextRegion],
+                          line_format_file: str):
+    """Transform a list of PageXMLDoc objects"""
+    headers = ['page_doc_id', 'textregion_id', 'line_id', 'text']
+    with gzip.open(line_format_file, 'wt') as fh:
+        header_string = '\t'.join(headers)
+        fh.write(f'{header_string}\n')
+        for page_doc in page_docs:
+            for line_tsv in get_line_format_tsv(page_doc, headers):
+                line_string = '\t'.join(line_tsv)
+                fh.write(f'{line_string}\n')
 
 
 # SPLIT_PATTERN = r'[ \.,\!\?\(\)\[\]\{\}"\':;]+'
@@ -263,9 +369,9 @@ def vector_length(skipgram_freq):
 
 
 class Vocabulary:
-    """A Vocabulary class to map terms to identifiers."""
 
     def __init__(self):
+        """A Vocabulary class to map terms to identifiers."""
         self.term_id = {}
         self.id_term = {}
         self.term_freq = {}
@@ -281,7 +387,15 @@ class Vocabulary:
         self.id_term = {}
         self.term_freq = {}
 
-    def index_terms(self, terms: List[str], reset_index: bool = True):
+    def add_terms(self, terms: List[str], reset_index: bool = True):
+        """Add a list of terms to the vocabulary. Use 'reset_index=True' to reset
+        the vocabulary before adding the terms.
+
+        :param terms: a list of terms to add to the vocabulary
+        :type terms: List[str]
+        :param reset_index: a flag to indicate whether to empty the vocabulary before adding terms
+        :type reset_index: bool
+        """
         if reset_index is True:
             self.reset_index()
         for term in terms:
@@ -295,30 +409,38 @@ class Vocabulary:
         self.id_term[term_id] = term
 
     def term2id(self, term: str):
+        """Return the term ID for a given term."""
         return self.term_id[term] if term in self.term_id else None
 
     def id2term(self, term_id: int):
+        """Return the term for a given term ID."""
         return self.id_term[term_id] if term_id in self.id_term else None
 
 
-def get_skip_coocs(seq_ids: List[str], skip_size: int = 1) -> Generator[Tuple[int, int], None, None]:
+def get_skip_coocs(seq_ids: List[str], skip_size: int = 0) -> Generator[Tuple[int, int], None, None]:
     for ci, curr_id in enumerate(seq_ids):
-        for offset in range(1, skip_size + 1):
-            if ci + offset >= len(seq_ids):
-                break
-            next_id = seq_ids[ci + offset]
+        for next_id in seq_ids[ci + 1: ci + 2 + skip_size]:
             yield curr_id, next_id
 
 
 class SkipCooccurrence:
-    """A class to count the co-occurrence frequency of word skipgrams."""
 
-    def __init__(self, vocabulary: Vocabulary, skip_size: int = 1):
+    def __init__(self, vocabulary: Vocabulary, skip_size: int = 1, sentences: Iterable[List[str]] = None):
+        """A class to count the co-occurrence frequency of word skipgrams."""
         self.cooc_freq = defaultdict(int)
         self.vocabulary = vocabulary
         self.skip_size: int = skip_size
+        if sentences is not None:
+            self.calculate_skip_cooccurrences(sentences)
 
-    def calculate_skip_cooccurrences(self, sentences: Iterable, skip_size: int = None):
+    def calculate_skip_cooccurrences(self, sentences: Iterable[List[str]], skip_size: int = 0):
+        """Count the frequency of term (skip) co-occurrences for a given list of sentences.
+
+        :param sentences: a list of sentences, where each sentence is itself a list of term tokens
+        :type sentences: Iterable[List[str]
+        :param skip_size: the maximum number of skips to allow between co-occurring terms
+        :type skip_size: int
+        """
         for sent in sentences:
             seq_ids = [self.vocabulary.term2id(t) for t in sent]
             self.cooc_freq.update(get_skip_coocs(seq_ids, skip_size=skip_size))
@@ -370,7 +492,10 @@ class SkipgramSimilarity:
         self.skipgram_index = defaultdict(lambda: defaultdict(Counter))
 
     def index_terms(self, terms: List[str], reset_index: bool = True):
-        """Index a list of terms.
+        """Make a frequency index of the skip grams for a given list of terms.
+        By default, indexing is cumulative, that is, everytime you call index_terms
+        with a list of terms, they are added to the index. Use 'reset_index=True' to
+        reset the index before indexing the given terms.
 
         :param terms: a list of term to index
         :type terms: List[str]
@@ -379,7 +504,7 @@ class SkipgramSimilarity:
         """
         if reset_index is True:
             self._reset_index()
-        self.vocabulary.index_terms(terms)
+        self.vocabulary.add_terms(terms)
         for term in terms:
             self._index_term_skips(term)
 
