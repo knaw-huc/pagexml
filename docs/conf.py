@@ -12,21 +12,17 @@
 #
 import os
 import sys
-import tomllib
 
 sys.path.insert(0, os.path.abspath('../'))
 
-with open("../pyproject.toml", "rb") as f:
-    toml_data = tomllib.load(f)
-config = toml_data['tool']['poetry']
 
 # -- Project information -----------------------------------------------------
-project = config['name']
+project = 'pagexml-tools'
 copyright = '2023, KNAW-HuC'
-author = " ".join(config['authors'])
+author = "Marijn Koolen, Bram Buitendijk"
 
 # The full version, including alpha/beta/rc tags
-release = config['version']
+release = '0.2.1'
 
 # -- General configuration ---------------------------------------------------
 
