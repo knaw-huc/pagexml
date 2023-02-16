@@ -3,23 +3,23 @@ import traceback
 
 from icecream import ic
 
-from pagexml.model.physical_document_model import pretty_print_textregion
+from pagexml.helper.pagexml_helper import pretty_print_textregion
 from pagexml.parser import parse_pagexml_file
 
 
 def main():
     pagexml_basedir = "../golden-agents/pagexml/"
-    testdirs = glob.glob(pagexml_basedir + '[0-9AN]*')
-    # testdirs = glob.glob(pagexml_basedir + '10025*')
-    assert len(testdirs) > 0
-    for d in testdirs:
+    test_dirs = glob.glob(pagexml_basedir + '[0-9AN]*')
+    # test_dirs = glob.glob(pagexml_basedir + '10025*')
+    assert len(test_dirs) > 0
+    for d in test_dirs:
         files = glob.glob(d + '/*.xml')
         assert len(files) > 0
-        for fname in files:
-            ic(fname)
-            print(fname)
+        for file_name in files:
+            ic(file_name)
+            print(file_name)
             try:
-                scan_doc = parse_pagexml_file(fname)
+                scan_doc = parse_pagexml_file(file_name)
                 pretty_print_textregion(scan_doc, print_stats=True)
             except Exception:
                 print(traceback.format_exc())
