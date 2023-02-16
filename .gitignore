@@ -6,3 +6,4 @@ venv
 /out
 dist/
 poetry.lock
+docs/_build/
