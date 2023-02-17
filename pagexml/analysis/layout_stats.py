@@ -32,7 +32,7 @@ def get_baseline_y(line: pdm.PageXMLTextLine) -> List[int]:
 
 
 def line_starts_with_big_capital(line: pdm.PageXMLTextLine) -> bool:
-    """Determine is a line start with a capital in a larger font than the rest,
+    """Determine if a line start with a capital in a larger font than the rest,
     which is aligned at the top, so sticks out at the bottom."""
     # The vertical distance between the lowest and highest baseline point (height) should be large
     if line.baseline.h < 30:

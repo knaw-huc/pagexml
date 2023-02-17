@@ -11,15 +11,8 @@ Some tools for working with `pagexml <https://www.primaresearch.org/tools/PAGELi
 
    source/install
    source/usage
-   source/api
+   source/api/pagexml
 
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 
 Support
 -------
