@@ -904,7 +904,7 @@ def get_doc_words(pagexml_doc: pdm.PageXMLTextRegion, use_re_word_boundaries: bo
     """
     lines = [line for line in pagexml_doc.get_lines() if line.text is not None]
     if use_re_word_boundaries:
-        return [w for line in lines for w in re.split(r'\b', line.text) if w != ' ' and w != '']
+        return [w.replace(' ', '') for line in lines for w in re.split(r'\b', line.text) if w != ' ' and w != '']
     else:
         return [w for line in lines for w in line.text.split(' ')]
 
@@ -937,7 +937,7 @@ def get_word_cat_stats(words, stop_words=None, max_word_length: int = 30,
     word_length_bin = word_length_bin_size
     word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
     for wl in range(1, max_word_length+1):
-        if wl == word_length_bin:
+        if wl > word_length_bin:
             word_length_bin += word_length_bin_size
             word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
         word_cat_stats[f'num_words_length_{word_length_bin}'] += word_length_freq[wl]

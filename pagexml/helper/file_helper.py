@@ -1,4 +1,4 @@
-from typing import Generator, List, Literal, Tuple, Union
+from typing import Dict, Generator, IO, List, Literal, Tuple, Union
 import os
 import tarfile
 from zipfile import ZipFile
@@ -9,7 +9,7 @@ from tqdm import tqdm
 import py7zr
 
 
-ZIP_EXTENSIONS = {'.zip', '.7z'}
+ZIP_EXTENSIONS = {'.zip', '.7z', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2'}
 
 
 def parse_archived_filename(archived_fname: str) -> Tuple[str, str, str]:
@@ -37,6 +37,13 @@ def parse_archived_filename(archived_fname: str) -> Tuple[str, str, str]:
     return archived_fname_dir, archived_fname_file, archived_fname_ext
 
 
+def get_archived_files_infos(archive_handle: Union[TarFile, ZipFile]) -> List[Union[zipfile.ZipInfo, tarfile.TarInfo]]:
+    if isinstance(archive_handle, ZipFile):
+        return archive_handle.infolist()
+    elif isinstance(archive_handle, TarFile):
+        return archive_handle.getmembers()
+
+
 def get_archived_file_names(archive_handle: Union[TarFile, ZipFile]) -> List[str]:
     if isinstance(archive_handle, ZipFile):
         return archive_handle.namelist()
@@ -44,30 +51,82 @@ def get_archived_file_names(archive_handle: Union[TarFile, ZipFile]) -> List[str
         return archive_handle.getnames()
 
 
-def read_archive_handle(archive_fname: str, archive_handle: Union[TarFile, ZipFile],
-                        filenames_only: bool = False) -> Generator[Tuple[dict, Union[str, None]], None, None]:
-    archived_filenames = get_archived_file_names(archive_handle)
-    for archived_fname in archived_filenames:
-        archived_fname_dir, archived_fname_file, archived_fname_ext = parse_archived_filename(archived_fname)
-        with archive_handle.open(archived_fname) as fh:
+def read_tar_handle(archive_fname: str, archive_handle: TarFile, filenames_only: bool = False):
+    # print('reading from tar handle:', archive_fname)
+    for tarfile_info in archive_handle:
+        if tarfile_info.isdir():
+            continue
+        archived_dir, archived_file, archived_file_ext = parse_archived_filename(tarfile_info.name)
+        file_info = {
+            'source_file': [archive_fname],
+            'archived_filename': archived_file,
+            'archived_filepath': tarfile_info.name
+        }
+        if archived_file_ext in ZIP_EXTENSIONS:
+            # print('read_tar_handle\ttarred file is archive:', archived_file)
+            file_reader = archive_handle.extractfile(tarfile_info)
+            for inner_file_info, file_data in read_inner_archive(tarfile_info.name,
+                                                                 archived_file_ext,
+                                                                 file_reader, file_info,
+                                                                 filenames_only=filenames_only):
+                yield inner_file_info, file_data
+
+        elif filenames_only is True:
+            yield file_info, None
+        else:
+            file_reader = archive_handle.extractfile(tarfile_info)
+            file_content = file_reader.read()
+            yield file_info, file_content
+
+
+def read_inner_archive(archived_filename: str, archived_file_ext: str,
+                       archived_file_handle: Union[IO[bytes], bytes],
+                       file_info: Dict[str, any], filenames_only: bool = False):
+    # print('archived_file_ext:', archived_file_ext)
+    archiver, read_mode = get_archiver_mode(archived_filename)
+    # print('archiver:', archiver, '\tread_mode:', read_mode)
+    open_func, read_func = get_archive_functions(archiver)
+    # print('archived_file_handle:', archived_file_handle)
+    # print('open_func:', open_func)
+    if archiver == 'tar':
+        inner_archive_handle = open_func(fileobj=archived_file_handle, mode=read_mode)
+    else:
+        inner_archive_handle = open_func(archived_file_handle, mode=read_mode)
+    # print('inner_archive_handle:', inner_archive_handle)
+    # with open_func(fileobj=archived_file_handle, mode='r') as inner_archive_handle:
+    #     print('inner_archive_handle:', inner_archive_handle)
+    for inner_file_info, file_data in read_func(archived_filename,
+                                                inner_archive_handle,
+                                                filenames_only=filenames_only):
+        inner_file_info['source_file'] = file_info['source_file'] + inner_file_info['source_file']
+        yield inner_file_info, file_data
+    inner_archive_handle.close()
+
+
+def read_zip_handle(archive_fname: str, archive_handle: ZipFile,
+                    filenames_only: bool = False) -> Generator[Tuple[dict, Union[str, None]], None, None]:
+    # archived_filenames = archive_handle.namelist()
+    archived_file_infos = archive_handle.infolist()
+    for archived_file_info in archived_file_infos:
+        archived_filename, is_dir = archived_file_info.filename, archived_file_info.is_dir()
+        if is_dir is True:
+            continue
+        archived_dir, archived_file, archived_file_ext = parse_archived_filename(archived_filename)
+    # for archived_fname in archived_filenames:
+        # archived_fname_dir, archived_fname_file, archived_fname_ext = parse_archived_filename(archived_fname)
+        # file_reader = archive_handle.extract(archived_file_info)
+        with archive_handle.open(archived_filename) as fh:
             file_info = {
                 'source_file': [archive_fname],
-                'archived_filename': archived_fname_file,
-                'archived_filepath': archived_fname
+                'archived_filename': archived_file,
+                'archived_filepath': archived_filename
             }
-            if archived_fname_ext in ZIP_EXTENSIONS:
-                if archived_fname_ext == '.zip':
-                    zip_func = zipfile.ZipFile
-                    read_func = read_archive_handle
-                elif archived_fname_ext == '.7z':
-                    zip_func = py7zr.SevenZipFile
-                    read_func = read_7z_handle
-                with zip_func(fh, mode='r') as inner_zip_handle:
-                    for inner_file_info, file_data in read_func(archived_fname,
-                                                                inner_zip_handle,
-                                                                filenames_only=filenames_only):
-                        inner_file_info['source_file'] = file_info['source_file'] + inner_file_info['source_file']
-                        yield inner_file_info, file_data
+            if archived_file_ext in ZIP_EXTENSIONS:
+                for inner_file_info, file_data in read_inner_archive(archived_filename,
+                                                                     archived_file_ext,
+                                                                     fh, file_info,
+                                                                     filenames_only=filenames_only):
+                    yield inner_file_info, file_data
             else:
                 file_data = fh.read() if filenames_only is False else None
                 yield file_info, file_data
@@ -95,6 +154,21 @@ def read_page_7z_file(page_7z_file: str,
             yield file_info, file_data
 
 
+def get_archive_functions(archiver: str):
+    if archiver == "py7zr":
+        open_func = py7zr.SevenZipFile
+        read_func = read_7z_handle
+    elif archiver == "tar":
+        open_func = tarfile.open
+        read_func = read_tar_handle
+    elif archiver == "zip":
+        open_func = zipfile.ZipFile
+        read_func = read_zip_handle
+    else:
+        raise ValueError(f'unknown archive extension "{archiver}", expected "tar.gz", "tgz", "zip" or "7z"')
+    return open_func, read_func
+
+
 class Extractor:
 
     def __init__(self, page_archive_file: str, filenames_only: bool = False):
@@ -103,19 +177,12 @@ class Extractor:
         self.filenames_only = filenames_only
         self.archiver = archiver
         self.read_mode = read_mode
-        if archiver == "py7zr":
-            self.open_func = py7zr.SevenZipFile
-            self.handle_func = read_7z_handle
-        elif archiver == "tar":
-            self.open_func = tarfile.TarFile
-            self.handle_func = read_archive_handle
-        elif archiver == "zip":
-            self.open_func = zipfile.ZipFile
-            self.handle_func = read_archive_handle
+        self.open_func, self.handle_func = get_archive_functions(archiver)
 
     def __iter__(self):
-        with self.open_func(self.page_archive_file, mode=self.read_mode) as ah:
-            extractor = self.handle_func(self.page_archive_file, ah,
+        # print('Extractor - open_func:', self.open_func)
+        with self.open_func(self.page_archive_file, mode=self.read_mode) as archive_handle:
+            extractor = self.handle_func(self.page_archive_file, archive_handle,
                                          filenames_only=self.filenames_only)
             for file_info, file_data in extractor:
                 yield file_info, file_data

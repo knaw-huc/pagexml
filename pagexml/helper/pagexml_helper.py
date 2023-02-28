@@ -13,6 +13,21 @@ import pagexml.analysis.text_stats as text_stats
 import pagexml.helper.text_helper as text_helper
 
 
+def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
+                     threshold: float = 0.5) -> bool:
+    """Check if two elements have overlapping coordinates."""
+    v_overlap = pdm.get_vertical_overlap(element1, element2)
+    h_overlap = pdm.get_horizontal_overlap(element1, element2)
+    if v_overlap / element1.coords.height > threshold:
+        if h_overlap / element1.coords.width > threshold:
+            return True
+    if v_overlap / element2.coords.height > threshold:
+        if h_overlap / element2.coords.width > threshold:
+            return True
+    else:
+        return False
+
+
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
     doc_text_regions: List[pdm.PageXMLTextRegion] = []
     if doc.reading_order and hasattr(doc, 'text_regions') and doc.text_regions:
@@ -203,7 +218,7 @@ def line_ends_with_word_break(curr_line: pdm.PageXMLTextLine, next_line: pdm.Pag
 
 def json_to_pagexml_word(json_doc: dict) -> pdm.PageXMLWord:
     word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           text=json_doc['text'])
+                           text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None)
     return word
 
 
@@ -213,7 +228,8 @@ def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
     try:
         line = pdm.PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                                    coords=pdm.Coords(json_doc['coords']), baseline=pdm.Baseline(json_doc['baseline']),
-                                   text=json_doc['text'], words=words, reading_order=reading_order)
+                                   text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None,
+                                   words=words, reading_order=reading_order)
         return line
     except TypeError:
         print(json_doc['baseline'])

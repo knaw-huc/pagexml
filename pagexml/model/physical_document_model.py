@@ -301,11 +301,11 @@ def parse_derived_coords(document_list: list) -> Coords:
 
 
 def coords_list_to_hull_coords(coords_list):
-    print(coords_list)
+    # print(coords_list)
     points = np.array([point for coords in coords_list for point in coords.points])
-    print(points)
+    # print(points)
     edges = points_to_hull_edges(points)
-    print(edges)
+    # print(edges)
     hull_points = edges_to_hull_points(edges)
     return Coords(hull_points)
 
@@ -492,11 +492,12 @@ class PageXMLTextLine(PageXMLDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  baseline: Baseline = None, xheight: int = None,
-                 text: str = None, words: List[PageXMLWord] = None,
+                 conf: float = None, text: str = None, words: List[PageXMLWord] = None,
                  reading_order: Dict[int, str] = None):
         super().__init__(doc_id=doc_id, doc_type="line", metadata=metadata,
                          coords=coords, reading_order=reading_order)
         self.main_type = 'line'
+        self.conf = conf
         self.text: Union[None, str] = text
         self.xheight: Union[None, int] = xheight
         self.baseline: Union[None, Baseline] = baseline
@@ -507,7 +508,7 @@ class PageXMLTextLine(PageXMLDoc):
             self.add_type(doc_type)
 
     def __repr__(self):
-        content_string = f"id={self.id}, type={self.type}, text={self.text}"
+        content_string = f"id={self.id}, type={self.type}, text={self.text} conf={self.conf}"
         return f"{self.__class__.__name__}({content_string})"
 
     def __lt__(self, other: PageXMLTextLine):
@@ -522,6 +523,8 @@ class PageXMLTextLine(PageXMLDoc):
     def json(self) -> Dict[str, any]:
         doc_json = super().json
         doc_json['text'] = self.text
+        if self.conf is not None:
+            doc_json['conf'] = self.conf
         if self.baseline:
             doc_json['baseline'] = self.baseline.points
         if self.words:
@@ -897,3 +900,19 @@ def set_parentage(parent_doc: StructureDoc):
         parent_doc.set_as_parent(parent_doc.words)
         for word in parent_doc.words:
             set_parentage(word)
+
+
+def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:
+    """Check if two PageXML elements are part of the same column."""
+    if (
+            'scan_id' in element1.metadata
+            and 'scan_id' in element2.metadata
+            and element1.metadata['scan_id'] != element2.metadata['scan_id']
+    ):
+        return False
+    if 'column_id' in element1.metadata and 'column_id' in element2.metadata:
+        return element1.metadata['column_id'] == element2.metadata['column_id']
+    else:
+        # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
+        # Note: this doesn't work for short adjacent lines within the same column
+        return get_horizontal_overlap(element1, element2) > (element1.coords.w / 2)
