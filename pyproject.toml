@@ -1,8 +1,8 @@
 [tool.poetry]
 name = "pagexml-tools"
-version = "0.1.2-alpha.0"
+version = "0.2.1"
 description = "Utility functions for reading PageXML files"
-authors = ["Marijn Koolen <marijn.koolen@huygens.knaw.nl>","Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
+authors = ["Marijn Koolen <marijn.koolen@huygens.knaw.nl>", "Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
 readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/knaw-huc/pagexml"
@@ -18,15 +18,22 @@ classifiers = [
 packages = [{ include = "pagexml" }]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.11"
-python-dateutil = "^2.8.2"
-xmltodict = "^0.12.0"
+python = "^3.8,<3.12"
 numpy = "^1.22.3"
-scipy = "^1.7.0"
+matplotlib = "^3.7.0"
+pandas = "^1.5.3"
 py7zr = "^0.20.2"
+python-dateutil = "^2.8.2"
+scipy = "^1.7.0"
+seaborn = "^0.12.2"
 tqdm = "^4.64.1"
+xmltodict = "^0.12.0"
 
 [tool.poetry.dev-dependencies]
+
+[tool.poetry.group.test.dependencies]
+icecream = "^2.1.2"
+loguru = "^0.6.0"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/knaw-huc/pagexml/issues"

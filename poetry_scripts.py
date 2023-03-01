@@ -4,12 +4,6 @@ import sys
 project_init_file = 'pagexml/__init__.py'
 
 
-def hello(who=None):
-    if not who:
-        who = sys.argv[1]
-    print(f"Hello, {who}")
-
-
 def version(argv=None):
     if not argv:
         argv = sys.argv

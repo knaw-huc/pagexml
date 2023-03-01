@@ -644,9 +644,9 @@ class PageXMLTextRegion(PageXMLDoc):
         tr_ids = list({region_id: None for _index, region_id in sorted(self.reading_order.items(), key=lambda x: x[0])})
         tr_map = {}
         for text_region in self.text_regions:
-            if text_region.id not in tr_ids:
-                print("reading order:", self.reading_order)
-                raise KeyError(f"text_region with id {text_region.id} is not listed in reading_order")
+            # if text_region.id not in tr_ids:
+            #     print("reading order:", self.reading_order)
+            #     raise KeyError(f"text_region with id {text_region.id} is not listed in reading_order")
             tr_map[text_region.id] = text_region
         return [tr_map[tr_id] for tr_id in tr_ids if tr_id in tr_map]
 

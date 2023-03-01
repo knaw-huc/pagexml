@@ -5,30 +5,14 @@
 
 Some tools for working with `pagexml <https://www.primaresearch.org/tools/PAGELibraries>`_ files.
 
-
-Installation
-------------
-
-using pip:
-
-.. code-block:: bash
-
-    pip install pagexml-tools
-
-using poetry:
-
-.. code-block:: bash
-
-    poetry add pagexml-tools
-
-Read more on `basic usage <usage.html>`_
-
-Documentation
--------------
 .. toctree::
-    :maxdepth: 2
+   :maxdepth: 1
+   :caption: Contents
 
-    Basic Usage <usage>
+   source/install
+   source/usage
+   source/api/pagexml
+
 
 Support
 -------
@@ -40,7 +24,7 @@ https://github.com/knaw-huc/pagexml/issues
 Contribute
 ----------
 
-Want to improve the |pt|? Submit a pull request at:
+Want to improve the |pt| library? Submit a pull request at:
 
 https://github.com/knaw-huc/pagexml
 
@@ -49,7 +33,7 @@ License
 
 The MIT License (MIT)
 
-Copyright 2021, 2022 Koninklijke Nederlandse Akademie van Wetenschappen
+Copyright 2021-2023 Koninklijke Nederlandse Akademie van Wetenschappen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

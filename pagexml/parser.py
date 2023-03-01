@@ -47,11 +47,15 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
         else:
             unicode_string = ""
         try:
+            conf = None
+            if word_dict["TextEquiv"] is not None:
+                if "@conf" in word_dict["TextEquiv"]:
+                    conf = word_dict["TextEquiv"]["@conf"]
             word = PageXMLWord(text=unicode_string,
                                doc_id=word_dict['@id'] if '@id' in word_dict else None,
                                metadata=parse_custom_metadata(word_dict) if '@custom' in word_dict else None,
                                coords=parse_coords(word_dict["Coords"]),
-                               conf=word_dict["TextEquiv"]["@conf"] if "@conf" in word_dict["TextEquiv"] else None)
+                               conf=conf)
             words.append(word)
         except TypeError:
             print('Unexpected format for Word Unicode representation:', word_dict)
