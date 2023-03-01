@@ -1,9 +1,9 @@
-from collections import Counter
 from typing import Dict
+from collections import Counter
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set_theme(style="darkgrid")
@@ -26,5 +26,5 @@ def plot_dist_stats(stats: Dict[str, Dict[str, Counter]]) -> None:
             df = pd.DataFrame(data={field: points})
             x, y = zip(*sorted(stats[doc_type][field].items()))
             sns.histplot(df, ax=axes[fi], x=field, binwidth=binwidth)
-            # sns.kdeplot(ax=axes[fi], x=x, y=y, cut=0)
+            #sns.kdeplot(ax=axes[fi], x=x, y=y, cut=0)
             axes[fi].set_title(field)

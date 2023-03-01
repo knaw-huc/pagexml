@@ -1,7 +1,7 @@
 from __future__ import annotations
-
-from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Union
+from collections import defaultdict
+import json
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -132,30 +132,62 @@ def baseline_is_below(baseline1: Baseline, baseline2: Baseline) -> bool:
     return num_below / num_overlap > 0.5
 
 
-def horizontal_overlap(coords1: Coords, coords2: Coords) -> int:
-    right = min(coords1.right, coords2.right)
-    left = max(coords1.left, coords2.left)
-    return right - left if right > left else 0
-
-
-def vertical_overlap(coords1: Coords, coords2: Coords) -> int:
-    bottom = min(coords1.bottom, coords2.bottom)
-    top = max(coords1.top, coords2.top)
-    return bottom - top if bottom > top else 0
-
-
-def is_vertically_overlapping(region1: PageXMLTextRegion, region2: PageXMLTextRegion) -> bool:
-    v_overlap = vertical_overlap(region1.coords, region2.coords)
-    if region1.coords.height == 0 or region2.coords.height == 0:
+def has_baseline(doc: PageXMLDoc) -> bool:
+    if isinstance(doc, PageXMLTextLine):
+        return doc.baseline is not None
+    else:
         return False
-    return v_overlap / min(region1.coords.height, region2.coords.height) > 0.5
 
 
-def is_horizontally_overlapping(region1: PageXMLTextRegion, region2: PageXMLTextRegion) -> bool:
-    h_overlap = horizontal_overlap(region1.coords, region2.coords)
-    if region1.coords.width == 0 or region2.coords.width == 0:
+def get_horizontal_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
+    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine) and\
+            doc1.baseline is not None and doc2.baseline is not None:
+        overlap_left = max([doc1.baseline.left, doc2.baseline.left])
+        overlap_right = min([doc1.baseline.right, doc2.baseline.right])
+    else:
+        overlap_left = max([doc1.coords.left, doc2.coords.left])
+        overlap_right = min([doc1.coords.right, doc2.coords.right])
+    return overlap_right - overlap_left if overlap_right > overlap_left else 0
+
+
+def get_vertical_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
+    overlap_top = max([doc1.coords.top, doc2.coords.top])
+    overlap_bottom = min([doc1.coords.bottom, doc2.coords.bottom])
+    return overlap_bottom - overlap_top if overlap_bottom > overlap_top else 0
+
+
+def is_vertically_overlapping(region1: PageXMLDoc,
+                              region2: PageXMLDoc,
+                              threshold: float = 0.5) -> bool:
+    if region1.coords is None:
+        raise ValueError(f"No coords for {region1.id}")
+    elif region2.coords is None:
+        raise ValueError(f"No coords for {region2.id}")
+    if region1.coords.height == 0 and region2.coords.height == 0:
         return False
-    return h_overlap / min(region1.coords.width, region2.coords.width) > 0.5
+    elif region1.coords.height == 0:
+        return region2.coords.top <= region1.coords.top <= region2.coords.bottom
+    elif region2.coords.height == 0:
+        return region1.coords.top <= region2.coords.top <= region1.coords.bottom
+    v_overlap = get_vertical_overlap(region1, region2)
+    return v_overlap / min(region1.coords.height, region2.coords.height) > threshold
+
+
+def is_horizontally_overlapping(region1: PageXMLDoc,
+                                region2: PageXMLDoc,
+                                threshold: float = 0.5) -> bool:
+    if region1.coords is None:
+        raise ValueError(f"No coords for {region1.id}")
+    elif region2.coords is None:
+        raise ValueError(f"No coords for {region2.id}")
+    h_overlap = get_horizontal_overlap(region1, region2)
+    if region1.coords.width == 0 and region2.coords.width == 0:
+        return False
+    elif region1.coords.width == 0:
+        return region2.coords.left <= region1.coords.left <= region2.coords.right
+    elif region2.coords.width == 0:
+        return region1.coords.left <= region2.coords.left <= region1.coords.right
+    return h_overlap / min(region1.coords.width, region2.coords.width) > threshold
 
 
 def is_below(region1: PageXMLTextRegion, region2: PageXMLTextRegion, margin: int = 20) -> bool:
@@ -172,6 +204,96 @@ def is_next_to(region1: PageXMLTextRegion, region2: PageXMLTextRegion, margin: i
         return False
 
 
+def horizontal_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
+    if doc1.coords.right < doc2.coords.left:
+        # doc1 is to the left of doc2
+        return doc2.coords.left - doc1.coords.right
+    elif doc1.coords.left > doc2.coords.right:
+        # doc1 is to the right of doc2
+        return doc1.coords.left - doc2.coords.right
+    else:
+        # doc1 and doc2 horizontally overlap
+        return 0
+
+
+def vertical_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
+    if doc1.coords.bottom < doc2.coords.top:
+        # doc1 is above doc2
+        return doc2.coords.top - doc1.coords.bottom
+    elif doc1.coords.top > doc2.coords.bottom:
+        # doc1 is below doc2
+        return doc1.coords.top - doc2.coords.bottom
+    else:
+        # doc1 and doc2 vertically overlap
+        return 0
+
+
+def get_horizontal_diff(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
+    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine) and \
+            doc1.baseline is not None and doc2.baseline is not None:
+        return abs(doc1.baseline.left - doc2.baseline.left)
+    else:
+        return abs(doc1.coords.left - doc2.coords.left)
+
+
+def get_horizontal_diff_ratio(doc1: PageXMLDoc, doc2: PageXMLDoc) -> float:
+    horizontal_diff = get_horizontal_diff(doc1, doc2)
+    max_right = max(doc1.coords.right, doc2.coords.right)
+    min_left = min(doc1.coords.left, doc2.coords.left)
+    return horizontal_diff / (max_right - min_left)
+
+
+def get_horizontal_overlap_ratio(doc1: PageXMLDoc, doc2: PageXMLDoc) -> float:
+    horizontal_overlap = get_horizontal_overlap(doc1, doc2)
+    max_right = max(doc1.coords.right, doc2.coords.right)
+    min_left = min(doc1.coords.left, doc2.coords.left)
+    return horizontal_overlap / (max_right - min_left)
+
+
+def get_vertical_diff(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
+    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine) and \
+            doc1.baseline is not None and doc2.baseline is not None:
+        return abs(doc1.baseline.top - doc2.baseline.top)
+    else:
+        return abs(doc1.coords.top - doc2.coords.top)
+
+
+def get_vertical_diff_ratio(doc1: PageXMLDoc, doc2: PageXMLDoc) -> float:
+    vertical_diff = get_vertical_diff(doc1, doc2)
+    max_bottom = max(doc1.coords.bottom, doc2.coords.bottom)
+    min_top = min(doc1.coords.top, doc2.coords.top)
+    return vertical_diff / (max_bottom - min_top)
+
+
+def get_vertical_overlap_ratio(doc1: PageXMLDoc, doc2: PageXMLDoc) -> float:
+    vertical_overlap = get_vertical_overlap(doc1, doc2)
+    max_bottom = max(doc1.coords.bottom, doc2.coords.bottom)
+    min_top = min(doc1.coords.top, doc2.coords.top)
+    return vertical_overlap / (max_bottom - min_top)
+
+
+def sort_lines(line1: PageXMLTextLine, line2: PageXMLTextLine, as_column: bool = True):
+    if get_horizontal_overlap(line1, line2):
+        if get_vertical_overlap(line1, line2):
+            # check which orientation dominates the difference
+            horizontal_ratio = get_horizontal_diff_ratio(line1, line2)
+            vertical_ratio = get_vertical_diff_ratio(line1, line2)
+            if vertical_ratio < 0.2 and horizontal_ratio > 0.8:
+                return line1.coords.left < line2.coords.left
+            else:
+                return line1.coords.top < line2.coords.top
+        else:
+            return line1.is_below(line2) is False
+    elif get_vertical_overlap(line1, line2):
+        return line1.coords.left < line2.coords.left
+    elif as_column is True:
+        # assume lines in a single column, so read from top to bottom
+        return line1.coords.top < line2.coords.top
+    else:
+        # assume lines in multiple columns, so read from left to right
+        return line1.coords.left < line2.coords.left
+
+
 def parse_derived_coords(document_list: list) -> Coords:
     """Derive scan coordinates for a composite document based on the list of documents it contains.
     A convex hull is drawn around all points of all contained documents."""
@@ -179,8 +301,11 @@ def parse_derived_coords(document_list: list) -> Coords:
 
 
 def coords_list_to_hull_coords(coords_list):
+    # print(coords_list)
     points = np.array([point for coords in coords_list for point in coords.points])
+    # print(points)
     edges = points_to_hull_edges(points)
+    # print(edges)
     hull_points = edges_to_hull_points(edges)
     return Coords(hull_points)
 
@@ -347,6 +472,12 @@ class PageXMLWord(PageXMLDoc):
         if doc_type:
             self.add_type(doc_type)
 
+    def __repr__(self):
+        content_string = f"id={self.id}, type={self.type}, text={self.text}"
+        if self.conf is not None:
+            content_string += f", conf={self.conf}"
+        return f"{self.__class__.__name__}({content_string})"
+
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
@@ -361,11 +492,12 @@ class PageXMLTextLine(PageXMLDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  baseline: Baseline = None, xheight: int = None,
-                 text: str = None, words: List[PageXMLWord] = None,
+                 conf: float = None, text: str = None, words: List[PageXMLWord] = None,
                  reading_order: Dict[int, str] = None):
         super().__init__(doc_id=doc_id, doc_type="line", metadata=metadata,
                          coords=coords, reading_order=reading_order)
         self.main_type = 'line'
+        self.conf = conf
         self.text: Union[None, str] = text
         self.xheight: Union[None, int] = xheight
         self.baseline: Union[None, Baseline] = baseline
@@ -375,25 +507,24 @@ class PageXMLTextLine(PageXMLDoc):
         if doc_type:
             self.add_type(doc_type)
 
+    def __repr__(self):
+        content_string = f"id={self.id}, type={self.type}, text={self.text} conf={self.conf}"
+        return f"{self.__class__.__name__}({content_string})"
+
     def __lt__(self, other: PageXMLTextLine):
         """For sorting text lines. Assumptions: reading from left to right,
         top to bottom. If two lines are horizontally overlapping, sort from
         top to bottom, even if the upper lines is more horizontally indented."""
         if other == self:
             return False
-        if horizontal_overlap(self.coords, other.coords):
-            return self.is_below(other) is False
-        elif vertical_overlap(self.coords, other.coords):
-            return self.coords.left < other.coords.left
-        elif self.coords.left < other.coords.left:
-            return True
-        else:
-            return self.coords.top < other.coords.top
+        return sort_lines(self, other, as_column=True)
 
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
         doc_json['text'] = self.text
+        if self.conf is not None:
+            doc_json['conf'] = self.conf
         if self.baseline:
             doc_json['baseline'] = self.baseline.points
         if self.words:
@@ -417,7 +548,7 @@ class PageXMLTextLine(PageXMLDoc):
     def is_below(self, other: PageXMLTextLine) -> bool:
         """Test if the baseline of this line is directly below the baseline of the other line."""
         # if there is no horizontal overlap, this line is not directly below the other
-        if not horizontal_overlap(self.baseline, other.baseline):
+        if not get_horizontal_overlap(self, other):
             # print("NO HORIZONTAL OVERLAP")
             return False
         # if the bottom of this line is above the top of the other line, this line is above the other
@@ -433,10 +564,10 @@ class PageXMLTextLine(PageXMLDoc):
 
     def is_next_to(self, other: PageXMLTextLine) -> bool:
         """Test if this line is vertically aligned with the other line."""
-        if vertical_overlap(self.coords, other.coords) == 0:
+        if get_vertical_overlap(self, other) == 0:
             # print("NO VERTICAL OVERLAP")
             return False
-        if horizontal_overlap(self.coords, other.coords) > 40:
+        if get_horizontal_overlap(self, other) > 40:
             # print("TOO MUCH HORIZONTAL OVERLAP", horizontal_overlap(self.coords, other.coords))
             return False
         if self.baseline.top > other.baseline.bottom + 10:
@@ -467,6 +598,11 @@ class PageXMLTextRegion(PageXMLDoc):
             self.set_text_regions_in_reader_order()
         if doc_type:
             self.add_type(doc_type)
+
+    def __repr__(self):
+        stats = json.dumps(self.stats)
+        content_string = f"\n\tid={self.id}, \n\ttype={self.type}, \n\tstats={stats}"
+        return f"{self.__class__.__name__}({content_string}\n)"
 
     def __lt__(self, other: PageXMLTextRegion):
         """For sorting text regions. Assumptions: reading from left to right,
@@ -515,9 +651,16 @@ class PageXMLTextRegion(PageXMLDoc):
         return [tr_map[tr_id] for tr_id in tr_ids if tr_id in tr_map]
 
     def set_text_regions_in_reader_order(self):
+        tr_ids = [tr.id for tr in self.text_regions]
         for order_number in self.reading_order:
             text_region_id = self.reading_order[order_number]
             self.reading_order_number[text_region_id] = order_number
+        for tr_id in tr_ids:
+            if tr_id not in self.reading_order_number:
+                # there is a text_region that was not in the original PageXML output:
+                # ignore reading order
+                self.reading_order = None
+                return None
         self.text_regions = self.get_text_regions_in_reading_order()
 
     def get_inner_text_regions(self) -> List[PageXMLTextRegion]:
@@ -757,3 +900,19 @@ def set_parentage(parent_doc: StructureDoc):
         parent_doc.set_as_parent(parent_doc.words)
         for word in parent_doc.words:
             set_parentage(word)
+
+
+def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:
+    """Check if two PageXML elements are part of the same column."""
+    if (
+            'scan_id' in element1.metadata
+            and 'scan_id' in element2.metadata
+            and element1.metadata['scan_id'] != element2.metadata['scan_id']
+    ):
+        return False
+    if 'column_id' in element1.metadata and 'column_id' in element2.metadata:
+        return element1.metadata['column_id'] == element2.metadata['column_id']
+    else:
+        # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
+        # Note: this doesn't work for short adjacent lines within the same column
+        return get_horizontal_overlap(element1, element2) > (element1.coords.w / 2)

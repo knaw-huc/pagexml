@@ -1,25 +1,33 @@
-import glob
-import re
-from datetime import datetime
 from typing import Generator, List, Dict, Union
+from datetime import datetime
+import glob
+import json
+import re
 
 import xmltodict
 from dateutil.parser import parse as date_parse
 
 from pagexml.model.physical_document_model import Baseline, Coords, parse_derived_coords
 from pagexml.model.physical_document_model import PageXMLScan, PageXMLTextLine, PageXMLTextRegion, PageXMLWord
+from pagexml.helper.file_helper import read_page_archive_file
 
 
 def parse_coords(coords: dict) -> Union[Coords, None]:
     if coords is None:
         return None
     if '@points' in coords and coords['@points'] != '':
-        return Coords(points=coords['@points'])
+        try:
+            return Coords(points=coords['@points'])
+        except ValueError as err:
+            message = f'{err} in "@points": "{coords["@points"]}"'
+            raise ValueError(message)
     else:
         return None
 
 
 def parse_baseline(baseline: dict) -> Baseline:
+    if baseline['@points'] == "":
+        raise ValueError('Empty points attribute in baseline element')
     return Baseline(points=baseline['@points'])
 
 
@@ -30,8 +38,12 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
     if isinstance(textline["Word"], dict):
         textline["Word"] = [textline["Word"]]
     for word_dict in textline["Word"]:
-        if "TextEquiv" in word_dict:
-            unicode_string = parse_text_equiv(word_dict["TextEquiv"])
+        if 'TextEquiv' not in word_dict or word_dict['TextEquiv'] is None:
+            continue
+        if isinstance(word_dict["TextEquiv"]["Unicode"], str):
+            unicode_string = word_dict["TextEquiv"]["Unicode"]
+        elif isinstance(word_dict["TextEquiv"]["Unicode"], dict):
+            unicode_string = word_dict["TextEquiv"]["Unicode"]['#text']
         else:
             unicode_string = ""
         try:
@@ -54,38 +66,46 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
 def parse_text_equiv(text_equiv: dict) -> Union[str, None]:
     if isinstance(text_equiv, str):
         return text_equiv
-    elif isinstance(text_equiv, dict):
-        if 'Unicode' in text_equiv:
-            text_equiv = text_equiv['Unicode']
-        elif 'PlainText' in text_equiv:
-            text_equiv = text_equiv['PlainText']
-        else:
-            return None
-        if isinstance(text_equiv, dict):
-            return text_equiv['#text']
-        elif isinstance(text_equiv, str):
-            return text_equiv
-        else:
-            return None
+    elif text_equiv is None:
+        return None
+    elif 'Unicode' in text_equiv:
+        return text_equiv['Unicode']
+    elif 'PlainText' in text_equiv:
+        return text_equiv['PlainText']
     else:
         return None
 
 
 def parse_textline(textline: dict) -> PageXMLTextLine:
     text = parse_text_equiv(textline['TextEquiv']) if 'TextEquiv' in textline else None
-    return PageXMLTextLine(
-        xheight=int(textline['@xheight']) if '@xheight' in textline else None,
-        doc_id=textline['@id'] if '@id' in textline else None,
-        metadata=parse_custom_metadata(textline)
-        if '@custom' in textline
-        else None,
-        coords=parse_coords(textline['Coords']),
-        baseline=parse_baseline(textline['Baseline'])
-        if 'Baseline' in textline
-        else None,
-        text=text,
-        words=parse_line_words(textline),
-    )
+    try:
+        return PageXMLTextLine(
+            xheight=int(textline['@xheight']) if '@xheight' in textline else None,
+            doc_id=textline['@id'] if '@id' in textline else None,
+            metadata=parse_custom_metadata(textline)
+            if '@custom' in textline
+            else None,
+            coords=parse_coords(textline['Coords']),
+            baseline=parse_baseline(textline['Baseline'])
+            if 'Baseline' in textline
+            else None,
+            text=text,
+            conf=parse_conf(textline['TextEquiv']) if 'TextEquiv' in textline else None,
+            words=parse_line_words(textline),
+        )
+    except ValueError as err:
+        message = f'Error parsing TextLine:\n{json.dumps(textline, indent=4)}\n{err}'
+        raise ValueError(message)
+
+
+def parse_conf(text_element: dict) -> Union[float, None]:
+    if '@conf' in text_element:
+        if text_element['@conf'] == '':
+            return None
+        else:
+            return float(text_element['@conf'])
+    else:
+        return None
 
 
 def parse_textline_list(textline_list: list) -> List[PageXMLTextLine]:
@@ -121,7 +141,7 @@ def parse_custom_metadata(text_element: Dict[str, any]) -> Dict[str, any]:
     return metadata
 
 
-def parse_textregion(text_region_dict: dict) -> PageXMLTextRegion:
+def parse_textregion(text_region_dict: dict) -> Union[PageXMLTextRegion, None]:
     text_region = PageXMLTextRegion(
         doc_id=text_region_dict['@id'] if '@id' in text_region_dict else None,
         orientation=float(text_region_dict['@orientation']) if '@orientation' in text_region_dict else None,
@@ -141,12 +161,18 @@ def parse_textregion(text_region_dict: dict) -> PageXMLTextRegion:
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.lines)
         if child == 'TextRegion':
-            if isinstance(text_region_dict['TextRegion'], list):
-                text_region.text_regions = parse_textregion_list(text_region_dict['TextRegion'])
-            else:
-                text_region.text_regions = [parse_textregion(text_region_dict['TextRegion'])]
+            text_region.text_regions = []
+            if isinstance(text_region_dict['TextRegion'], list) is False:
+                text_region_dict['TextRegion'] = [text_region_dict['TextRegion']]
+            for tr in parse_textregion_list(text_region_dict['TextRegion']):
+                if tr is not None:
+                    text_region.text_regions.append(tr)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.text_regions)
+    if text_region.coords is None:
+        stats = text_region.stats
+        if sum([stats[field] for field in stats]) == 0:
+            return None
     return text_region
 
 
@@ -161,14 +187,14 @@ def parse_page_metadata(metadata_json: dict) -> dict:
             continue
         if field in ['Created', 'LastChange']:
             if metadata_json[field].isdigit():
-                metadata[field] = datetime.fromtimestamp(int(metadata_json[field]) / 1000)
+                metadata[field] = datetime.fromtimestamp(int(metadata_json[field]) / 1000).isoformat()
             else:
                 try:
-                    metadata[field] = date_parse(metadata_json[field])
+                    metadata[field] = date_parse(metadata_json[field]).isoformat()
                 except ValueError:
                     print('Date format deviation')
                     print(metadata_json)
-                    metadata[field] = date_parse(metadata_json[field])
+                    metadata[field] = date_parse(metadata_json[field]).isoformat()
         elif isinstance(metadata_json[field], dict):
             metadata[field] = metadata_json[field]
         elif metadata_json[field].isdigit():
@@ -208,6 +234,9 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> PageXMLScan:
     doc_id = pagexml_file
     coords, text_regions = None, None
     metadata = {}
+    if 'PcGts' not in scan_json:
+        # print('SCAN_JSON:', scan_json)
+        raise TypeError(f'Not a PageXML file: {pagexml_file}')
     if 'Metadata' in scan_json['PcGts'] and scan_json['PcGts']['Metadata']:
         metadata = parse_page_metadata(scan_json['PcGts']['Metadata'])
     if 'xmlns' in scan_json['PcGts']:
@@ -218,10 +247,12 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> PageXMLScan:
     if scan_json['@imageWidth'] != '0' and scan_json['@imageHeight'] != '0':
         coords = parse_page_image_size(scan_json)
     if 'TextRegion' in scan_json:
-        if isinstance(scan_json['TextRegion'], list):
-            text_regions = parse_textregion_list(scan_json['TextRegion'])
-        else:
-            text_regions = [parse_textregion(scan_json['TextRegion'])]
+        text_regions = []
+        if isinstance(scan_json['TextRegion'], list) is False:
+            scan_json['TextRegion'] = [scan_json['TextRegion']]
+        for tr in parse_textregion_list(scan_json['TextRegion']):
+            if tr is not None:
+                text_regions.append(tr)
     if 'ReadingOrder' in scan_json and scan_json['ReadingOrder']:
         reading_order = parse_page_reading_order(scan_json)
     else:
@@ -243,12 +274,26 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
 
 def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
                        encoding: str = 'utf-8') -> PageXMLScan:
-    """Read PageXML from file (or passed separately if read from elsewhere, e.g. tarball)
-    and return a PageXMLScan object."""
+    """Read PageXML from file (or content of file passed separately if read from elsewhere,
+    e.g. tarball) and return a PageXMLScan object.
+
+    :param pagexml_file: filepath to a PageXML file
+    :type pagexml_file: str
+    :param pagexml_data: string representation of PageXML document (corresponding to the content of pagexml_file)
+    :type pagexml_data: str
+    :param encoding: the encoding of the file (default utf-8)
+    :type encoding: str
+    :return: a PageXMLScan object
+    :rtype: PageXMLScan
+    """
     if not pagexml_data:
         pagexml_data = read_pagexml_file(pagexml_file, encoding=encoding)
     scan_json = xmltodict.parse(pagexml_data)
-    scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+    try:
+        scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+    except BaseException:
+        print(f'Error parsing file {pagexml_file}')
+        raise
     scan_doc.metadata['filename'] = pagexml_file
     return scan_doc
 
@@ -268,11 +313,41 @@ def parse_pagexml_files(pagexml_files: List[str],
                 raise
 
 
-def read_pagexml_dirs(pagexml_dirs: str) -> List[str]:
-    """Return a list of all (Page)XML files within a list of directories."""
+def read_pagexml_dirs(pagexml_dirs: Union[str, List[str]]) -> List[str]:
+    """Return a list of all (Page)XML files within a list of directories.
+
+    :param pagexml_dirs: a list of directories containing PageXML files.
+    :type pagexml_dirs: Union[str, List[str]]
+    """
     pagexml_files = []
     if isinstance(pagexml_dirs, str):
         pagexml_dirs = [pagexml_dirs]
     for pagexml_dir in pagexml_dirs:
         pagexml_files += glob.glob(pagexml_dir + "**/*.xml", recursive=True)
     return pagexml_files
+
+
+def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = False,
+                                     encoding: str = 'utf-8') -> Generator[PageXMLScan, None, None]:
+    """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
+    PageXML file as a PageXMLScan object.
+
+    :param archive_file: filepath of a archive (zip, tar) containing PageXML files
+    :type archive_file: str
+    :param ignore_errors: whether to ignore errors when parsing individual PageXML files
+    :type ignore_errors: bool
+    :param encoding: the encoding of the file (default utf-8)
+    :type encoding: str
+    :return: a PageXMLScan object
+    :rtype: PageXMLScan
+    """
+    for pagefile_info, pagefile_data in read_page_archive_file(archive_file):
+        try:
+            yield parse_pagexml_file(pagefile_info['archived_filename'], pagexml_data=pagefile_data,
+                                     encoding=encoding)
+        except (KeyError, AttributeError, IndexError, ValueError, TypeError) as err:
+            if ignore_errors is True:
+                print(f"Skipping file with parser error: {pagefile_info['archived_filename']}")
+                continue
+            else:
+                raise

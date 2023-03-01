@@ -1,16 +1,31 @@
-import copy
-import gzip
-import re
-import string
-from collections import Counter
 from typing import Dict, Generator, List, Tuple, Union
+from collections import Counter
+import copy
+import re
+import gzip
+import string
 
 import numpy as np
 
+import pagexml.model.physical_document_model as pdm
 import pagexml.analysis.layout_stats as summarise
 import pagexml.analysis.text_stats as text_stats
 import pagexml.helper.text_helper as text_helper
-import pagexml.model.physical_document_model as pdm
+
+
+def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
+                     threshold: float = 0.5) -> bool:
+    """Check if two elements have overlapping coordinates."""
+    v_overlap = pdm.get_vertical_overlap(element1, element2)
+    h_overlap = pdm.get_horizontal_overlap(element1, element2)
+    if v_overlap / element1.coords.height > threshold:
+        if h_overlap / element1.coords.width > threshold:
+            return True
+    if v_overlap / element2.coords.height > threshold:
+        if h_overlap / element2.coords.width > threshold:
+            return True
+    else:
+        return False
 
 
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
@@ -203,7 +218,7 @@ def line_ends_with_word_break(curr_line: pdm.PageXMLTextLine, next_line: pdm.Pag
 
 def json_to_pagexml_word(json_doc: dict) -> pdm.PageXMLWord:
     word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           text=json_doc['text'])
+                           text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None)
     return word
 
 
@@ -213,7 +228,8 @@ def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
     try:
         line = pdm.PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                                    coords=pdm.Coords(json_doc['coords']), baseline=pdm.Baseline(json_doc['baseline']),
-                                   text=json_doc['text'], words=words, reading_order=reading_order)
+                                   text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None,
+                                   words=words, reading_order=reading_order)
         return line
     except TypeError:
         print(json_doc['baseline'])
@@ -246,20 +262,16 @@ def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
     return column
 
 
-def json_to_columns_regions_lines(json_doc: dict) -> Tuple[list, list, list, dict, pdm.Coords]:
+def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
+    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
+        if 'extra' in json_doc else []
     columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
     text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
         if 'text_regions' in json_doc else []
     lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
     coords = pdm.Coords(json_doc['coords']) if 'coords' in json_doc else None
-    return columns, text_regions, lines, reading_order, coords
-
-
-def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
-    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
-        if 'extra' in json_doc else []
-    columns, text_regions, lines, reading_order, coords = json_to_columns_regions_lines(json_doc)
     page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            coords=coords, extra=extra, columns=columns,
                            text_regions=text_regions, lines=lines,
@@ -270,9 +282,14 @@ def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
 
 def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
     pages = [json_to_pagexml_page(page) for page in json_doc['pages']] if 'pages' in json_doc else []
-    columns, text_regions, lines, reading_order, coords = json_to_columns_regions_lines(json_doc)
+    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
+        if 'text_regions' in json_doc else []
+    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
     scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           coords=coords, pages=pages, columns=columns,
+                           coords=pdm.Coords(json_doc['coords']), pages=pages, columns=columns,
                            text_regions=text_regions, lines=lines, reading_order=reading_order)
     pdm.set_parentage(scan)
     return scan
@@ -307,23 +324,48 @@ def write_pagexml_to_line_format(pagexml_docs: List[pdm.PageXMLTextRegion], outp
                 fh.write(f"{doc_id}\t{line_id}\t{line_text}\n")
 
 
-def read_line_format_file(line_format_files: Union[str, List[str]]) -> Generator[Tuple[str, str, str], None, None]:
+def read_line_format_file(line_format_files: Union[str, List[str]],
+                          headers: List[str] = None,
+                          has_header: bool = False) -> Generator[Tuple[str, str, str], None, None]:
     if isinstance(line_format_files, str):
         line_format_files = [line_format_files]
     for line_format_file in line_format_files:
         with gzip.open(line_format_file, 'rt') as fh:
-            for line in fh:
-                yield line.strip().split('\t')
+            if has_header is True or headers is None:
+                header_line = next(fh)
+                headers = header_line.strip().split('\t')
+            for li, line in enumerate(fh):
+                row = line.strip().split('\t')
+                if headers is None:
+                    yield row
+                else:
+                    if len(row) > len(headers):
+                        raise IndexError(f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
+                                         f"has {len(row)} columns")
+                    yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
+
+
+class LineIterable:
+
+    def __init__(self, line_format_files: Union[str, List[str]], headers: List[str] = None):
+        self.line_format_files = line_format_files
+        self.headers = headers
+
+    def __iter__(self):
+        line_iterator = read_line_format_file(line_format_files=self.line_format_files,
+                                              headers=self.headers)
+        for line in line_iterator:
+            yield line
 
 
 def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
-                   end_word: str, merge_word: str, line_break_char: str = '-') -> str:
+                   end_word: str, merge_word: str, line_break_chars: str = '-') -> str:
     line_text = line.text
-    if len(line_text) >= 2 and line_text.endswith(line_break_char * 2):
+    if len(line_text) >= 2 and line_text[-1] in line_break_chars and line_text[-2] in line_break_chars:
         # remove the redundant line break char
         line_text = line_text[:-1]
     if do_merge:
-        if line_text[-1] == line_break_char and merge_word.startswith(end_word) is False:
+        if line_text[-1] in line_break_chars and merge_word.startswith(end_word) is False:
             # the merge word does not contain a line break char, so remove it from the line
             # before adding it to the text
             line_text = line_text[:-1]
@@ -332,10 +374,10 @@ def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
             # well, so leave it in.
             line_text = line.text
     else:
-        # no need to meed so add line with trailing whitespace
-        if line_text[-1] == line_break_char and len(line_text) >= 2 and line_text[-2] != ' ':
+        # no need to merge so add line with trailing whitespace
+        if line_text[-1] in line_break_chars and len(line_text) >= 2 and line_text[-2] != ' ':
             # the line break char at the end is trailing, so disconnect it from the preceding word
-            line_text = line_text[:-1] + f' {line_break_char} '
+            line_text = line_text[:-1] + f' {line_text[-1]} '
         else:
             line_text = line_text + ' '
     return line_text
@@ -352,23 +394,40 @@ def make_line_range(text: str, line: pdm.PageXMLTextLine, line_text: str) -> Dic
 
 def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                           lbd: text_stats.LineBreakDetector) -> Tuple[Union[str, None], List[Dict[str, any]]]:
+    """Turn the text lines in a region into a single paragraph of text, with a list of line ranges
+    that indicates how the text of each line corresponds to character offsets in the paragraph.
+
+    :param lines: a list of PageXML text lines belonging to the same text region
+    :type lines: List[PageXMLTextLine]
+    :param lbd: a line break detector object
+    :type lbd: LineBreakDetector
+    :return: a paragraph of text and a list of line ranges that indicates how the text of each line
+    corresponds to character offsets in the paragraph.
+    :rtype: Tuple[str, List[Dict[str, any]]
+    """
     text = ''
     line_ranges = []
     if len(lines) == 0:
         return None, []
     prev_line = lines[0]
-    prev_words = text_helper.get_line_words(prev_line.text) if prev_line.text else []
+    prev_words = text_helper.get_line_words(prev_line.text, line_break_chars=lbd.line_break_chars) \
+        if prev_line.text else []
     if len(lines) > 1:
         for curr_line in lines[1:]:
             if curr_line.text is None:
+                do_merge = False
+                merge_word = None
                 curr_words = []
                 prev_line_text = prev_line.text if prev_line.text else ''
             else:
                 curr_words = text_helper.get_line_words(curr_line.text,
-                                                        line_break_char=lbd.line_break_char)
+                                                        line_break_chars=lbd.line_break_chars)
                 if prev_line.text is not None:
                     do_merge, merge_word = text_stats.determine_line_break(lbd, curr_words, prev_words)
-                    prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word)
+                    # print(do_merge, merge_word)
+                    prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word,
+                                                    line_break_chars=lbd.line_break_chars)
+                    # print(prev_line_text)
                 else:
                     prev_line_text = ''
             line_range = make_line_range(text, prev_line, prev_line_text)
@@ -385,7 +444,18 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
 
 
 def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = False,
-                line_break_char: str = '-'):
+                line_break_char: str = '-') -> pdm.PageXMLTextLine:
+    """Returns a PageXMLTextline object that is the merge of a list of PageXMLTextlines.
+
+    :param lines: a list of PageXML text lines
+    :type lines: List[PageXMLTextline]
+    :param remove_line_break: flag indicating whether line break characters should be removed
+    :type remove_line_break: bool
+    :param line_break_char: the character that is used as a line break
+    :type line_break_char: str
+    :return: a PageXML text line object
+    :rtype: PageXMLTextline
+    """
     coords = pdm.parse_derived_coords(lines)
     text = ''
     for li, curr_line in enumerate(lines):
@@ -396,3 +466,5 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
+
+
