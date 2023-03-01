@@ -1,16 +1,16 @@
-from typing import Dict, Generator, List, Tuple, Union
-from collections import Counter
 import copy
-import re
 import gzip
+import re
 import string
+from collections import Counter
+from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 
-import pagexml.model.physical_document_model as pdm
 import pagexml.analysis.layout_stats as summarise
 import pagexml.analysis.text_stats as text_stats
 import pagexml.helper.text_helper as text_helper
+import pagexml.model.physical_document_model as pdm
 
 
 def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
@@ -340,8 +340,9 @@ def read_line_format_file(line_format_files: Union[str, List[str]],
                     yield row
                 else:
                     if len(row) > len(headers):
-                        raise IndexError(f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
-                                         f"has {len(row)} columns")
+                        raise IndexError(
+                            f"Missing columns. Header has {len(headers)} columns while line {li + 1} in row "
+                            f"has {len(row)} columns")
                     yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
 
 
@@ -466,5 +467,3 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
-
-

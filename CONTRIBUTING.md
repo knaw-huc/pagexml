@@ -12,7 +12,7 @@ or from within a `poetry shell` just
 version [ patch | minor | major | prepatch | preminor | premajor | prerelease | <valid semver string> ] 
 ```
 
-instead of the default 
+instead of the default
 
 ```
 poetry version

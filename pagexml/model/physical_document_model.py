@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Dict, List, Set, Tuple, Union
-from collections import defaultdict
+
 import json
+from collections import defaultdict
+from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -140,7 +141,7 @@ def has_baseline(doc: PageXMLDoc) -> bool:
 
 
 def get_horizontal_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
-    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine) and\
+    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine) and \
             doc1.baseline is not None and doc2.baseline is not None:
         overlap_left = max([doc1.baseline.left, doc2.baseline.left])
         overlap_right = min([doc1.baseline.right, doc2.baseline.right])

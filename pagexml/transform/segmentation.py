@@ -1,4 +1,5 @@
 from typing import Tuple
+
 import pagexml.model.physical_document_model as pdm
 
 

@@ -2,9 +2,9 @@ from typing import Dict, List, Union
 
 import numpy as np
 
-import pagexml.model.physical_document_model as pdm
-import pagexml.analysis.text_stats as text_stats
 import pagexml.analysis.layout_stats as layout_stats
+import pagexml.analysis.text_stats as text_stats
+import pagexml.model.physical_document_model as pdm
 
 
 def derive_boundary_points(pagexml_doc: pdm.PageXMLTextRegion) -> List[int]:
@@ -18,7 +18,7 @@ def _init_doc_stats(line_width_boundary_points: List[int],
               'num_words', 'num_number_words', 'num_title_words', 'num_non_title_words',
               'num_stop_words', 'num_punctuation_words', 'num_oversized_words']
     doc_stats = {field: [] for field in fields}
-    for length_bin in range(word_length_bin_size, max_word_length+1, word_length_bin_size):
+    for length_bin in range(word_length_bin_size, max_word_length + 1, word_length_bin_size):
         doc_stats[f"num_words_length_{length_bin}"] = []
     for width_range in layout_stats.get_boundary_width_ranges(line_width_boundary_points):
         doc_stats[f"line_width_range_{width_range}"] = []
@@ -65,7 +65,7 @@ def get_doc_stats(pagexml_docs: Union[pdm.PageXMLTextRegion, List[pdm.PageXMLTex
         pagexml_docs = [pagexml_docs]
     for pi, pagexml_doc in enumerate(pagexml_docs):
         pagexml_doc_stats['doc_id'].append(pagexml_doc.id)
-        pagexml_doc_stats['doc_num'].append(pi+1)
+        pagexml_doc_stats['doc_num'].append(pi + 1)
         lines = [line for line in pagexml_doc.get_lines() if line.text is not None]
         words = text_stats.get_doc_words(pagexml_doc, use_re_word_boundaries=use_re_word_boundaries)
         word_stats = text_stats.get_word_cat_stats(words, stop_words=stop_words,

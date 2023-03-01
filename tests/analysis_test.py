@@ -1,4 +1,5 @@
 from unittest import TestCase
+
 import pagexml.analysis.text_stats as text_stats
 
 

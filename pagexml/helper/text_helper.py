@@ -1,10 +1,10 @@
-from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
-import re
 import gzip
+import re
+from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
 
-import pagexml.parser as parser
 import pagexml.helper.file_helper as file_helper
 import pagexml.model.physical_document_model as pdm
+import pagexml.parser as parser
 
 
 def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, None, None]:

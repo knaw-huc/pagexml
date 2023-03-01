@@ -1,4 +1,5 @@
 from unittest import TestCase
+
 import pagexml.helper.text_helper as text_helper
 
 

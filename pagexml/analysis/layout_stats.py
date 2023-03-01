@@ -1,11 +1,11 @@
-from typing import Dict, Generator, List, Tuple, Union
 from collections import Counter
 from collections import defaultdict
+from typing import Dict, Generator, List, Tuple, Union
 
 import numpy as np
 
-import pagexml.parser as pagexml_parser
 import pagexml.model.physical_document_model as pdm
+import pagexml.parser as pagexml_parser
 from pagexml.model.physical_document_model import in_same_column
 
 

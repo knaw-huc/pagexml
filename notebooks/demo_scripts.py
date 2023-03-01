@@ -1,5 +1,5 @@
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.cluster import KMeans
 
 
@@ -35,12 +35,10 @@ def cluster_plot_elbow(df, data_cols, max_clusters: int = 10):
 def plot_line_widths_boundary_points(line_widths, line_width_break_points) -> None:
     fig, ax = plt.subplots(1, 1)
     sns.kdeplot(data=line_widths, ax=ax, clip=(0, max(line_widths)))
-    fig.set_size_inches(16,6)
+    fig.set_size_inches(16, 6)
     plt.vlines(line_width_break_points, 0.0, ax.get_ylim()[1], colors='green', linestyles='dashed')
     return None
 
 
 sns.set_theme()
 sns.set_theme(style="whitegrid", palette="pastel")
-
-

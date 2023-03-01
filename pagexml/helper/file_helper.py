@@ -1,13 +1,12 @@
-from typing import Dict, Generator, IO, List, Literal, Tuple, Union
 import os
 import tarfile
-from zipfile import ZipFile
-from tarfile import TarFile
 import zipfile
+from tarfile import TarFile
+from typing import Dict, Generator, IO, List, Literal, Tuple, Union
+from zipfile import ZipFile
 
-from tqdm import tqdm
 import py7zr
-
+from tqdm import tqdm
 
 ZIP_EXTENSIONS = {'.zip', '.7z', '.tar.gz', '.tgz', '.tar.bz2', '.tbz2'}
 
@@ -112,7 +111,7 @@ def read_zip_handle(archive_fname: str, archive_handle: ZipFile,
         if is_dir is True:
             continue
         archived_dir, archived_file, archived_file_ext = parse_archived_filename(archived_filename)
-    # for archived_fname in archived_filenames:
+        # for archived_fname in archived_filenames:
         # archived_fname_dir, archived_fname_file, archived_fname_ext = parse_archived_filename(archived_fname)
         # file_reader = archive_handle.extract(archived_file_info)
         with archive_handle.open(archived_filename) as fh:
@@ -189,7 +188,7 @@ class Extractor:
 
 
 def get_archiver_mode(page_archive_file: str) -> Tuple[Literal["tar", "zip", "py7zr"],
-                                                       Literal["r", "r:", "r:gz", "r:bz2"]]:
+Literal["r", "r:", "r:gz", "r:bz2"]]:
     archived_fname_dir, archived_fname_file, archived_fname_ext = parse_archived_filename(page_archive_file)
     if archived_fname_ext in {".tar.gz", ".tgz"}:
         return "tar", "r:gz"

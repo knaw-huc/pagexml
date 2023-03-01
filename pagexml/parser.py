@@ -1,15 +1,15 @@
-from typing import Generator, List, Dict, Union
-from datetime import datetime
 import glob
 import json
 import re
+from datetime import datetime
+from typing import Generator, List, Dict, Union
 
 import xmltodict
 from dateutil.parser import parse as date_parse
 
+from pagexml.helper.file_helper import read_page_archive_file
 from pagexml.model.physical_document_model import Baseline, Coords, parse_derived_coords
 from pagexml.model.physical_document_model import PageXMLScan, PageXMLTextLine, PageXMLTextRegion, PageXMLWord
-from pagexml.helper.file_helper import read_page_archive_file
 
 
 def parse_coords(coords: dict) -> Union[Coords, None]:

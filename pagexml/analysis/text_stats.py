@@ -1,16 +1,16 @@
 from __future__ import annotations
-from typing import Dict, Iterable, List, Set, Tuple, Union
+
+import json
+import re
+import string
 from collections import Counter
 from collections import defaultdict
-import re
-import json
-import string
+from typing import Dict, Iterable, List, Set, Tuple, Union
 
 import numpy as np
 
-import pagexml.model.physical_document_model as pdm
 import pagexml.helper.text_helper as text_helper
-
+import pagexml.model.physical_document_model as pdm
 
 _SMALL = 1e-20
 
@@ -575,7 +575,8 @@ class LineBreakDetector(LineWordAnalyser):
             # print(f"{start_word: <20}{freqs}{merge_exist_frac: >8.2f}{merge_freq: >8}")
 
     def _set_common_start_ends(self):
-        for start_word in sorted(self.common_start_merged_with, key=lambda t: self.freq['mid'][t] / self.freq['start'][t]):
+        for start_word in sorted(self.common_start_merged_with,
+                                 key=lambda t: self.freq['mid'][t] / self.freq['start'][t]):
             merge_exist_frac = sum(self.common_start_merged_with[start_word].values()) / self.freq['start'][start_word]
             merge_freq = sum([self.freq['mid'][merged_word]
                               for end_word, merged_word in self.common_start_merged_with[start_word]])
@@ -936,7 +937,7 @@ def get_word_cat_stats(words, stop_words=None, max_word_length: int = 30,
     }
     word_length_bin = word_length_bin_size
     word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
-    for wl in range(1, max_word_length+1):
+    for wl in range(1, max_word_length + 1):
         if wl > word_length_bin:
             word_length_bin += word_length_bin_size
             word_cat_stats[f'num_words_length_{word_length_bin}'] = 0
