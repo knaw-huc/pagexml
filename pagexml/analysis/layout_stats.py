@@ -164,7 +164,7 @@ def average_baseline_height(baseline: pdm.Baseline) -> int:
 
 def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np.ndarray]:
     """Returns a list of line distance numpy arrays. For each line, its distance
-    to the next at 50 pixel intervals is computed and stored in an numpy ndarray.
+    to the next at 50 pixel intervals is computed and stored in a numpy ndarray.
 
     :param text_region: a TextRegion object that contains TextLines
     :type text_region: PageXMLTextRegion
@@ -199,9 +199,9 @@ def get_textregion_avg_line_distance(text_region: pdm.PageXMLTextRegion,
     """Returns the median distance between subsequent lines in a
     textregion object. If the textregion contains smaller textregions, it only
     considers line distances between lines within the same column (i.e. only
-    lines from textregions that are horizontally aligned.
+    lines from textregions that are horizontally aligned.)
 
-    By default the macro-average is returned.
+    By default, the macro-average is returned.
 
     :param text_region: a TextRegion object that contains TextLines
     :type text_region: PageXMLTextRegion
@@ -428,7 +428,7 @@ def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int =
     :type line_widths: List[int]
     :param line_bin_size: the bin size for grouping lines to establish the line width distribution (default 50 pixels)
     :type line_bin_size: int
-    :param min_ratio: the minimum ratio between a peak frequency and it's neighbouring minimum to determine
+    :param min_ratio: the minimum ratio between a peak frequency and its neighbouring minimum to determine
     if the minimum is a category boundary
     :type min_ratio: float
     :return: A list of category boundary points

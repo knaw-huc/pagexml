@@ -319,7 +319,7 @@ class LineCharAnalyser(LineAnalyser):
         """A character frequency analyser of a list of text lines. Four frequencies are calculated:
         - all_freq: the overall frequency of a character
         - start_freq: the frequency of a character as the first character in a text line
-        - mid_freq: the frequency of a character in the middle of in a text line (so neither as the first or
+        - mid_freq: the frequency of a character in the middle of in a text line (so neither as the first nor
         last character of a line)
         - end_freq: the frequency of a character as the last character in a text line
 
@@ -400,7 +400,7 @@ class LineBreakDetector(LineWordAnalyser):
                  ignorecase: bool = False):
         """A line break detector class that uses corpus statistics and a configurable list
         of line break characters to determine, for two subsequent lines, whether the first line ends
-        with a line break (a word break off mid-word on the first line and continued on the second line.
+        with a line break (a word broken off mid-word on the first line and continued on the second line.)
 
         :param min_bigram_word_freq: the minimum frequency of word bigrams to be considered common bigrams
         :type min_bigram_word_freq: int

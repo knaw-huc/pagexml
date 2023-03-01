@@ -45,7 +45,7 @@ def get_doc_stats(pagexml_docs: Union[pdm.PageXMLTextRegion, List[pdm.PageXMLTex
     :type line_width_boundary_points: List[int]
     :param stop_words: a list of stopwords to include in number of stopwords the scan statistics
     :type stop_words: List[str],
-    :param max_word_length: max word length above which words are considered over sized
+    :param max_word_length: max word length above which words are considered oversized
     :type max_word_length: int
     :param doc_num: the number of a doc in a sequence of docs
     :type doc_num: int
