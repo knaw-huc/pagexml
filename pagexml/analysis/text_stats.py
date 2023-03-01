@@ -100,10 +100,10 @@ def compute_keyness(target_counter: Counter, reference_counter: Counter,
     are more common in the target counter than in the reference counter.
 
     :param target_counter: the counter used for token frequencies of the target
-    corpus (possible values: 'all', 'start', 'mid' or 'end')
+        corpus (possible values: 'all', 'start', 'mid' or 'end')
     :type target_counter: str
     :param reference_counter: the counter used for token frequencies of the
-    reference corpus (possible values: 'all', 'start', 'mid' or 'end')
+        reference corpus (possible values: 'all', 'start', 'mid' or 'end')
     :param vocab: an optional vocabulary for which to compute keyness values.
     :type vocab: Iterable[str]
     """
@@ -139,7 +139,8 @@ def compute_complement_keyness(target_analyser: LineAnalyser,
     :param target_analyser: the target LineAnalyser
     :type target_analyser: LineAnalyser
     :param target_counter: the counter used for token frequencies of the target
-    corpus (possible values: 'all', 'start', 'mid' or 'end')
+        corpus (possible values: 'all', 'start', 'mid' or 'end')
+
     :type target_counter: str
     """
     target_counter = target_analyser.freq[target_counter]
@@ -623,7 +624,7 @@ def determine_line_break(lbd: LineBreakDetector, curr_words: List[str],
     :param prev_words: a list of words for the previous line to be merged with the current line
     :type prev_words: List[str]
     :return: a flag whether the previous line ends in a line break and the merged word composed of
-    the previous line's last word and current line's first word (or None if the words should not be merged)
+        the previous line's last word and current line's first word (or None if the words should not be merged)
     :rtype: Union[str, None]
     :param debug: print debugging information
     """

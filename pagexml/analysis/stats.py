@@ -41,7 +41,7 @@ def get_doc_stats(pagexml_docs: Union[pdm.PageXMLTextRegion, List[pdm.PageXMLTex
     :param pagexml_docs: a PageXML document object or a list of PageXML document objects
     :type pagexml_docs: PageXMLTextRegion
     :param line_width_boundary_points: a list of points indicating boundaries between categories of
-    line widths
+        line widths
     :type line_width_boundary_points: List[int]
     :param stop_words: a list of stopwords to include in number of stopwords the scan statistics
     :type stop_words: List[str],

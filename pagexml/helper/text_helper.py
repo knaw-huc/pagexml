@@ -68,7 +68,7 @@ class LineReader:
         :param has_header: whether the pagexml_line_files have a header line
         :type has_header: bool
         :param use_outer_textregions: use ID of outer text regions (when True) otherwise ID of inner
-        text regions
+            text regions
         :type use_outer_textregions: bool
         :param groupby: group lines by 'doc_id' or 'textregion_id'
         :type groupby: str
@@ -148,7 +148,7 @@ class LineReader:
 
 def make_page_extractor(archive_file: str,
                         show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
-    """Convenience function to return a generator that yield a PageXMLScan object per PageXML file
+    """Convenience function to return a generator that yields a PageXMLScan object per PageXML file
     in a zip/tar archive file."""
     for page_fileinfo, page_data in file_helper.read_page_archive_file(archive_file,
                                                                        show_progress=show_progress):

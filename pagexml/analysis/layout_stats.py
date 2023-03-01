@@ -45,6 +45,7 @@ def interpolate_points(p1: Tuple[int, int], p2: Tuple[int, int],
                        step: int = 50) -> Generator[Dict[int, int], None, None]:
     """Determine the x coordinates between a pair of points on a baseline
     and calculate their corresponding y coordinates.
+
     :param p1: a 2D point
     :type p1: Tuple[int, int]
     :param p2: a 2D point
@@ -429,7 +430,7 @@ def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int =
     :param line_bin_size: the bin size for grouping lines to establish the line width distribution (default 50 pixels)
     :type line_bin_size: int
     :param min_ratio: the minimum ratio between a peak frequency and its neighbouring minimum to determine
-    if the minimum is a category boundary
+        if the minimum is a category boundary
     :type min_ratio: float
     :return: A list of category boundary points
     :rtype: List[int]

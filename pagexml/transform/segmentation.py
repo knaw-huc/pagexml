@@ -17,7 +17,7 @@ def is_above_point(page_doc: pdm.PageXMLDoc, point: Tuple[int, int]):
             return True
 
 
-def split_horizonally(page_doc: pdm.PageXMLTextRegion, point: Tuple[int, int]):
+def split_horizontally(page_doc: pdm.PageXMLTextRegion, point: Tuple[int, int]):
     above = []
     below = []
     for tr in page_doc.text_regions:
