@@ -11,6 +11,7 @@ Some tools for working with `pagexml <https://www.primaresearch.org/tools/PAGELi
 
    source/install
    source/usage
+   source/tutorials
    source/api/pagexml
 
 

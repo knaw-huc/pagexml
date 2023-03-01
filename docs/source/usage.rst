@@ -9,4 +9,3 @@ Usage
     filepath = 'example.xml'
     scan = parse_pagexml_file(filepath)
     pretty_print_textregion(scan, print_stats=True)
-
