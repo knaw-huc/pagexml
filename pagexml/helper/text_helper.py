@@ -14,7 +14,7 @@ def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, 
                 yield line
 
 
-def get_bbox_coords(doc: pdm.PageXMLDoc):
+def get_bbox(doc: pdm.PageXMLDoc):
     if doc.coords.points is None:
         return None
     return f"{doc.coords.x},{doc.coords.y},{doc.coords.w},{doc.coords.h}"
@@ -38,9 +38,9 @@ def get_line_format_json(page_doc: pdm.PageXMLTextRegion,
                 'text': line.text
             }
             if add_bounding_box is True:
-                json_doc['doc_coords'] = get_bbox_coords(page_doc)
-                json_doc['textregion_coords'] = get_bbox_coords(tr)
-                json_doc['line_coords'] = get_bbox_coords(line)
+                json_doc['doc_box'] = get_bbox(page_doc)
+                json_doc['textregion_box'] = get_bbox(tr)
+                json_doc['line_box'] = get_bbox(line)
             yield json_doc
     return None
 
@@ -154,7 +154,7 @@ class LineReader(Iterable):
                 'doc_id', 'textregion_id', 'line_id', 'text'
             ]
             if self.add_bounding_box is True:
-                self.line_file_headers.extend(['doc_coords', 'textregion_coords', 'line_coords'])
+                self.line_file_headers.extend(['doc_box', 'textregion_box', 'line_box'])
         for li, line in enumerate(line_iterator):
             try:
                 cols = line.strip('\r\n').split('\t')
@@ -164,6 +164,12 @@ class LineReader(Iterable):
                 line = line.strip('\n')
                 print(f'#{line}#')
                 raise
+
+
+def transform_box_to_coords(box_string: str) -> pdm.Coords:
+    x, y, w, h = [int(part) for part in box_string.split(',')]
+    points = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
+    return pdm.Coords(points)
 
 
 def read_pagexml_docs_from_line_file(line_files: List[str], has_headers: bool = True,
@@ -176,15 +182,20 @@ def read_pagexml_docs_from_line_file(line_files: List[str], has_headers: bool = 
     curr_doc = None
     curr_tr = None
     for li, line_dict in enumerate(line_iterator):
+        doc_coords, tr_coords, line_coords = None, None, None
+        if add_bounding_box is True:
+            doc_coords = transform_box_to_coords(line_dict['doc_box'])
+            tr_coords = transform_box_to_coords(line_dict['textregion_box'])
+            line_coords = transform_box_to_coords(line_dict['line_box'])
         if curr_doc is None or curr_doc != line_dict['doc_id']:
             if curr_doc is not None:
                 yield curr_doc
-            curr_doc = pdm.PageXMLTextRegion(doc_id=line_dict['doc_id'])
+            curr_doc = pdm.PageXMLTextRegion(doc_id=line_dict['doc_id'], coords=doc_coords)
         if curr_tr is None or curr_tr != line_dict['textregion_id']:
-            curr_tr = pdm.PageXMLTextRegion(doc_id=line_dict['textregion_id'])
+            curr_tr = pdm.PageXMLTextRegion(doc_id=line_dict['textregion_id'], coords=tr_coords)
             curr_doc.add_child(curr_tr)
         line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
-                                   text=line_dict['text'])
+                                   text=line_dict['text'], coords=line_coords)
         curr_tr.add_child(line)
     if curr_doc is not None:
         yield curr_doc
@@ -207,7 +218,7 @@ def make_line_format_file(page_docs: Iterable[pdm.PageXMLTextRegion],
     if headers is None:
         headers = [
             'doc_id', 'textregion_id', 'line_id', 'text',
-            'doc_coords', 'textregion_coords', 'line_coords'
+            'doc_box', 'textregion_box', 'line_box'
         ]
     with gzip.open(line_format_file, 'wt') as fh:
         header_string = '\t'.join(headers)
