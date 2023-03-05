@@ -29,17 +29,21 @@ def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
 
 
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
+    """Sort text regions in reading order. If an explicit reading order is given,
+    that is used, otherwise, text regions are sorted top to bottom, left to right."""
     doc_text_regions: List[pdm.PageXMLTextRegion] = []
     if doc.reading_order and hasattr(doc, 'text_regions') and doc.text_regions:
         text_region_ids = [region for _index, region in sorted(doc.reading_order.items(), key=lambda x: x[0])]
         return [tr for tr in sorted(doc.text_regions, key=lambda x: text_region_ids.index(x.id))]
     if hasattr(doc, 'columns') and sorted(doc.columns):
-        doc_text_regions = doc.columns
-    elif hasattr(doc, 'text_regions') and doc.text_regions:
-        doc_text_regions = doc.text_regions
+        doc_text_regions.extend(doc.columns)
+    if hasattr(doc, 'text_regions') and doc.text_regions:
+        doc_text_regions.extend(doc.text_regions)
+    if hasattr(doc, 'extra') and doc.extra:
+        doc_text_regions.extend(doc.extra)
     if doc_text_regions:
         sub_text_regions = []
-        for text_region in sorted(doc_text_regions, key=lambda x: x.coords.left):
+        for text_region in sorted(doc_text_regions, key=lambda x: (x.coords.top, x.coords.left)):
             sub_text_regions += sort_regions_in_reading_order(text_region)
         return sub_text_regions
     elif isinstance(doc, pdm.PageXMLTextRegion):
@@ -91,7 +95,17 @@ def horizontally_merge_lines(lines: List[pdm.PageXMLTextLine]) -> List[pdm.PageX
     return horizontally_merged_lines
 
 
-def sort_lines_in_reading_order(doc: pdm.PageXMLDoc) -> Generator[pdm.PageXMLTextLine, None, None]:
+def sort_lines_in_reading_order(doc: pdm.PageXMLTextRegion,
+                                row_order: bool = False,
+                                reading_direction: str = 'ltr') -> Generator[pdm.PageXMLTextLine, None, None]:
+    if row_order is True:
+        return sort_lines_in_row_reading_order(doc, reading_direction=reading_direction)
+    else:
+        return sort_lines_in_column_reading_order(doc, reading_direction=reading_direction)
+
+
+def sort_lines_in_column_reading_order(doc: pdm.PageXMLDoc,
+                                       reading_direction: str = 'ltr') -> Generator[pdm.PageXMLTextLine, None, None]:
     """Sort the lines of a pdm.PageXML document in reading order.
     Reading order is: columns from left to right, text regions in columns from top to bottom,
     lines in text regions from top to bottom, and when (roughly) adjacent, from left to right."""
@@ -103,10 +117,54 @@ def sort_lines_in_reading_order(doc: pdm.PageXMLDoc) -> Generator[pdm.PageXMLTex
                 line.metadata = {'id': line.id, 'type': ['pagexml', 'line'], 'parent_id': text_region.id}
             if 'column_id' in text_region.metadata and 'column_id' not in line.metadata:
                 line.metadata['column_id'] = text_region.metadata['column_id']
-        stacked_lines = horizontal_group_lines(text_region.lines)
-        for lines in stacked_lines:
-            for line in sorted(lines, key=lambda x: x.coords.left):
-                yield line
+        for line in sort_lines_in_reading_direction(text_region.lines, reading_direction=reading_direction):
+            yield line
+
+
+def sort_lines_in_row_reading_order(doc: pdm.PageXMLTextRegion,
+                                    reading_direction: str = 'ltr') -> Generator[pdm.PageXMLTextLine, None, None]:
+    """Sort the lines of a pdm.PageXML document in row order.
+    Row order is: lines from top to bottom, and when (roughly) adjacent, in the
+    given reading direction."""
+    return sort_lines_in_reading_direction(doc.get_lines(), reading_direction=reading_direction)
+
+
+def sort_lines_in_reading_direction(lines: List[pdm.PageXMLTextLine],
+                                    reading_direction: str = 'ltr') -> Generator[pdm.PageXMLTextLine, None, None]:
+    stacked_lines = horizontal_group_lines(lines)
+    for lines in stacked_lines:
+        if reading_direction == 'ltr':
+            stacked_lines = sorted(lines, key=lambda x: x.coords.left)
+        elif reading_direction == 'rtl':
+            stacked_lines = sorted(lines, key=lambda x: x.coords.right, reverse=True)
+        else:
+            raise ValueError(f'invalid reading direction {reading_direction}, should be "ltr" or "rtl"')
+        for line in stacked_lines:
+            yield line
+
+
+def combine_adjacent_lines(lines: List[pdm.PageXMLTextLine], reading_direction: str,
+                           avg_char_width: float):
+    if reading_direction not in {'ltr', 'rtl'}:
+        raise ValueError(f'invalid reading direction {reading_direction}, should be "ltr" or "rtl"')
+    prev_line = None
+    line_string = ''
+    for curr_line in lines:
+        line_text = curr_line.text if curr_line.text is not None else ''
+        infix_whitespace = ""
+        if prev_line is not None:
+            if reading_direction == 'ltr':
+                indent = curr_line.coords.left - prev_line.coords.right
+            else:
+                indent = prev_line.coords.left - curr_line.coords.right
+            if indent > 0 and avg_char_width > 0:
+                infix_whitespace = " " * int(float(indent) / avg_char_width)
+        if reading_direction == 'ltr':
+            line_string = line_string + infix_whitespace + line_text
+        else:
+            line_string = line_text + infix_whitespace + line_string
+        prev_line = curr_line
+    return line_string
 
 
 def print_textregion_stats(text_region: pdm.PageXMLTextRegion) -> None:
@@ -134,7 +192,8 @@ def print_textregion_stats(text_region: pdm.PageXMLTextRegion) -> None:
     print("--------------------------------------\n")
 
 
-def pretty_print_textregion(text_region: pdm.PageXMLTextRegion, print_stats: bool = False) -> None:
+def pretty_print_textregion(text_region: pdm.PageXMLTextRegion,
+                            reading_direction: str = 'ltr', print_stats: bool = False) -> None:
     """Pretty print the text of a text region, using indentation and
     vertical space based on the average character width and average
     distance between lines. If no corresponding images of the PageXML
@@ -143,6 +202,7 @@ def pretty_print_textregion(text_region: pdm.PageXMLTextRegion, print_stats: boo
 
     :param text_region: a TextRegion object that contains TextLines
     :type text_region: PageXMLTextRegion
+    :param reading_direction: option to set reading direction left-to-right (default) or right-to-left
     :param print_stats: flag to print text_region statistics if set to True
     :type print_stats: bool
     """
@@ -150,24 +210,30 @@ def pretty_print_textregion(text_region: pdm.PageXMLTextRegion, print_stats: boo
         print_textregion_stats(text_region)
     avg_line_distance = summarise.get_textregion_avg_line_distance(text_region)
     avg_char_width = summarise.get_textregion_avg_char_width(text_region)
-    for ti, tr in enumerate(text_region.get_inner_text_regions()):
-        if len(tr.lines) < 2:
-            continue
-        for li, curr_line in enumerate(tr.lines[:-1]):
-            next_line = tr.lines[li + 1]
-            left_indent = (curr_line.coords.left - tr.coords.left)
-            if left_indent > 0 and avg_char_width > 0:
-                preceding_whitespace = " " * int(float(left_indent) / avg_char_width)
-            else:
-                preceding_whitespace = ""
-            distances = summarise.compute_baseline_distances(curr_line.baseline, next_line.baseline)
-            if curr_line.text is None:
-                print()
-            else:
-                print(preceding_whitespace, curr_line.text)
+    pretty_string = ''
+    lines = [line for line in sort_lines_in_reading_order(text_region, reading_direction=reading_direction)]
+    min_left = min([line.coords.left for line in lines])
+    max_right = max([line.coords.right for line in lines])
+    stacked_lines = horizontal_group_lines(lines)
+    prev_stack = None
+    for curr_stack in stacked_lines:
+        line_string = combine_adjacent_lines(curr_stack, reading_direction=reading_direction,
+                                             avg_char_width=avg_char_width)
+        if reading_direction == 'ltr':
+            indent = curr_stack[0].coords.left - min_left
+        else:
+            indent = max_right - curr_stack[0].coords.right
+        preceding_whitespace = " " * int(float(indent) / avg_char_width) if avg_char_width > 0 else ""
+        if reading_direction == 'ltr':
+            pretty_string += f"{preceding_whitespace}{line_string}\n"
+        else:
+            pretty_string += f"{line_string}{preceding_whitespace}\n"
+        if prev_stack is not None:
+            distances = summarise.compute_baseline_distances(prev_stack, curr_stack)
             if np.median(distances) > avg_line_distance * 1.2:
-                print()
-    print()
+                pretty_string += '\n'
+        prev_stack = curr_stack
+    print(pretty_string)
 
 
 def line_ends_with_word_break(curr_line: pdm.PageXMLTextLine, next_line: pdm.PageXMLTextLine,
@@ -341,7 +407,7 @@ def read_line_format_file(line_format_files: Union[str, List[str]],
                 else:
                     if len(row) > len(headers):
                         raise IndexError(
-                            f"Missing columns. Header has {len(headers)} columns while line {li + 1} in row "
+                            f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
                             f"has {len(row)} columns")
                     yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
 
@@ -403,7 +469,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
     :param lbd: a line break detector object
     :type lbd: LineBreakDetector
     :return: a paragraph of text and a list of line ranges that indicates how the text of each line
-        corresponds to character offsets in the paragraph.
+    corresponds to character offsets in the paragraph.
     :rtype: Tuple[str, List[Dict[str, any]]
     """
     text = ''
@@ -467,3 +533,5 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
+
+

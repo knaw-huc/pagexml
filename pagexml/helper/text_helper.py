@@ -68,7 +68,7 @@ class LineReader:
         :param has_header: whether the pagexml_line_files have a header line
         :type has_header: bool
         :param use_outer_textregions: use ID of outer text regions (when True) otherwise ID of inner
-            text regions
+        text regions
         :type use_outer_textregions: bool
         :param groupby: group lines by 'doc_id' or 'textregion_id'
         :type groupby: str
@@ -110,7 +110,7 @@ class LineReader:
             if len(lines) > 0:
                 yield lines
 
-    def _iter(self):
+    def _iter(self) -> Generator[Dict[str, any], None, None]:
         if self.pagexml_line_files:
             for line in self._iter_from_line_file():
                 yield line
@@ -120,12 +120,12 @@ class LineReader:
         if len(self.pagexml_docs) > 0:
             self._iter_from_pagexml_docs(self.pagexml_docs)
 
-    def _iter_from_pagexml_docs(self, pagexml_doc_iterator):
+    def _iter_from_pagexml_docs(self, pagexml_doc_iterator) -> Generator[Dict[str, any], None, None]:
         for pagexml_doc in pagexml_doc_iterator:
             for line in get_line_format_json(pagexml_doc, use_outer_textregions=self.use_outer_textregions):
                 yield line
 
-    def _iter_from_line_file(self):
+    def _iter_from_line_file(self) -> Generator[Dict[str, any], None, None]:
         line_iterator = read_lines_from_line_files(self.pagexml_line_files)
         if self.has_header is True:
             header_line = next(line_iterator)
@@ -146,9 +146,31 @@ class LineReader:
                 raise
 
 
+def read_pagexml_docs_from_line_file(line_files: List[str], headers: List[str] = None) -> pdm.PageXMLTextRegion:
+    """Read lines from one or more PageXML line format files and return them
+    as PageXMLTextLine objects, grouped by their PageXML document."""
+    has_headers = False if headers is None else True
+    line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers, has_header=has_headers)
+    curr_doc = None
+    curr_tr = None
+    for li, line_dict in enumerate(line_iterator):
+        if curr_doc is None or curr_doc != line_dict['doc_id']:
+            if curr_doc is not None:
+                yield curr_doc
+            curr_doc = pdm.PageXMLTextRegion(doc_id=line_dict['doc_id'])
+        if curr_tr is None or curr_tr != line_dict['textregion_id']:
+            curr_tr = pdm.PageXMLTextRegion(doc_id=line_dict['textregion_id'])
+            curr_doc.add_child(curr_tr)
+        line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
+                                   text=line_dict['text'])
+        curr_tr.add_child(line)
+    if curr_doc is not None:
+        yield curr_doc
+
+
 def make_page_extractor(archive_file: str,
                         show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
-    """Convenience function to return a generator that yields a PageXMLScan object per PageXML file
+    """Convenience function to return a generator that yield a PageXMLScan object per PageXML file
     in a zip/tar archive file."""
     for page_fileinfo, page_data in file_helper.read_page_archive_file(archive_file,
                                                                        show_progress=show_progress):

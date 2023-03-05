@@ -95,7 +95,8 @@ def interpolate_baseline_points(points: List[Tuple[int, int]],
     return interpolated_baseline_points
 
 
-def compute_baseline_distances(baseline1: pdm.Baseline, baseline2: pdm.Baseline,
+def compute_baseline_distances(line1: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
+                               line2: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
                                step: int = 50) -> np.ndarray:
     """Compute the vertical distance between two baselines, based on
     their horizontal overlap, using a fixed step size. Interpolated
@@ -106,55 +107,66 @@ def compute_baseline_distances(baseline1: pdm.Baseline, baseline2: pdm.Baseline,
     If two lines have no horizontal overlap, it returns a list with
     a single distance between the average heights of the two baselines
 
-    :param baseline1: the first Baseline object to compare
-    :type baseline1: Baseline
-    :param baseline2: the second Baseline object to compare
-    :type baseline2: Baseline
+    :param line1: the first line (or list of adjacent lines) in the comparison
+    :type line1: PageXMLTextLine
+    :param line2: the second line (or list of adjacent lines) in the comparison
+    :type line2: PageXMLTextLine
     :param step: the step size in pixels for interpolation
     :type step: int
     :return: a list of vertical distances based on horizontal overlap
     :rtype: List[int]
     """
-    if baseline1 is None or baseline2 is None:
+    if isinstance(line1, pdm.PageXMLTextLine):
+        points1 = line1.baseline.points if line1.baseline.points is not None else []
+    else:
+        points1 = [point for line in line1 for point in line.baseline.points if line.baseline.points is not None]
+    if isinstance(line2, pdm.PageXMLTextLine):
+        points2 = line2.baseline.points if line2.baseline.points is not None else []
+    else:
+        points2 = [point for line in line2 for point in line.baseline.points if line.baseline.points is not None]
+    if points1 is None or points2 is None:
         return np.array([])
-    b1_points = interpolate_baseline_points(baseline1.points, step=step)
-    b2_points = interpolate_baseline_points(baseline2.points, step=step)
+    b1_points = interpolate_baseline_points(points1, step=step)
+    b2_points = interpolate_baseline_points(points2, step=step)
     distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
                           if curr_x in b2_points])
     if len(distances) == 0:
-        avg1 = average_baseline_height(baseline1)
-        avg2 = average_baseline_height(baseline2)
+        avg1 = average_baseline_height(line1)
+        avg2 = average_baseline_height(line2)
         distances = np.array([abs(avg1 - avg2)])
     return distances
 
 
-def average_baseline_height(baseline: pdm.Baseline) -> int:
+def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]]) -> int:
     """Compute the average (mean) baseline height for comparing lines that
     are not horizontally aligned.
 
-    :param baseline: the baseline of a TextLine
-    :type baseline: Baseline
+    :param line: a TextLine or a list of adjacent lines
+    :type line: PageXMLTextLine
     :return: the average (mean) baseline height across all its baseline points
     :rtype: int
     """
     total_avg = 0
     # iterate over each subsequent pair of baseline points
-    for ci, curr_point in enumerate(baseline.points[:-1]):
-        next_point = baseline.points[ci + 1]
+    if isinstance(line, pdm.PageXMLTextLine):
+        points = line.baseline.points
+    else:
+        points = [point for l in line for point in l.baseline.points]
+    for ci, curr_point in enumerate(points[:-1]):
+        next_point = points[ci + 1]
         segment_avg = (curr_point[1] + next_point[1]) / 2
         # segment contributes its average height times its width
         total_avg += segment_avg * (next_point[0] - curr_point[0])
 
     # average is total of average heights divided by total width
-    total_width = (baseline.points[-1][0] - baseline.points[0][0])
+    total_width = (points[-1][0] - points[0][0])
     if total_width != 0:
         return int(total_avg / total_width)
     # this should not happen, but if it does we need to calculate
     # the average differently, to avoid a division by zero error
     print(f"total_avg={total_avg}")
-    print(f"baseline={baseline}")
-    print(f"baseline.points[-1][0]={baseline.points[-1][0]}")
-    xcoords = [p[0] for p in baseline.points]
+    print(f"baseline.points[-1][0]={points[-1][0]}")
+    xcoords = [p[0] for p in points]
     left_x = min(xcoords)
     right_x = max(xcoords)
     if left_x != right_x:
@@ -190,7 +202,7 @@ def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np
                 # of this textregion's last line and the next textregion's first line
                 next_line = next_tr.lines[0]
             if next_line:
-                distances = compute_baseline_distances(curr_line.baseline, next_line.baseline)
+                distances = compute_baseline_distances(curr_line, next_line)
                 all_distances.append(distances)
     return all_distances
 
@@ -278,7 +290,7 @@ def compute_textregion_distance(tr1: pdm.PageXMLTextRegion,
     if len(tr1.lines) > 0 and len(tr2.lines) > 0:
         prev_line = tr1.lines[-1]
         curr_line = tr2.lines[0]
-        distances = compute_baseline_distances(prev_line.baseline, curr_line.baseline)
+        distances = compute_baseline_distances(prev_line, curr_line)
         return float(np.median(distances))
     else:
         return tr2.coords.top - tr1.coords.bottom
@@ -292,7 +304,7 @@ def compute_lines_stats(lines: List[pdm.PageXMLTextLine],
         stats["line"]["width"].update([curr_line.coords.w])
         stats["line"]["words"].update([curr_line.num_words])
         if isinstance(prev_line, pdm.PageXMLTextLine):
-            distances = compute_baseline_distances(prev_line.baseline, curr_line.baseline)
+            distances = compute_baseline_distances(prev_line, curr_line)
             if len(distances) == 0:
                 continue
             try:
