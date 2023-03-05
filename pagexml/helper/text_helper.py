@@ -14,8 +14,15 @@ def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, 
                 yield line
 
 
+def get_bbox_coords(doc: pdm.PageXMLDoc):
+    if doc.coords.points is None:
+        return None
+    return f"{doc.coords.x},{doc.coords.y},{doc.coords.w},{doc.coords.h}"
+
+
 def get_line_format_json(page_doc: pdm.PageXMLTextRegion,
-                         use_outer_textregions: bool = False) -> Generator[Dict[str, any], None, None]:
+                         use_outer_textregions: bool = False,
+                         add_bounding_box: bool = False) -> Generator[Dict[str, any], None, None]:
     if page_doc.num_text_regions == 0 and page_doc.num_lines > 0:
         trs = [page_doc]
     elif use_outer_textregions is True:
@@ -24,19 +31,26 @@ def get_line_format_json(page_doc: pdm.PageXMLTextRegion,
         trs = page_doc.get_inner_text_regions()
     for tr in trs:
         for line in tr.get_lines():
-            yield {
+            json_doc = {
                 'doc_id': page_doc.id,
                 'textregion_id': tr.id,
                 'line_id': line.id,
                 'text': line.text
             }
+            if add_bounding_box is True:
+                json_doc['doc_coords'] = get_bbox_coords(page_doc)
+                json_doc['textregion_coords'] = get_bbox_coords(tr)
+                json_doc['line_coords'] = get_bbox_coords(line)
+            yield json_doc
     return None
 
 
 def get_line_format_tsv(page_doc: pdm.PageXMLTextRegion,
                         headers: List[str],
-                        use_outer_textregions: bool = False) -> Generator[List[str], None, None]:
-    for line_json in get_line_format_json(page_doc, use_outer_textregions=use_outer_textregions):
+                        use_outer_textregions: bool = False,
+                        add_bounding_box: bool = False) -> Generator[List[str], None, None]:
+    for line_json in get_line_format_json(page_doc, use_outer_textregions=use_outer_textregions,
+                                          add_bounding_box=add_bounding_box):
         line_list = [line_json[header] for header in headers]
         yield [val if val is not None else '' for val in line_list]
 
@@ -45,14 +59,15 @@ def make_list(var) -> list:
     return var if isinstance(var, list) else [var]
 
 
-class LineReader:
+class LineReader(Iterable):
 
     def __init__(self, pagexml_files: Union[str, List[str]] = None,
                  pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
                  pagexml_line_files: Union[str, List[str]] = None,
                  line_file_headers: List[str] = None,
-                 has_header: bool = True,
+                 has_headers: bool = True,
                  use_outer_textregions: bool = False,
+                 add_bounding_box: bool = False,
                  groupby: str = None):
         """A Line Reader class that turns a list of PageXML files, PageXML objects,
         or a PageXML line file into an iterable over the lines.
@@ -65,11 +80,13 @@ class LineReader:
         :type pagexml_line_files: List[str]
         :param line_file_headers: an optional list of column headers to use for headerless line files
         :type line_file_headers: List[str]
-        :param has_header: whether the pagexml_line_files have a header line
-        :type has_header: bool
+        :param has_headers: whether the pagexml_line_files have a header line
+        :type has_headers: bool
         :param use_outer_textregions: use ID of outer text regions (when True) otherwise ID of inner
         text regions
         :type use_outer_textregions: bool
+        :param add_bounding_box: whether the line format output should include bounding boxes of each element
+        :type add_bounding_box: bool
         :param groupby: group lines by 'doc_id' or 'textregion_id'
         :type groupby: str
         """
@@ -80,8 +97,9 @@ class LineReader:
         if line_file_headers is not None:
             self.has_header = False
         else:
-            self.has_header = has_header
+            self.has_headers = has_headers
         self.use_outer_textregions = use_outer_textregions
+        self.add_bounding_box = add_bounding_box
         self.groupby = groupby
         if pagexml_files is None and pagexml_docs is None and pagexml_line_files is None:
             raise TypeError(f"MUST use one of the following optional arguments: "
@@ -122,22 +140,24 @@ class LineReader:
 
     def _iter_from_pagexml_docs(self, pagexml_doc_iterator) -> Generator[Dict[str, any], None, None]:
         for pagexml_doc in pagexml_doc_iterator:
-            for line in get_line_format_json(pagexml_doc, use_outer_textregions=self.use_outer_textregions):
+            for line in get_line_format_json(pagexml_doc, use_outer_textregions=self.use_outer_textregions,
+                                             add_bounding_box=self.add_bounding_box):
                 yield line
 
     def _iter_from_line_file(self) -> Generator[Dict[str, any], None, None]:
         line_iterator = read_lines_from_line_files(self.pagexml_line_files)
-        if self.has_header is True:
+        if self.has_headers is True:
             header_line = next(line_iterator)
             self.line_file_headers = header_line.strip().split('\t')
         elif self.line_file_headers is None:
             self.line_file_headers = [
                 'doc_id', 'textregion_id', 'line_id', 'text'
             ]
-        num_splits = len(self.line_file_headers) - 1
+            if self.add_bounding_box is True:
+                self.line_file_headers.extend(['doc_coords', 'textregion_coords', 'line_coords'])
         for li, line in enumerate(line_iterator):
             try:
-                cols = line.strip('\r\n').split('\t', num_splits)
+                cols = line.strip('\r\n').split('\t')
                 yield {header: cols[hi] for hi, header in enumerate(self.line_file_headers)}
             except (IndexError, ValueError):
                 print(f"line {li} in file {self.pagexml_line_files}:")
@@ -146,11 +166,13 @@ class LineReader:
                 raise
 
 
-def read_pagexml_docs_from_line_file(line_files: List[str], headers: List[str] = None) -> pdm.PageXMLTextRegion:
+def read_pagexml_docs_from_line_file(line_files: List[str], has_headers: bool = True,
+                                     headers: List[str] = None,
+                                     add_bounding_box: bool = False) -> pdm.PageXMLTextRegion:
     """Read lines from one or more PageXML line format files and return them
     as PageXMLTextLine objects, grouped by their PageXML document."""
-    has_headers = False if headers is None else True
-    line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers, has_header=has_headers)
+    line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers,
+                               has_headers=has_headers, add_bounding_box=add_bounding_box)
     curr_doc = None
     curr_tr = None
     for li, line_dict in enumerate(line_iterator):
@@ -170,7 +192,7 @@ def read_pagexml_docs_from_line_file(line_files: List[str], headers: List[str] =
 
 def make_page_extractor(archive_file: str,
                         show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
-    """Convenience function to return a generator that yield a PageXMLScan object per PageXML file
+    """Convenience function to return a generator that yields a PageXMLScan object per PageXML file
     in a zip/tar archive file."""
     for page_fileinfo, page_data in file_helper.read_page_archive_file(archive_file,
                                                                        show_progress=show_progress):
@@ -179,14 +201,21 @@ def make_page_extractor(archive_file: str,
 
 
 def make_line_format_file(page_docs: Iterable[pdm.PageXMLTextRegion],
-                          line_format_file: str):
-    """Transform a list of PageXMLDoc objects"""
-    headers = ['doc_id', 'textregion_id', 'line_id', 'text']
+                          line_format_file: str, headers: List[str] = None,
+                          use_outer_textregions: bool = False, add_bounding_box: bool = False):
+    """Create a line format file for a list of PageXMLDoc objects."""
+    if headers is None:
+        headers = [
+            'doc_id', 'textregion_id', 'line_id', 'text',
+            'doc_coords', 'textregion_coords', 'line_coords'
+        ]
     with gzip.open(line_format_file, 'wt') as fh:
         header_string = '\t'.join(headers)
         fh.write(f'{header_string}\n')
         for page_doc in page_docs:
-            for line_tsv in get_line_format_tsv(page_doc, headers):
+            for line_tsv in get_line_format_tsv(page_doc, headers,
+                                                use_outer_textregions=use_outer_textregions,
+                                                add_bounding_box=add_bounding_box):
                 line_string = '\t'.join(line_tsv)
                 fh.write(f'{line_string}\n')
 
