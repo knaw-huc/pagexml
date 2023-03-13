@@ -156,23 +156,27 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
         next_point = points[ci + 1]
         segment_avg = (curr_point[1] + next_point[1]) / 2
         # segment contributes its average height times its width
-        total_avg += segment_avg * (next_point[0] - curr_point[0])
+        total_avg += segment_avg * abs(next_point[0] - curr_point[0])
+    if total_avg < 0:
+        print(f'total_avg: {total_avg}\n')
 
     # average is total of average heights divided by total width
-    total_width = (points[-1][0] - points[0][0])
+    x = sorted([point[0] for point in points])
+    total_width = (x[-1] - x[0])
     if total_width != 0:
         return int(total_avg / total_width)
-    # this should not happen, but if it does we need to calculate
-    # the average differently, to avoid a division by zero error
-    print(f"total_avg={total_avg}")
-    print(f"baseline.points[-1][0]={points[-1][0]}")
-    xcoords = [p[0] for p in points]
-    left_x = min(xcoords)
-    right_x = max(xcoords)
-    if left_x != right_x:
-        return int(total_avg / (right_x - left_x))
     else:
-        return int(total_avg)
+        # this should not happen, but if it does, we need to calculate
+        # the average differently, to avoid a division by zero error
+        print(f"total_avg={total_avg}")
+        print(f"baseline.points[-1][0]={points[-1][0]}")
+        xcoords = [p[0] for p in points]
+        left_x = min(xcoords)
+        right_x = max(xcoords)
+        if left_x != right_x:
+            return int(total_avg / (right_x - left_x))
+        else:
+            return int(total_avg)
 
 
 def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np.ndarray]:
@@ -251,7 +255,12 @@ def get_textregion_avg_char_width(text_region: pdm.PageXMLTextRegion) -> float:
             if line.text is None:
                 continue
             total_chars += len(line.text)
-            total_text_width += line.coords.width
+            if line.baseline is not None:
+                total_text_width += line.baseline.width
+            elif line.coords is not None:
+                total_text_width += line.coords.width
+            else:
+                continue
     return total_text_width / total_chars if total_chars else 0.0
 
 
@@ -277,7 +286,8 @@ def get_textregion_avg_line_width(text_region: pdm.PageXMLTextRegion, unit: str 
                 # skip non-text lines
                 continue
             total_lines += 1
-            total_line_width += len(line.text) if unit == 'char' else line.coords.width
+            line_width = line.baseline.w if line.baseline is not None else line.coords.w
+            total_line_width += len(line.text) if unit == 'char' else line_width
     return total_line_width / total_lines if total_lines > 0 else 0.0
 
 

@@ -28,6 +28,8 @@ PageXML-tools contains functions for parsing and for a range of analysis tasks.
 
 ### Parsing PageXML files and the Physical Document model
 
+There is a tutorial that demonstrates the [physical document model API](./notebooks/Demo-understanding-the-document-model.ipynb)
+
 PageXML-tools contains basic functionality for parsing a PageXML file that returns
 a document model representing the content of the file. The HTR/OCR process that generates
 PageXML, recognises text in an image of a physical document.
@@ -62,9 +64,9 @@ functionality to support a range of tasks:
 
 - checking the quality of the HTR/OCR process,
 - classifying physical document types in a large set of PageXML documents,
-- identifying sections in sequences of PageXML documents,
+- identifying sections in sequences of PageXML documents ([tutorial](./notebooks/Demo-analysing-pagexml-characteristics.ipynb#section_detection)),
 - turning physical structure into logical structure,
-- turning text lines into running text,
+- turning text lines into running text ([tutorial](./notebooks/Demo-from-lines-to-running-text.ipynb)),
 - supporting different reading orders,
 - reinterpreting and restructuring text regions and lines,
 

@@ -2,11 +2,15 @@ import gzip
 import re
 from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
 
+from fuzzy_search.similarity import SkipgramSimilarity
+
 import pagexml.model.physical_document_model as pdm
 import pagexml.parser as parser
 
 
-def read_lines_from_line_files(pagexml_line_files: List[str]) -> Generator[str, None, None]:
+def read_lines_from_line_files(pagexml_line_files: Union[str, List[str]]) -> Generator[str, None, None]:
+    if isinstance(pagexml_line_files, str):
+        pagexml_line_files = [pagexml_line_files]
     for line_file in pagexml_line_files:
         with gzip.open(line_file, 'rt') as fh:
             for line in fh:
@@ -133,7 +137,8 @@ class LineReader(Iterable):
                 yield line
         if len(self.pagexml_files) > 0:
             pagexml_doc_iterator = parser.parse_pagexml_files(self.pagexml_files)
-            self._iter_from_pagexml_docs(pagexml_doc_iterator)
+            for line in self._iter_from_pagexml_docs(pagexml_doc_iterator):
+                yield line
         if len(self.pagexml_docs) > 0:
             self._iter_from_pagexml_docs(self.pagexml_docs)
 
@@ -229,28 +234,28 @@ def make_line_format_file(page_docs: Iterable[pdm.PageXMLTextRegion],
 #     return [word for word in re.split(split_pattern, line) if word != '']
 
 
-def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: Union[str, Set[str]] = '-') -> List[str]:
+def get_line_words(line: Union[pdm.PageXMLTextLine, str], word_break_chars: Union[str, Set[str]] = '-') -> List[str]:
     """Return a list of the words for a given line.
 
     :param line: a line of text (string or PageXMLTextline)
     :type line: Union[str, PageXMLTextline]
-    :param line_break_chars: a string of one or more line break characters
-    :type line_break_chars: str
+    :param word_break_chars: a string of one or more line break characters
+    :type word_break_chars: str
     :return: a list of words
     :rtype: List[str]
     """
     new_terms = []
     if line is None or line == '':
         return new_terms
-    if line[-1] in line_break_chars and len(line) >= 2:
-        if line[-2] in line_break_chars:
+    if line[-1] in word_break_chars and len(line) >= 2:
+        if line[-2] in word_break_chars:
             line = line[:-1]
         elif line[-2] == ' ':
             line = line[:-2] + line[-1]
-    # if line.endswith(f'{line_break_chars}{line_break_chars}'):
+    # if line.endswith(f'{word_break_chars}{word_break_chars}'):
     #     line = line[:-1]
-    # elif line.endswith(f' {line_break_chars}'):
-    #     line = line[:-2] + line_break_chars
+    # elif line.endswith(f' {word_break_chars}'):
+    #     line = line[:-2] + word_break_chars
     terms = [term for term in re.split(r'\b', line) if term != '']
     for ti, term in enumerate(terms):
         if ti == 0:
@@ -261,9 +266,9 @@ def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: Unio
             #     new_terms[-1] = new_terms[-1] + term.strip()
             # elif term[0].isalpha() and prev_term[-1] == '-':
             #     new_terms[-1] = new_terms[-1] + term
-            if term[0] in line_break_chars and prev_term[0].isalpha():
+            if term[0] in word_break_chars and prev_term[0].isalpha():
                 new_terms[-1] = new_terms[-1] + term.strip()
-            elif term[0].isalpha() and prev_term[-1] in line_break_chars:
+            elif term[0].isalpha() and prev_term[-1] in word_break_chars:
                 new_terms[-1] = new_terms[-1] + term
             elif term == ' ':
                 continue
@@ -272,13 +277,13 @@ def get_line_words(line: Union[pdm.PageXMLTextLine, str], line_break_chars: Unio
     return new_terms
 
 
-def get_page_lines_words(page: pdm.PageXMLPage, line_break_chars='-') -> Generator[List[str], None, None]:
+def get_page_lines_words(page: pdm.PageXMLPage, word_break_chars='-') -> Generator[List[str], None, None]:
     """Return a generator object yielding lists of words per line of a PageXML Page.
 
     :param page: a PageXML page object
     :type page: PageXMLPage
-    :param line_break_chars: a string of one or more line break characters
-    :type line_break_chars: str
+    :param word_break_chars: a string of one or more line break characters
+    :type word_break_chars: str
     :return: a generator object yielding a list of words per page line
     :rtype: Generator[List[str], None, None]
     """
@@ -286,7 +291,7 @@ def get_page_lines_words(page: pdm.PageXMLPage, line_break_chars='-') -> Generat
         if line.text is None:
             continue
         try:
-            words = get_line_words(line.text, line_break_chars=line_break_chars)
+            words = get_line_words(line.text, word_break_chars=word_break_chars)
         except TypeError:
             print(line.text)
             raise
@@ -303,13 +308,13 @@ def split_line_words(words: List[str]) -> Tuple[List[str], List[str], List[str]]
     return start_words, mid_words, end_words
 
 
-def remove_line_break_chars(end_word: str, start_word: str, line_break_chars='-=:') -> str:
-    if end_word[-1] in line_break_chars:
-        if len(end_word) >= 2 and end_word[-2] in line_break_chars:
+def remove_word_break_chars(end_word: str, start_word: str, word_break_chars='-=:') -> str:
+    if end_word[-1] in word_break_chars:
+        if len(end_word) >= 2 and end_word[-2] in word_break_chars:
             end_word = end_word[:-2]
         else:
             end_word = end_word[:-1]
-    if start_word[0] in line_break_chars:
+    if start_word[0] in word_break_chars:
         start_word = start_word[1:]
     return end_word + start_word
 
@@ -376,3 +381,14 @@ def find_term_in_context(term: str,
             if num_contexts == max_hits:
                 return None
     return None
+
+
+def make_skipgram_similarity_dict(line_reader: LineReader, ngram_length: int = 2,
+                                  skip_length: int = 1) -> SkipgramSimilarity:
+    skip_sim = SkipgramSimilarity(ngram_length=ngram_length, skip_length=skip_length)
+    for line in line_reader:
+        if line['text'] is None:
+            continue
+        words = [word for word in re.split(r'\W+', line['text']) if word != '']
+        skip_sim.index_terms(words, reset_index=False)
+    return skip_sim

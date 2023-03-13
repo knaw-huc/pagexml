@@ -3,7 +3,7 @@ import gzip
 import re
 import string
 from collections import Counter
-from typing import Dict, Generator, List, Tuple, Union
+from typing import Dict, Generator, List, Set, Tuple, Union
 
 import numpy as np
 
@@ -330,13 +330,13 @@ class LineIterable:
 
 
 def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
-                   end_word: str, merge_word: str, line_break_chars: str = '-') -> str:
+                   end_word: str, merge_word: str, word_break_chars: Union[str, Set[str]] = '-') -> str:
     line_text = line.text
-    if len(line_text) >= 2 and line_text[-1] in line_break_chars and line_text[-2] in line_break_chars:
+    if len(line_text) >= 2 and line_text[-1] in word_break_chars and line_text[-2] in word_break_chars:
         # remove the redundant line break char
         line_text = line_text[:-1]
     if do_merge:
-        if line_text[-1] in line_break_chars and merge_word.startswith(end_word) is False:
+        if line_text[-1] in word_break_chars and merge_word.startswith(end_word) is False:
             # the merge word does not contain a line break char, so remove it from the line
             # before adding it to the text
             line_text = line_text[:-1]
@@ -346,7 +346,7 @@ def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
             line_text = line.text
     else:
         # no need to merge so add line with trailing whitespace
-        if line_text[-1] in line_break_chars and len(line_text) >= 2 and line_text[-2] != ' ':
+        if line_text[-1] in word_break_chars and len(line_text) >= 2 and line_text[-2] != ' ':
             # the line break char at the end is trailing, so disconnect it from the preceding word
             line_text = line_text[:-1] + f' {line_text[-1]} '
         else:
@@ -364,24 +364,29 @@ def make_line_range(text: str, line: pdm.PageXMLTextLine, line_text: str) -> Dic
 
 
 def make_text_region_text(lines: List[pdm.PageXMLTextLine],
-                          lbd: text_stats.LineBreakDetector) -> Tuple[Union[str, None], List[Dict[str, any]]]:
+                          word_break_chars: List[str] = '-',
+                          wbd: text_stats.WordBreakDetector = None) -> Tuple[Union[str, None], List[Dict[str, any]]]:
     """Turn the text lines in a region into a single paragraph of text, with a list of line ranges
     that indicates how the text of each line corresponds to character offsets in the paragraph.
 
     :param lines: a list of PageXML text lines belonging to the same text region
     :type lines: List[PageXMLTextLine]
-    :param lbd: a line break detector object
-    :type lbd: LineBreakDetector
+    :param word_break_chars: a lsit of characters that signal a word-break
+    :type word_break_chars: List[str]
+    :param wbd: a line break detector object
+    :type wbd: LineBreakDetector
     :return: a paragraph of text and a list of line ranges that indicates how the text of each line
     corresponds to character offsets in the paragraph.
     :rtype: Tuple[str, List[Dict[str, any]]
     """
+    if wbd is not None and wbd.word_break_chars is not None:
+        word_break_chars = set([char for char in wbd.word_break_chars])
     text = ''
     line_ranges = []
     if len(lines) == 0:
         return None, []
     prev_line = lines[0]
-    prev_words = text_helper.get_line_words(prev_line.text, line_break_chars=lbd.line_break_chars) \
+    prev_words = text_helper.get_line_words(prev_line.text, word_break_chars=word_break_chars) \
         if prev_line.text else []
     if len(lines) > 1:
         for curr_line in lines[1:]:
@@ -392,12 +397,14 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                 prev_line_text = prev_line.text if prev_line.text else ''
             else:
                 curr_words = text_helper.get_line_words(curr_line.text,
-                                                        line_break_chars=lbd.line_break_chars)
+                                                        word_break_chars=word_break_chars)
                 if prev_line.text is not None:
-                    do_merge, merge_word = text_stats.determine_line_break(lbd, curr_words, prev_words)
+                    do_merge, merge_word = text_stats.determine_word_break(curr_words, prev_words,
+                                                                           wbd=wbd,
+                                                                           word_break_chars=word_break_chars)
                     # print(do_merge, merge_word)
                     prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word,
-                                                    line_break_chars=lbd.line_break_chars)
+                                                    word_break_chars=word_break_chars)
                     # print(prev_line_text)
                 else:
                     prev_line_text = ''
@@ -414,23 +421,23 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
     return text, line_ranges
 
 
-def merge_lines(lines: List[pdm.PageXMLTextLine], remove_line_break: bool = False,
-                line_break_char: str = '-') -> pdm.PageXMLTextLine:
+def merge_lines(lines: List[pdm.PageXMLTextLine], remove_word_break: bool = False,
+                word_break_char: str = '-') -> pdm.PageXMLTextLine:
     """Returns a PageXMLTextline object that is the merge of a list of PageXMLTextlines.
 
     :param lines: a list of PageXML text lines
     :type lines: List[PageXMLTextline]
-    :param remove_line_break: flag indicating whether line break characters should be removed
-    :type remove_line_break: bool
-    :param line_break_char: the character that is used as a line break
-    :type line_break_char: str
+    :param remove_word_break: flag indicating whether line break characters should be removed
+    :type remove_word_break: bool
+    :param word_break_char: the character that is used as a line break
+    :type word_break_char: str
     :return: a PageXML text line object
     :rtype: PageXMLTextline
     """
     coords = pdm.parse_derived_coords(lines)
     text = ''
     for li, curr_line in enumerate(lines):
-        if remove_line_break and len(text) > 0 and text.endswith(line_break_char):
+        if remove_word_break and len(text) > 0 and text.endswith(word_break_char):
             if curr_line.text[0].islower():
                 # remove hyphen
                 text = text[:-1]
