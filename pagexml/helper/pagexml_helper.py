@@ -60,8 +60,8 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.Pa
     # First, sort lines vertically
     vertically_sorted = [line for line in sorted(lines, key=lambda line: line.coords.top) if line.text is not None]
     if len(vertically_sorted) == 0:
-        for line in lines:
-            print(line.coords.box, line.text)
+        # for line in lines:
+        #     print(line.coords.box, line.text)
         return []
     # Second, group adjacent lines in vertical line stack
     horizontally_grouped_lines = [[vertically_sorted[0]]]
@@ -280,102 +280,6 @@ def line_ends_with_word_break(curr_line: pdm.PageXMLTextLine, next_line: pdm.Pag
         return True
     else:
         return False
-
-
-def json_to_pagexml_word(json_doc: dict) -> pdm.PageXMLWord:
-    word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None)
-    return word
-
-
-def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
-    words = [json_to_pagexml_word(word) for word in json_doc['words']] if 'words' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-    try:
-        line = pdm.PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                                   coords=pdm.Coords(json_doc['coords']), baseline=pdm.Baseline(json_doc['baseline']),
-                                   text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None,
-                                   words=words, reading_order=reading_order)
-        return line
-    except TypeError:
-        print(json_doc['baseline'])
-        raise
-
-
-def json_to_pagexml_text_region(json_doc: dict) -> pdm.PageXMLTextRegion:
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-
-    text_region = pdm.PageXMLTextRegion(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                                        coords=pdm.Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
-                                        reading_order=reading_order)
-    pdm.set_parentage(text_region)
-    return text_region
-
-
-def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-
-    column = pdm.PageXMLColumn(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                               coords=pdm.Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
-                               reading_order=reading_order)
-    pdm.set_parentage(column)
-    return column
-
-
-def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
-    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
-        if 'extra' in json_doc else []
-    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-
-    coords = pdm.Coords(json_doc['coords']) if 'coords' in json_doc else None
-    page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           coords=coords, extra=extra, columns=columns,
-                           text_regions=text_regions, lines=lines,
-                           reading_order=reading_order)
-    pdm.set_parentage(page)
-    return page
-
-
-def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
-    pages = [json_to_pagexml_page(page) for page in json_doc['pages']] if 'pages' in json_doc else []
-    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-
-    scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           coords=pdm.Coords(json_doc['coords']), pages=pages, columns=columns,
-                           text_regions=text_regions, lines=lines, reading_order=reading_order)
-    pdm.set_parentage(scan)
-    return scan
-
-
-def json_to_pagexml_doc(json_doc: dict) -> pdm.PageXMLDoc:
-    if 'pagexml_doc' not in json_doc['type']:
-        raise TypeError('json_doc is not of type "pagexml_doc".')
-    if 'scan' in json_doc['type']:
-        return json_to_pagexml_scan(json_doc)
-    if 'page' in json_doc['type']:
-        return json_to_pagexml_page(json_doc)
-    if 'column' in json_doc['type']:
-        return json_to_pagexml_column(json_doc)
-    if 'text_region' in json_doc['type']:
-        return json_to_pagexml_text_region(json_doc)
-    if 'line' in json_doc['type']:
-        return json_to_pagexml_line(json_doc)
-    if 'word' in json_doc['type']:
-        return json_to_pagexml_word(json_doc)
 
 
 def pagexml_to_line_format(pagexml_doc: pdm.PageXMLTextRegion) -> Generator[Tuple[str, str, str], None, None]:

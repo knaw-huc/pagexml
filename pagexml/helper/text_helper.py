@@ -2,7 +2,6 @@ import gzip
 import re
 from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
 
-import pagexml.helper.file_helper as file_helper
 import pagexml.model.physical_document_model as pdm
 import pagexml.parser as parser
 
@@ -172,9 +171,9 @@ def transform_box_to_coords(box_string: str) -> pdm.Coords:
     return pdm.Coords(points)
 
 
-def read_pagexml_docs_from_line_file(line_files: List[str], has_headers: bool = True,
+def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_headers: bool = True,
                                      headers: List[str] = None,
-                                     add_bounding_box: bool = False) -> pdm.PageXMLTextRegion:
+                                     add_bounding_box: bool = False) -> Generator[pdm.PageXMLTextRegion, None, None]:
     """Read lines from one or more PageXML line format files and return them
     as PageXMLTextLine objects, grouped by their PageXML document."""
     line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers,
@@ -187,28 +186,22 @@ def read_pagexml_docs_from_line_file(line_files: List[str], has_headers: bool = 
             doc_coords = transform_box_to_coords(line_dict['doc_box'])
             tr_coords = transform_box_to_coords(line_dict['textregion_box'])
             line_coords = transform_box_to_coords(line_dict['line_box'])
-        if curr_doc is None or curr_doc != line_dict['doc_id']:
+        if curr_doc is None or curr_doc.id != line_dict['doc_id']:
             if curr_doc is not None:
                 yield curr_doc
-            curr_doc = pdm.PageXMLTextRegion(doc_id=line_dict['doc_id'], coords=doc_coords)
-        if curr_tr is None or curr_tr != line_dict['textregion_id']:
+            curr_doc = pdm.PageXMLScan(doc_id=line_dict['doc_id'], coords=doc_coords)
+            curr_tr = None
+        if curr_tr is None or curr_tr.id != line_dict['textregion_id']:
             curr_tr = pdm.PageXMLTextRegion(doc_id=line_dict['textregion_id'], coords=tr_coords)
             curr_doc.add_child(curr_tr)
+            # print(f'creating tr with id {curr_tr.id} and appending to doc with id {curr_doc.id}')
         line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
                                    text=line_dict['text'], coords=line_coords)
         curr_tr.add_child(line)
+        # print('curr_doc:', curr_doc.id, '\tline doc_id:', line_dict['doc_id'])
+        # print('curr_tr:', curr_tr.id, '\tline textregion_id:', line_dict['textregion_id'])
     if curr_doc is not None:
         yield curr_doc
-
-
-def make_page_extractor(archive_file: str,
-                        show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
-    """Convenience function to return a generator that yields a PageXMLScan object per PageXML file
-    in a zip/tar archive file."""
-    for page_fileinfo, page_data in file_helper.read_page_archive_file(archive_file,
-                                                                       show_progress=show_progress):
-        scan = parser.parse_pagexml_file(pagexml_file=page_fileinfo['archived_filename'], pagexml_data=page_data)
-        yield scan
 
 
 def make_line_format_file(page_docs: Iterable[pdm.PageXMLTextRegion],

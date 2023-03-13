@@ -9,7 +9,7 @@ from dateutil.parser import parse as date_parse
 
 from pagexml.helper.file_helper import read_page_archive_file
 from pagexml.model.physical_document_model import Baseline, Coords, parse_derived_coords
-from pagexml.model.physical_document_model import PageXMLScan, PageXMLTextLine, PageXMLTextRegion, PageXMLWord
+import pagexml.model.physical_document_model as pdm
 
 
 def parse_coords(coords: dict) -> Union[Coords, None]:
@@ -31,8 +31,8 @@ def parse_baseline(baseline: dict) -> Baseline:
     return Baseline(points=baseline['@points'])
 
 
-def parse_line_words(textline: dict) -> List[PageXMLWord]:
-    words: List[PageXMLWord] = []
+def parse_line_words(textline: dict) -> List[pdm.PageXMLWord]:
+    words: List[pdm.PageXMLWord] = []
     if "Word" not in textline:
         return words
     if isinstance(textline["Word"], dict):
@@ -51,7 +51,7 @@ def parse_line_words(textline: dict) -> List[PageXMLWord]:
             if word_dict["TextEquiv"] is not None:
                 if "@conf" in word_dict["TextEquiv"]:
                     conf = word_dict["TextEquiv"]["@conf"]
-            word = PageXMLWord(text=unicode_string,
+            word = pdm.PageXMLWord(text=unicode_string,
                                doc_id=word_dict['@id'] if '@id' in word_dict else None,
                                metadata=parse_custom_metadata(word_dict) if '@custom' in word_dict else None,
                                coords=parse_coords(word_dict["Coords"]),
@@ -76,10 +76,10 @@ def parse_text_equiv(text_equiv: dict) -> Union[str, None]:
         return None
 
 
-def parse_textline(textline: dict) -> PageXMLTextLine:
+def parse_textline(textline: dict) -> pdm.PageXMLTextLine:
     text = parse_text_equiv(textline['TextEquiv']) if 'TextEquiv' in textline else None
     try:
-        return PageXMLTextLine(
+        return pdm.PageXMLTextLine(
             xheight=int(textline['@xheight']) if '@xheight' in textline else None,
             doc_id=textline['@id'] if '@id' in textline else None,
             metadata=parse_custom_metadata(textline)
@@ -108,7 +108,7 @@ def parse_conf(text_element: dict) -> Union[float, None]:
         return None
 
 
-def parse_textline_list(textline_list: list) -> List[PageXMLTextLine]:
+def parse_textline_list(textline_list: list) -> List[pdm.PageXMLTextLine]:
     return [parse_textline(textline) for textline in textline_list]
 
 
@@ -141,8 +141,8 @@ def parse_custom_metadata(text_element: Dict[str, any]) -> Dict[str, any]:
     return metadata
 
 
-def parse_textregion(text_region_dict: dict) -> Union[PageXMLTextRegion, None]:
-    text_region = PageXMLTextRegion(
+def parse_textregion(text_region_dict: dict) -> Union[pdm.PageXMLTextRegion, None]:
+    text_region = pdm.PageXMLTextRegion(
         doc_id=text_region_dict['@id'] if '@id' in text_region_dict else None,
         orientation=float(text_region_dict['@orientation']) if '@orientation' in text_region_dict else None,
         coords=parse_coords(text_region_dict['Coords']) if 'Coords' in text_region_dict else None,
@@ -158,6 +158,7 @@ def parse_textregion(text_region_dict: dict) -> Union[PageXMLTextRegion, None]:
                 text_region.lines = parse_textline_list(text_region_dict['TextLine'])
             else:
                 text_region.lines = [parse_textline(text_region_dict['TextLine'])]
+            text_region.set_as_parent(text_region.lines)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.lines)
         if child == 'TextRegion':
@@ -167,6 +168,7 @@ def parse_textregion(text_region_dict: dict) -> Union[PageXMLTextRegion, None]:
             for tr in parse_textregion_list(text_region_dict['TextRegion']):
                 if tr is not None:
                     text_region.text_regions.append(tr)
+            text_region.set_as_parent(text_region.text_regions)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.text_regions)
     if text_region.coords is None:
@@ -176,7 +178,7 @@ def parse_textregion(text_region_dict: dict) -> Union[PageXMLTextRegion, None]:
     return text_region
 
 
-def parse_textregion_list(textregion_dict_list: list) -> List[PageXMLTextRegion]:
+def parse_textregion_list(textregion_dict_list: list) -> List[pdm.PageXMLTextRegion]:
     return [parse_textregion(textregion_dict) for textregion_dict in textregion_dict_list]
 
 
@@ -229,7 +231,7 @@ def parse_page_reading_order(page_json: dict) -> dict:
     return reading_order
 
 
-def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> PageXMLScan:
+def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> pdm.PageXMLScan:
     """Parse a JSON/xmltodict representation of a PageXML file and return a PageXMLScan object."""
     doc_id = pagexml_file
     coords, text_regions = None, None
@@ -257,7 +259,7 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> PageXMLScan:
         reading_order = parse_page_reading_order(scan_json)
     else:
         reading_order = {}
-    return PageXMLScan(
+    return pdm.PageXMLScan(
         doc_id=doc_id,
         metadata=metadata,
         coords=coords,
@@ -273,7 +275,7 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
 
 
 def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
-                       encoding: str = 'utf-8') -> PageXMLScan:
+                       encoding: str = 'utf-8') -> pdm.PageXMLScan:
     """Read PageXML from file (or content of file passed separately if read from elsewhere,
     e.g. tarball) and return a PageXMLScan object.
 
@@ -283,7 +285,7 @@ def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
     :type pagexml_data: str
     :param encoding: the encoding of the file (default utf-8)
     :type encoding: str
-    :return: a PageXMLScan object
+    :return: a pdm.PageXMLScan object
     :rtype: PageXMLScan
     """
     if not pagexml_data:
@@ -300,7 +302,7 @@ def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
 
 def parse_pagexml_files(pagexml_files: List[str],
                         ignore_errors: bool = False,
-                        encoding: str = 'utf-8') -> Generator[PageXMLScan, None, None]:
+                        encoding: str = 'utf-8') -> Generator[pdm.PageXMLScan, None, None]:
     """Parse a list of PageXML files and return each as a PageXMLScan object."""
     for pagexml_file in pagexml_files:
         try:
@@ -328,7 +330,7 @@ def read_pagexml_dirs(pagexml_dirs: Union[str, List[str]]) -> List[str]:
 
 
 def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = False,
-                                     encoding: str = 'utf-8') -> Generator[PageXMLScan, None, None]:
+                                     encoding: str = 'utf-8') -> Generator[pdm.PageXMLScan, None, None]:
     """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
     PageXML file as a PageXMLScan object.
 
@@ -351,3 +353,107 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
                 continue
             else:
                 raise
+
+
+def json_to_pagexml_word(json_doc: dict) -> pdm.PageXMLWord:
+    word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                           text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None)
+    return word
+
+
+def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
+    words = [json_to_pagexml_word(word) for word in json_doc['words']] if 'words' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+    try:
+        line = pdm.PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                                   coords=pdm.Coords(json_doc['coords']), baseline=pdm.Baseline(json_doc['baseline']),
+                                   text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None,
+                                   words=words, reading_order=reading_order)
+        return line
+    except TypeError:
+        print(json_doc['baseline'])
+        raise
+
+
+def json_to_pagexml_text_region(json_doc: dict) -> pdm.PageXMLTextRegion:
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
+        if 'text_regions' in json_doc else []
+    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
+    text_region = pdm.PageXMLTextRegion(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                                        coords=pdm.Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
+                                        reading_order=reading_order)
+    pdm.set_parentage(text_region)
+    return text_region
+
+
+def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
+        if 'text_regions' in json_doc else []
+    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
+    column = pdm.PageXMLColumn(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                               coords=pdm.Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
+                               reading_order=reading_order)
+    pdm.set_parentage(column)
+    return column
+
+
+def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
+    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
+        if 'extra' in json_doc else []
+    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
+        if 'text_regions' in json_doc else []
+    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
+    coords = pdm.Coords(json_doc['coords']) if 'coords' in json_doc else None
+    page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                           coords=coords, extra=extra, columns=columns,
+                           text_regions=text_regions, lines=lines,
+                           reading_order=reading_order)
+    pdm.set_parentage(page)
+    return page
+
+
+def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
+    pages = [json_to_pagexml_page(page) for page in json_doc['pages']] if 'pages' in json_doc else []
+    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
+        if 'text_regions' in json_doc else []
+    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+
+    scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
+                           coords=pdm.Coords(json_doc['coords']), pages=pages, columns=columns,
+                           text_regions=text_regions, lines=lines, reading_order=reading_order)
+    pdm.set_parentage(scan)
+    return scan
+
+
+def json_to_pagexml_doc(json_doc: dict) -> pdm.PageXMLDoc:
+    if 'pagexml_doc' not in json_doc['type']:
+        raise TypeError('json_doc is not of type "pagexml_doc".')
+    if 'scan' in json_doc['type']:
+        return json_to_pagexml_scan(json_doc)
+    if 'page' in json_doc['type']:
+        return json_to_pagexml_page(json_doc)
+    if 'column' in json_doc['type']:
+        return json_to_pagexml_column(json_doc)
+    if 'text_region' in json_doc['type']:
+        return json_to_pagexml_text_region(json_doc)
+    if 'line' in json_doc['type']:
+        return json_to_pagexml_line(json_doc)
+    if 'word' in json_doc['type']:
+        return json_to_pagexml_word(json_doc)
+
+
+def parse_pagexml_from_json(pagexml_json: Union[str, Dict[str, any]]) -> pdm.PageXMLDoc:
+    """Turn a JSON representation of a PageXML document into an instance from
+    the physical document model."""
+    if isinstance(pagexml_json, str):
+        pagexml_json = json.loads(pagexml_json)
+    return json_to_pagexml_doc(pagexml_json)

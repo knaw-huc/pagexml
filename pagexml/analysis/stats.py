@@ -14,7 +14,8 @@ def derive_boundary_points(pagexml_doc: pdm.PageXMLTextRegion) -> List[int]:
 
 def _init_doc_stats(line_width_boundary_points: List[int],
                     word_length_bin_size: int = 5, max_word_length: int = 30) -> Dict[str, List[any]]:
-    fields = ['doc_id', 'doc_num', 'lines', 'words', 'text_regions', 'columns', 'extra', 'pages',
+    fields = ['doc_id', 'doc_num', 'lines', 'words', 'text_regions',
+              'columns', 'extra', 'pages',
               'num_words', 'num_number_words', 'num_title_words', 'num_non_title_words',
               'num_stop_words', 'num_punctuation_words', 'num_oversized_words']
     doc_stats = {field: [] for field in fields}

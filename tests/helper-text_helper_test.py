@@ -1,3 +1,5 @@
+import os
+import tempfile
 import unittest
 
 import pagexml.helper.text_helper as text_helper
@@ -35,6 +37,33 @@ class TestTextHelper(unittest.TestCase):
         line_format_reader = text_helper.LineReader(pagexml_files=self.page_file, add_bounding_box=True)
         for line in line_format_reader:
             self.assertEqual(True, all([field in line for field in self.box_fields]))
+
+
+class TestTextHelperWriter(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.page_file = 'data/example.xml'
+        self.page_doc = parse_pagexml_file(self.page_file)
+        self.box_fields = ['doc_box', 'textregion_box', 'line_box']
+        self.tmp = tempfile.NamedTemporaryFile(delete=False)
+        self.tmp.close()
+
+    def tearDown(self) -> None:
+        os.unlink(self.tmp.name)
+
+    def test_read_from_line_file_returns_correct_number_of_scans(self):
+        text_helper.make_line_format_file([self.page_doc], self.tmp.name, add_bounding_box=True)
+        page_docs = text_helper.read_pagexml_docs_from_line_file(self.tmp.name, add_bounding_box=True)
+        page_docs = [page_doc for page_doc in page_docs]
+        self.assertEqual(1, len(page_docs))
+
+    def test_read_from_line_file_returns_complete_scan(self):
+        stats = self.page_doc.stats
+        text_helper.make_line_format_file([self.page_doc], self.tmp.name, add_bounding_box=True)
+        page_docs = text_helper.read_pagexml_docs_from_line_file(self.tmp.name, add_bounding_box=True)
+        page_doc = [page_doc for page_doc in page_docs][0]
+        for field in page_doc.stats:
+            self.assertEqual(True, page_doc.stats[field] == stats[field])
 
 
 if __name__ == '__main__':
