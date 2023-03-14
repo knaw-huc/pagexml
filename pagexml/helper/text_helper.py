@@ -86,7 +86,7 @@ class LineReader(Iterable):
         :param has_headers: whether the pagexml_line_files have a header line
         :type has_headers: bool
         :param use_outer_textregions: use ID of outer text regions (when True) otherwise ID of inner
-        text regions
+            text regions
         :type use_outer_textregions: bool
         :param add_bounding_box: whether the line format output should include bounding boxes of each element
         :type add_bounding_box: bool

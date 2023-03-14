@@ -376,7 +376,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
     :param wbd: a line break detector object
     :type wbd: LineBreakDetector
     :return: a paragraph of text and a list of line ranges that indicates how the text of each line
-    corresponds to character offsets in the paragraph.
+        corresponds to character offsets in the paragraph.
     :rtype: Tuple[str, List[Dict[str, any]]
     """
     if wbd is not None and wbd.word_break_chars is not None:

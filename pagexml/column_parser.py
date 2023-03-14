@@ -3,8 +3,8 @@ import re
 from collections import Counter
 from typing import Dict, List, Tuple
 
-import pagexml.model.physical_document_model as pdm
 import pagexml.helper.pagexml_helper as pagexml_helper
+import pagexml.model.physical_document_model as pdm
 
 
 def within_column(line: pdm.PageXMLTextLine, column_range: Dict[str, int],
@@ -20,7 +20,7 @@ def find_overlapping_columns(columns: List[pdm.PageXMLColumn]):
     columns.sort()
     merge_sets = []
     for ci, curr_col in enumerate(columns[:-1]):
-        next_col = columns[ci+1]
+        next_col = columns[ci + 1]
         if pdm.is_horizontally_overlapping(curr_col, next_col):
             for merge_set in merge_sets:
                 if curr_col in merge_set:
@@ -201,7 +201,8 @@ def merge_columns(columns: List[pdm.PageXMLColumn],
 def sort_lines_in_column_ranges(lines: List[pdm.PageXMLTextLine],
                                 column_ranges: List[Dict[str, int]],
                                 overlap_threshold: float,
-                                debug: bool = False) -> Tuple[List[List[pdm.PageXMLTextLine]], List[pdm.PageXMLTextLine]]:
+                                debug: bool = False
+                                ) -> Tuple[List[List[pdm.PageXMLTextLine]], List[pdm.PageXMLTextLine]]:
     column_lines = [[] for _ in range(len(column_ranges))]
     extra_lines = []
     append_count = 0
@@ -243,7 +244,8 @@ def merge_overlapping_columns(text_region: pdm.PageXMLTextRegion, columns: List[
 
 
 def make_column_range_columns(text_region: pdm.PageXMLTextRegion,
-                              column_lines: List[List[pdm.PageXMLTextLine]]) -> List[pdm.PageXMLColumn]:
+                              column_lines: List[List[pdm.PageXMLTextLine]]
+                              ) -> List[pdm.PageXMLColumn]:
     columns = []
     for lines in column_lines:
         if len(lines) == 0:
@@ -346,11 +348,11 @@ def split_lines_on_column_gaps(text_region: pdm.PageXMLTextRegion,
     :param text_region: a text region with lines (as direct children or as deeper descendants).
     :type text_region: PageXMLTextRegion
     :param gap_threshold: the minimum number of horizontal pixels between columns of horizontally
-    aligned lines to be considered a column boundary. Default is 50.
+        aligned lines to be considered a column boundary. Default is 50.
     :type gap_threshold: int
     :param overlap_threshold: the minimum overlap ratio between two lines to be considered
-    horizontally aligned (i.e. part of the same 'column'). Default is 0.5, that is, two lines need
-    to horizontally overlap at least 50% of the shortest line.
+        horizontally aligned (i.e. part of the same 'column'). Default is 0.5, that is, two lines need
+        to horizontally overlap at least 50% of the shortest line.
     :type overlap_threshold: float
     """
     column_ranges = find_column_gaps(text_region.get_lines(), gap_threshold=gap_threshold)
