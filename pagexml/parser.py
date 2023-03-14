@@ -7,9 +7,9 @@ from typing import Generator, List, Dict, Union
 import xmltodict
 from dateutil.parser import parse as date_parse
 
+import pagexml.model.physical_document_model as pdm
 from pagexml.helper.file_helper import read_page_archive_file
 from pagexml.model.physical_document_model import Baseline, Coords, parse_derived_coords
-import pagexml.model.physical_document_model as pdm
 
 
 def parse_coords(coords: dict) -> Union[Coords, None]:
@@ -52,10 +52,10 @@ def parse_line_words(textline: dict) -> List[pdm.PageXMLWord]:
                 if "@conf" in word_dict["TextEquiv"]:
                     conf = word_dict["TextEquiv"]["@conf"]
             word = pdm.PageXMLWord(text=unicode_string,
-                               doc_id=word_dict['@id'] if '@id' in word_dict else None,
-                               metadata=parse_custom_metadata(word_dict) if '@custom' in word_dict else None,
-                               coords=parse_coords(word_dict["Coords"]),
-                               conf=conf)
+                                   doc_id=word_dict['@id'] if '@id' in word_dict else None,
+                                   metadata=parse_custom_metadata(word_dict) if '@custom' in word_dict else None,
+                                   coords=parse_coords(word_dict["Coords"]),
+                                   conf=conf)
             words.append(word)
         except TypeError:
             print('Unexpected format for Word Unicode representation:', word_dict)

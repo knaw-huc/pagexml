@@ -187,8 +187,8 @@ class Extractor:
                 yield file_info, file_data
 
 
-def get_archiver_mode(page_archive_file: str) -> Tuple[Literal["tar", "zip", "py7zr"],
-Literal["r", "r:", "r:gz", "r:bz2"]]:
+def get_archiver_mode(page_archive_file: str) -> \
+        Tuple[Literal["tar", "zip", "py7zr"], Literal["r", "r:", "r:gz", "r:bz2"]]:
     archived_fname_dir, archived_fname_file, archived_fname_ext = parse_archived_filename(page_archive_file)
     if archived_fname_ext in {".tar.gz", ".tgz"}:
         return "tar", "r:gz"
