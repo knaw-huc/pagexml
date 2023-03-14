@@ -13,4 +13,5 @@ Submodules
    :maxdepth: 4
 
    pagexml.analysis.layout_stats
+   pagexml.analysis.stats
    pagexml.analysis.text_stats

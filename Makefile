@@ -1,9 +1,14 @@
-.PHONY: docs help clean tests install publish version-update-patch version-update-minor version-update-major
+.PHONY: docs docs-source help clean tests install publish version-update-patch version-update-minor version-update-major
 
 all: help
 
+
+
 docs:
 	cd docs && rm -rf generated && make clean && make html
+
+apidoc-doc-source:
+	sphinx-apidoc -o docs/source/api --separate --force --module-first pagexml
 
 clean:
 	cd docs && rm -rf generated && make clean
@@ -37,6 +42,7 @@ help:
 	@echo
 	@echo "Please use \`make <target>', where <target> is one of:"
 	@echo "  install           		to install the necessary requirements"
+	@echo "  apidoc-source          to build or update the apidoc source files in docs/source/api"
 	@echo "  docs           		to build or update the documentation pages in docs/_build"
 	@echo "  clean          		to remove all generated files and directories"
 	@echo "  tests          		to run the unit tests in tests/"
