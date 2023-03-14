@@ -383,6 +383,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
         word_break_chars = set([char for char in wbd.word_break_chars])
     text = ''
     line_ranges = []
+    lines = [line for line in lines if line.text is not None and line.text != '']
     if len(lines) == 0:
         return None, []
     prev_line = lines[0]
@@ -390,7 +391,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
         if prev_line.text else []
     if len(lines) > 1:
         for curr_line in lines[1:]:
-            if curr_line.text is None:
+            if curr_line.text is None or curr_line.text == '':
                 do_merge = False
                 merge_word = None
                 curr_words = []
@@ -411,6 +412,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
             line_range = make_line_range(text, prev_line, prev_line_text)
             line_ranges.append(line_range)
             text += prev_line_text
+
             prev_words = curr_words
             prev_line = curr_line
     # add the last line (without adding trailing whitespace)

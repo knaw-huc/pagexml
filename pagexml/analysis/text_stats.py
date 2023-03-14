@@ -14,6 +14,22 @@ import pagexml.model.physical_document_model as pdm
 
 _SMALL = 1e-20
 
+wpl_to_cat = {}
+wpl_cat_min = {}
+wpl_cat_max = {}
+
+for wpl in range(0, 101):
+    if wpl > 0:
+        wpl_cat = (np.log(wpl) * 2).round(0) / 2
+    else:
+        wpl_cat = -np.inf
+    wpl_to_cat[wpl] = wpl_cat
+    if wpl_cat not in wpl_cat_min:
+        wpl_cat_min[wpl_cat] = wpl
+    wpl_cat_max[wpl_cat] = wpl
+
+wpl_cat_range = {wpl_cat: f"{wpl_cat_min[wpl_cat]}-{wpl_cat_max[wpl_cat]}" for wpl_cat in wpl_cat_min}
+
 
 def get_line_text(text_line: Union[str, Dict[str, any]]) -> Union[str, None]:
     """Convenience function to return the text string of a text line, regardless
@@ -910,6 +926,35 @@ def get_typical_start_end_words(wbd: WordBreakDetector,
                 wbd.freq['end'][end_word] / wbd.freq['all'][end_word] > threshold:
             typical_end_words.add(end_word)
     return typical_start_words, typical_end_words
+
+
+def get_words_per_line(lines: List[pdm.PageXMLTextLine], use_re_word_boundaries: bool = False):
+    """Return a Counter of the number of words per line of a PageXML pagexml_doc object.
+
+    :param lines: a list of PageXMLTextLine objects
+    :type lines: List[PageXMLTextLine]
+    :param use_re_word_boundaries: whether to split words of a line using RegEx word boundaries
+    :type use_re_word_boundaries: bool
+    :return: a counter of the number of words per line of a pagexml_doc
+    :rtype: Counter
+    """
+    words_per_line = Counter()
+    if isinstance(lines, pdm.PageXMLTextRegion):
+        lines = lines.get_lines()
+    for line in lines:
+        if line.text is None or line.text == '':
+            words = []
+        elif use_re_word_boundaries:
+            words = [w.replace(' ', '') for w in re.split(r'\b', line.text) if w != ' ' and w != '']
+        else:
+            words = [w for w in line.text.split(' ')]
+        # words_per_line.update([len(words)])
+        if len(words) in wpl_to_cat:
+            wpl_cat = wpl_to_cat[len(words)]
+        else:
+            wpl_cat = max(wpl_cat_range.keys())
+        words_per_line.update([wpl_cat_range[wpl_cat]])
+    return words_per_line
 
 
 def get_doc_words(pagexml_doc: pdm.PageXMLTextRegion, use_re_word_boundaries: bool = False) -> List[str]:

@@ -339,11 +339,21 @@ def handle_extra_lines(text_region: pdm.PageXMLTextRegion,
 
 def split_lines_on_column_gaps(text_region: pdm.PageXMLTextRegion,
                                gap_threshold: int = 50,
-                               overlap_threshold: float = 0.5,
-                               debug: bool = False) -> List[pdm.PageXMLColumn]:
+                               overlap_threshold: float = 0.5) -> List[pdm.PageXMLColumn]:
+    """Takes a PageXMLTextRegion object and tries to split the lines into columns based
+    on a minimum horizontal gap (in number of pixels) between columns.
+
+    :param text_region: a text region with lines (as direct children or as deeper descendants).
+    :type text_region: PageXMLTextRegion
+    :param gap_threshold: the minimum number of horizontal pixels between columns of horizontally
+    aligned lines to be considered a column boundary. Default is 50.
+    :type gap_threshold: int
+    :param overlap_threshold: the minimum overlap ratio between two lines to be considered
+    horizontally aligned (i.e. part of the same 'column'). Default is 0.5, that is, two lines need
+    to horizontally overlap at least 50% of the shortest line.
+    :type overlap_threshold: float
+    """
     column_ranges = find_column_gaps(text_region.get_lines(), gap_threshold=gap_threshold)
-    if debug:
-        print("COLUMN RANGES:", column_ranges)
     column_ranges = [col_range for col_range in column_ranges if col_range["end"] - col_range["start"] >= 20]
     column_lines, extra_lines = sort_lines_in_column_ranges(text_region.get_lines(),
                                                             column_ranges,

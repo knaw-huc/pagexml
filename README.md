@@ -62,13 +62,16 @@ for tr in page_doc.text_regions:
 In addition to the basic parsing and handling of PageXML output, there is
 functionality to support a range of tasks:
 
-- checking the quality of the HTR/OCR process,
-- classifying physical document types in a large set of PageXML documents,
-- identifying sections in sequences of PageXML documents ([tutorial](./notebooks/Demo-analysing-pagexml-characteristics.ipynb#section_detection)),
-- turning physical structure into logical structure,
+- reading sets of PageXML files from a archive (tar, zip) file ([tutorial](./notebooks/Demo-reading-pagexml-files-from-archive.ipynb)),
+- searching in text ([keyword in context](./notebooks/Demo-text-search-simple.ipynb), [keywords or fuzzy search](./notebooks/Demo-text-search-in-pagexml-archive.ipynb))
+- classifying physical document types in a large set of PageXML documents ([tutorial](./notebooks/Demo-analysing-scan-characteristics.ipynb)),
+- checking the quality of the HTR/OCR process ([tutorial](./notebooks/Demo-analysing-scan-characteristics-checking-quality.ipynb)),
+- comparing subsets ([tutorial](./notebooks/Demo-analysing-scan-characteristics-comparing-subsets.ipynb)),
+- identifying document sections in sequences of PageXML documents ([tutorial](./notebooks/Demo-analysing-scan-characteristics-book-sections.ipynb)),
 - turning text lines into running text ([tutorial](./notebooks/Demo-from-lines-to-running-text.ipynb)),
-- supporting different reading orders,
-- reinterpreting and restructuring text regions and lines,
+- supporting different reading orders ([tutorial](./notebooks/Demo-sorting.ipynb)),
+- reinterpreting and restructuring text regions and lines ([tutorial](./notebooks/Demo-restructuring-documents.ipynb)),
+- turning physical structure into logical structure,
 
 ----
 
