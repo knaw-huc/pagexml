@@ -460,6 +460,10 @@ class PageXMLDoc(PhysicalStructureDoc):
         self.add_type(doc_type)
         self.main_type = 'pagexml_doc'
 
+    @property
+    def stats(self):
+        return {}
+
 
 class PageXMLWord(PageXMLDoc):
 
@@ -534,6 +538,12 @@ class PageXMLTextLine(PageXMLDoc):
             doc_json['xheight'] = self.xheight
         return doc_json
 
+    @property
+    def stats(self):
+        return {
+            'words': self.num_words
+        }
+
     def get_words(self):
         if self.words:
             return self.words
@@ -590,11 +600,15 @@ class PageXMLTextRegion(PageXMLDoc):
         super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
                          coords=coords, reading_order=reading_order)
         self.main_type = 'text_region'
-        self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions else []
-        self.lines: List[PageXMLTextLine] = lines if lines else []
+        self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions is not None else []
+        self.lines: List[PageXMLTextLine] = lines if lines is not None else []
         self.orientation: Union[None, float] = orientation
         self.reading_order_number = {}
         self.text = text
+        if self.lines is not None:
+            self.set_as_parent(self.lines)
+        if self.text_regions is not None:
+            self.set_as_parent(self.text_regions)
         if self.reading_order:
             self.set_text_regions_in_reader_order()
         if doc_type:

@@ -14,10 +14,14 @@ def derive_boundary_points(pagexml_doc: pdm.PageXMLTextRegion) -> List[int]:
 
 def _init_doc_stats(line_width_boundary_points: List[int],
                     word_length_bin_size: int = 5, max_word_length: int = 30) -> Dict[str, List[any]]:
-    fields = ['doc_id', 'doc_num', 'lines', 'words', 'text_regions', 'columns', 'extra', 'pages',
+    fields = ['doc_id', 'doc_num', 'doc_width', 'doc_height',
+              'lines', 'words', 'text_regions',
+              'columns', 'extra', 'pages',
               'num_words', 'num_number_words', 'num_title_words', 'num_non_title_words',
               'num_stop_words', 'num_punctuation_words', 'num_oversized_words']
     doc_stats = {field: [] for field in fields}
+    for cat_wpl in text_stats.wpl_cat_range:
+        doc_stats[f"words_per_line_{text_stats.wpl_cat_range[cat_wpl]}"] = []
     for length_bin in range(word_length_bin_size, max_word_length + 1, word_length_bin_size):
         doc_stats[f"num_words_length_{length_bin}"] = []
     for width_range in layout_stats.get_boundary_width_ranges(line_width_boundary_points):
@@ -66,14 +70,19 @@ def get_doc_stats(pagexml_docs: Union[pdm.PageXMLTextRegion, List[pdm.PageXMLTex
     for pi, pagexml_doc in enumerate(pagexml_docs):
         pagexml_doc_stats['doc_id'].append(pagexml_doc.id)
         pagexml_doc_stats['doc_num'].append(pi + 1)
+        pagexml_doc_stats['doc_width'].append(pagexml_doc.coords.width)
+        pagexml_doc_stats['doc_height'].append(pagexml_doc.coords.height)
         lines = [line for line in pagexml_doc.get_lines() if line.text is not None]
         words = text_stats.get_doc_words(pagexml_doc, use_re_word_boundaries=use_re_word_boundaries)
         word_stats = text_stats.get_word_cat_stats(words, stop_words=stop_words,
                                                    max_word_length=max_word_length)
+        wpl_stats = text_stats.get_words_per_line(lines)
         for field in pagexml_doc.stats:
             pagexml_doc_stats[field].append(pagexml_doc.stats[field])
         for word_cat in word_stats:
             pagexml_doc_stats[word_cat].append((word_stats[word_cat]))
+        for wpl_cat in text_stats.wpl_cat_range.values():
+            pagexml_doc_stats[f'words_per_line_{wpl_cat}'].append(wpl_stats[wpl_cat])
         if line_width_boundary_points is None:
             bin_width = pagexml_doc.coords.width / 5
             line_width_boundary_points = [point for point in np.arange(bin_width, pagexml_doc.coords.width, bin_width)]
