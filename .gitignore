@@ -7,3 +7,4 @@ venv
 dist/
 poetry.lock
 docs/_build/
+notebooks/.ipynb_checkpoints/
