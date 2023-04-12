@@ -99,7 +99,7 @@ def parse_textline(textline: dict) -> pdm.PageXMLTextLine:
 
 
 def parse_conf(text_element: dict) -> Union[float, None]:
-    if '@conf' in text_element:
+    if text_element and '@conf' in text_element:
         if text_element['@conf'] == '':
             return None
         else:
