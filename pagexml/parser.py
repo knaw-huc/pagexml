@@ -1,11 +1,13 @@
 import glob
 import json
 import re
+from xml.parsers import expat
 from datetime import datetime
 from typing import Generator, List, Dict, Union
 
 import xmltodict
 from dateutil.parser import parse as date_parse
+from tqdm import tqdm
 
 import pagexml.model.physical_document_model as pdm
 from pagexml.helper.file_helper import read_page_archive_file
@@ -329,6 +331,30 @@ def read_pagexml_dirs(pagexml_dirs: Union[str, List[str]]) -> List[str]:
     return pagexml_files
 
 
+def parse_pagexml_files_from_directory(pagexml_directories: List[str],
+                                       show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
+    """Parse PageXML files from one or more directories.
+
+    :param pagexml_directories: the name of one or more directories containing uncompressed PageXML files
+    :type pagexml_directories: List[str]
+    :param show_progress: flag to determine whether a TQDM progress bar is shown
+    :type show_progress: bool
+    :return: a generator that yields a tuple of archived file name and content
+    :rtype: Generator[Tuple[str, str], None, None]
+    """
+    if isinstance(pagexml_directories, str):
+        pagexml_directories = [pagexml_directories]
+    for pagexml_directory in pagexml_directories:
+        dir_files = glob.glob(pagexml_directory, recursive=True)
+        pagexml_files = [fname for fname in dir_files if fname.endswith('.xml')]
+        if show_progress is True:
+            for pagexml_file in tqdm(pagexml_files, desc=f'Parsing files from directory {pagexml_directory}'):
+                yield parse_pagexml_file(pagexml_file)
+        else:
+            for pagexml_file in pagexml_files:
+                yield parse_pagexml_file(pagexml_file)
+
+
 def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = False,
                                      encoding: str = 'utf-8') -> Generator[pdm.PageXMLScan, None, None]:
     """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
@@ -347,9 +373,12 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
         try:
             yield parse_pagexml_file(pagefile_info['archived_filename'], pagexml_data=pagefile_data,
                                      encoding=encoding)
-        except (KeyError, AttributeError, IndexError, ValueError, TypeError) as err:
+        except (KeyError, AttributeError, IndexError,
+                ValueError, TypeError, FileNotFoundError,
+                expat.ExpatError) as err:
             if ignore_errors is True:
                 print(f"Skipping file with parser error: {pagefile_info['archived_filename']}")
+                print(err)
                 continue
             else:
                 raise
@@ -401,9 +430,7 @@ def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
     return column
 
 
-def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
-    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
-        if 'extra' in json_doc else []
+def json_to_column_container(json_doc: dict) -> tuple:
     columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
     text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
         if 'text_regions' in json_doc else []
@@ -411,6 +438,13 @@ def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
     reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
 
     coords = pdm.Coords(json_doc['coords']) if 'coords' in json_doc else None
+    return columns, text_regions, lines, reading_order, coords
+
+
+def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
+    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
+        if 'extra' in json_doc else []
+    columns, text_regions, lines, reading_order, coords = json_to_column_container(json_doc)
     page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            coords=coords, extra=extra, columns=columns,
                            text_regions=text_regions, lines=lines,
@@ -421,14 +455,9 @@ def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
 
 def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
     pages = [json_to_pagexml_page(page) for page in json_doc['pages']] if 'pages' in json_doc else []
-    columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-
+    columns, text_regions, lines, reading_order, coords = json_to_column_container(json_doc)
     scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           coords=pdm.Coords(json_doc['coords']), pages=pages, columns=columns,
+                           coords=coords, pages=pages, columns=columns,
                            text_regions=text_regions, lines=lines, reading_order=reading_order)
     pdm.set_parentage(scan)
     return scan

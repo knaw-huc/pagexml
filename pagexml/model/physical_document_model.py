@@ -305,7 +305,12 @@ def coords_list_to_hull_coords(coords_list):
     # print(coords_list)
     points = np.array([point for coords in coords_list for point in coords.points])
     # print(points)
-    edges = points_to_hull_edges(points)
+    try:
+        edges = points_to_hull_edges(points)
+    except IndexError:
+        print([coords for coords in coords_list])
+        print('points:', points)
+        raise
     # print(edges)
     hull_points = edges_to_hull_points(edges)
     return Coords(hull_points)
