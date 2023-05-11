@@ -348,9 +348,9 @@ class StructureDoc:
         self.type = doc_type
         self.main_type = 'doc'
         self.metadata = metadata if metadata else {}
-        if 'id' not in self.metadata:
+        if self.id and 'id' not in self.metadata:
             self.metadata['id'] = self.id
-        if 'type' not in self.metadata:
+        if self.metadata and 'type' not in self.metadata:
             self.metadata['type'] = self.type
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
         self.reading_order_number = {}
@@ -424,8 +424,11 @@ class StructureDoc:
 
 class PhysicalStructureDoc(StructureDoc):
 
-    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
-                 metadata: Dict[str, any] = None, coords: Coords = None, reading_order: Dict[int, str] = None):
+    def __init__(self, doc_id: str = None,
+                 doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None,
+                 coords: Coords = None,
+                 reading_order: Dict[int, str] = None):
         super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
         self.main_type = 'physical_structure_doc'
