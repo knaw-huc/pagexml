@@ -348,10 +348,10 @@ class StructureDoc:
         self.type = doc_type
         self.main_type = 'doc'
         self.metadata = metadata if metadata else {}
-        if self.id and 'id' not in self.metadata:
-            self.metadata['id'] = self.id
-        if self.metadata and 'type' not in self.metadata:
-            self.metadata['type'] = self.type
+        # if self.id and 'id' not in self.metadata:
+        #     self.metadata['id'] = self.id
+        # if self.metadata and 'type' not in self.metadata:
+        #     self.metadata['type'] = self.type
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
         self.reading_order_number = {}
         self.parent: Union[StructureDoc, None] = None

@@ -124,7 +124,7 @@ class TestStructureDoc(unittest.TestCase):
         json_data = doc.json
         self.assertEqual('doc1', json_data['id'])
         self.assertEqual('book', json_data['type'])
-        self.assertEqual({'title': 'The Great Gatsby', 'id': 'doc1', 'type': 'book'}, json_data['metadata'])
+        self.assertEqual({'title': 'The Great Gatsby'}, json_data['metadata'])
         self.assertEqual({}, json_data.get('reading_order', {}))
 
         doc.reading_order = {1: 'page1', 2: 'page2', 3: 'page3'}
@@ -156,7 +156,7 @@ class TestPhysicalStructureDoc(unittest.TestCase):
         expected_json = {
             'id': 'doc1',
             'type': 'book',
-            'metadata': {'author': 'Jane Doe', 'id': 'doc1', 'type': 'book'},
+            'metadata': {'author': 'Jane Doe'},
             'coords': [(0, 0), (0, 10), (10, 10), (10, 0)]
         }
         self.assertEqual(expected_json, self.doc.json)
