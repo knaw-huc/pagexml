@@ -343,9 +343,14 @@ class StructureDoc:
         self.type = doc_type
         self.main_type = 'doc'
         self.metadata = metadata if metadata else {}
+        if 'id' not in self.metadata:
+            self.metadata['id'] = self.id
+        if 'type' not in self.metadata:
+            self.metadata['type'] = self.type
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
         self.reading_order_number = {}
         self.parent: Union[StructureDoc, None] = None
+        self.logical_parent: Union[StructureDoc, None] = None
 
     def set_parent(self, parent: StructureDoc):
         """Set parent document and add metadata of parent to this document's metadata"""
@@ -394,6 +399,11 @@ class StructureDoc:
             self.metadata['parent_id'] = self.parent.id
             if hasattr(self.parent, 'main_type'):
                 self.metadata[f'{self.parent.main_type}_id'] = self.parent.id
+        if self.logical_parent:
+            self.metadata['logical_parent_type'] = self.logical_parent.main_type
+            self.metadata['logical_parent_id'] = self.logical_parent.id
+            if hasattr(self.logical_parent, 'main_type'):
+                self.metadata[f'{self.logical_parent.main_type}_id'] = self.logical_parent.id
 
     @property
     def json(self) -> Dict[str, any]:
@@ -442,6 +452,12 @@ class LogicalStructureDoc(StructureDoc):
         """Set parent document and add metadata of parent to this document's metadata"""
         self.logical_parent = parent
         self.add_logical_parent_id_to_metadata()
+
+    def set_as_logical_parent(self, children: Union[StructureDoc, List[StructureDoc]]):
+        if isinstance(children, StructureDoc):
+            children = [children]
+        for child in children:
+            child.parent = self
 
     def add_logical_parent_id_to_metadata(self):
         if self.logical_parent:
@@ -513,7 +529,7 @@ class PageXMLTextLine(PageXMLDoc):
             self.add_type(doc_type)
 
     def __repr__(self):
-        content_string = f"id={self.id}, type={self.type}, text={self.text} conf={self.conf}"
+        content_string = f"id={self.id}, type={self.type}, text=\"{self.text}\" conf={self.conf}"
         return f"{self.__class__.__name__}({content_string})"
 
     def __lt__(self, other: PageXMLTextLine):
@@ -607,6 +623,8 @@ class PageXMLTextRegion(PageXMLDoc):
         self.text = text
         if self.lines is not None:
             self.set_as_parent(self.lines)
+        if self.lines is not None:
+            self.set_as_parent(self.lines)
         if self.text_regions is not None:
             self.set_as_parent(self.text_regions)
         if self.reading_order:
@@ -677,6 +695,14 @@ class PageXMLTextRegion(PageXMLDoc):
                 self.reading_order = None
                 return None
         self.text_regions = self.get_text_regions_in_reading_order()
+
+    def get_all_text_regions(self):
+        text_regions: Set[PageXMLTextRegion] = set()
+        for text_region in self.text_regions:
+            text_regions.add(text_region)
+            if text_region.text_regions:
+                text_regions += text_region.get_all_text_regions()
+        return text_regions
 
     def get_inner_text_regions(self) -> List[PageXMLTextRegion]:
         text_regions: List[PageXMLTextRegion] = []
@@ -859,6 +885,7 @@ class PageXMLScan(PageXMLTextRegion):
         self.set_as_parent(self.columns)
         if doc_type:
             self.add_type(doc_type)
+        self.set_scan_id_as_metadata()
 
     def add_child(self, child: PageXMLDoc):
         child.set_parent(self)
@@ -870,6 +897,16 @@ class PageXMLScan(PageXMLTextRegion):
             self.text_regions.append(child)
         elif isinstance(child, PageXMLTextLine):
             self.lines.append(child)
+
+    def set_scan_id_as_metadata(self):
+        self.metadata['scan_id'] = self.id
+        for tr in self.get_all_text_regions():
+            tr.metadata['scan_id'] = self.id
+        for line in self.get_lines():
+            line.metadata['scan_id'] = self.id
+        for word in self.get_words():
+            if isinstance(word, PageXMLWord):
+                word.metadata['scan_id'] = self.id
 
     @property
     def json(self) -> Dict[str, any]:

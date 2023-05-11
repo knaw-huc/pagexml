@@ -179,6 +179,100 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
             return int(total_avg)
 
 
+def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, debug: int = 0) -> Tuple[List[Tuple[int, int]],
+                                                                                         List[Tuple[int, int]]]:
+    """Split the list of bounding polygon coordinates of a line in sets of points above and below
+    the baseline. When a line has no baseline or no bounding polygon, empty lists are
+    returned
+
+    :param line: a PageXML text line
+    :type line: PageXMLTextLine
+    :param debug: the detail level of debug information (0 = none, higher is more)
+    :type debug: int
+    :return: two lists of bounding polygon points
+    :rtype: tuple
+    """
+    ci_c = 0
+    below_baseline = []
+    above_baseline = []
+    if line.baseline is None:
+        return above_baseline, below_baseline
+    interpolated_baseline_points = [i for i in interpolate_baseline_points(line.baseline.points, step=50).items()]
+    if debug > 2:
+        print('interpolated_baseline_points:', interpolated_baseline_points)
+    sorted_coord_points = sorted(line.coords.points, key=lambda p: p[0])
+    if debug > 0:
+        print('sorted_coord_points:', sorted_coord_points)
+        print('len(sorted_coord_points):', len(sorted_coord_points))
+    if debug > 1:
+        print('ci_c:', ci_c)
+    num_baseline_points = len(line.baseline.points)
+    num_coord_points = len(sorted_coord_points)
+    for ci_b, curr_b in enumerate(interpolated_baseline_points):
+        curr_bx, curr_by = curr_b
+        next_b = interpolated_baseline_points[ci_b + 1] if ci_b + 1 < num_baseline_points else None
+        if debug > 0:
+            print(f'sort_above_below - curr_b: {curr_b}')
+            print('\tci_c:', ci_c, '\tnum_coord_points:', num_coord_points)
+        if ci_c == num_coord_points:
+            break
+        for curr_c in sorted_coord_points[ci_c:]:
+            curr_cx, curr_cy = curr_c
+            if next_b and abs(next_b[0] - curr_cx) < abs(curr_b[0] - curr_cx):
+                break
+            if debug > 0:
+                print(f'sort_above_below - curr_c ({ci_c}): {curr_c}')
+            ci_c += 1
+            if curr_cy > curr_by:
+                if debug > 0:
+                    print(f'sort_above_below - below')
+                below_baseline.append(curr_c)
+            elif curr_cy < curr_by:
+                if debug > 0:
+                    print(f'sort_above_below - above')
+                above_baseline.append(curr_c)
+            else:
+                if debug > 0:
+                    print(f'sort_above_below - neither')
+                pass
+
+    return above_baseline, below_baseline
+
+
+def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50) -> np.array:
+    above_baseline, below_baseline = sort_coords_above_below_baseline(line)
+    int_base = interpolate_baseline_points(line.baseline.points, step=step)
+    int_above = interpolate_baseline_points(above_baseline, step=step)
+
+    height = {}
+    for x in int_base:
+        if x in int_above:
+            height[x] = int_base[x] - int_above[x]
+
+    return np.array(list(height.values()))
+
+
+def get_height_stats(line_heights: np.array) -> Dict[str, int]:
+    return {
+        'max': line_heights.max(),
+        'min': line_heights.min(),
+        'mean': int(round(line_heights.mean())),
+        'median': int(np.median(line_heights))
+    }
+
+
+def get_line_distances(lines: List[pdm.PageXMLTextLine]) -> List[np.ndarray]:
+    all_distances = []
+    for li, curr_line in enumerate(lines):
+        next_line = None
+        if li + 1 < len(lines):
+            next_line = lines[li + 1]
+        if next_line:
+            distances = compute_baseline_distances(curr_line, next_line)
+            all_distances.append(distances)
+        return all_distances
+
+
 def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np.ndarray]:
     """Returns a list of line distance numpy arrays. For each line, its distance
     to the next at 50 pixel intervals is computed and stored in a numpy ndarray.
