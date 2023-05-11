@@ -18,7 +18,7 @@ def read_lines_from_line_files(pagexml_line_files: Union[str, List[str]]) -> Gen
 
 
 def get_bbox(doc: pdm.PageXMLDoc):
-    if doc.coords.points is None:
+    if doc is None or doc.coords is None or doc.coords.points is None:
         return None
     return f"{doc.coords.x},{doc.coords.y},{doc.coords.w},{doc.coords.h}"
 
@@ -178,7 +178,7 @@ def transform_box_to_coords(box_string: str) -> pdm.Coords:
 
 def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_headers: bool = True,
                                      headers: List[str] = None,
-                                     add_bounding_box: bool = False) -> Generator[pdm.PageXMLTextRegion, None, None]:
+                                     add_bounding_box: bool = True) -> Generator[pdm.PageXMLTextRegion, None, None]:
     """Read lines from one or more PageXML line format files and return them
     as PageXMLTextLine objects, grouped by their PageXML document."""
     line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers,
@@ -186,11 +186,17 @@ def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_head
     curr_doc = None
     curr_tr = None
     for li, line_dict in enumerate(line_iterator):
+        # print(line_dict.keys())
+        # print(line_dict)
         doc_coords, tr_coords, line_coords = None, None, None
         if add_bounding_box is True:
             doc_coords = transform_box_to_coords(line_dict['doc_box'])
             tr_coords = transform_box_to_coords(line_dict['textregion_box'])
-            line_coords = transform_box_to_coords(line_dict['line_box'])
+            # print('\t', tr_coords, line_dict['textregion_box'])
+            if line_dict['line_box'] is None:
+                line_coords = None
+            else:
+                line_coords = transform_box_to_coords(line_dict['line_box'])
         if curr_doc is None or curr_doc.id != line_dict['doc_id']:
             if curr_doc is not None:
                 yield curr_doc
@@ -200,6 +206,7 @@ def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_head
             curr_tr = pdm.PageXMLTextRegion(doc_id=line_dict['textregion_id'], coords=tr_coords)
             curr_doc.add_child(curr_tr)
             # print(f'creating tr with id {curr_tr.id} and appending to doc with id {curr_doc.id}')
+            # print(curr_tr.coords)
         line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
                                    text=line_dict['text'], coords=line_coords)
         curr_tr.add_child(line)
