@@ -259,13 +259,14 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> pdm.PageXMLScan:
         reading_order = parse_page_reading_order(scan_json)
     else:
         reading_order = {}
-    return pdm.PageXMLScan(
+    scan_doc = pdm.PageXMLScan(
         doc_id=doc_id,
         metadata=metadata,
         coords=coords,
         text_regions=text_regions,
         reading_order=reading_order,
     )
+    return scan_doc
 
 
 def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
