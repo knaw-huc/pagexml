@@ -1,5 +1,8 @@
+import datetime
 import subprocess
 import sys
+
+import yaml
 
 project_init_file = 'pagexml/__init__.py'
 citation_file = 'CITATION.cff'
@@ -32,6 +35,7 @@ def version(argv=None):
     with open(citation_file) as f:
         citation = yaml.load(f, Loader=yaml.Loader)
     citation['version'] = new_version
-    citation['date-released'] = datetime.datetime.now().strftime("%Y-%m-%d")
+    now = datetime.datetime.now()
+    citation['date-released'] = datetime.date(now.year, now.month, now.day)
     with open(citation_file, 'w') as f:
-        yaml.dump(citation)
+        f.write(yaml.dump(citation))
