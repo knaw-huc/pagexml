@@ -38,4 +38,4 @@ def version(argv=None):
     now = datetime.datetime.now()
     citation['date-released'] = datetime.date(now.year, now.month, now.day)
     with open(citation_file, 'w') as f:
-        f.write(yaml.dump(citation))
+        f.write(yaml.dump(citation, sort_keys=False))
