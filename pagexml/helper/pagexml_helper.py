@@ -330,7 +330,8 @@ class LineIterable:
 
 
 def make_line_text(line: pdm.PageXMLTextLine, do_merge: bool,
-                   end_word: str, merge_word: str, word_break_chars: Union[str, Set[str]] = '-') -> str:
+                   end_word: str, merge_word: str,
+                   word_break_chars: Union[str, Set[str], List[str]] = '-') -> str:
     line_text = line.text
     if len(line_text) >= 2 and line_text[-1] in word_break_chars and line_text[-2] in word_break_chars:
         # remove the redundant line break char
@@ -364,7 +365,7 @@ def make_line_range(text: str, line: pdm.PageXMLTextLine, line_text: str) -> Dic
 
 
 def make_text_region_text(lines: List[pdm.PageXMLTextLine],
-                          word_break_chars: List[str] = '-',
+                          word_break_chars: Union[str, Set[str], List[str]] = '-',
                           wbd: text_stats.WordBreakDetector = None) -> Tuple[Union[str, None], List[Dict[str, any]]]:
     """Turn the text lines in a region into a single paragraph of text, with a list of line ranges
     that indicates how the text of each line corresponds to character offsets in the paragraph.
@@ -390,6 +391,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
     prev_words = text_helper.get_line_words(prev_line.text, word_break_chars=word_break_chars) \
         if prev_line.text else []
     if len(lines) > 1:
+        remove_prefix_word_break = False
         for curr_line in lines[1:]:
             if curr_line.text is None or curr_line.text == '':
                 do_merge = False
@@ -406,6 +408,12 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                     # print(do_merge, merge_word)
                     prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word,
                                                     word_break_chars=word_break_chars)
+                    if remove_prefix_word_break and prev_line_text.startswith('„'):
+                        prev_line_text = prev_line_text[1:]
+                    if '„' in word_break_chars and prev_words[-1].endswith('„') and curr_line.text.startswith('„'):
+                        remove_prefix_word_break = True
+                    else:
+                        remove_prefix_word_break = False
                     # print(prev_line_text)
                 else:
                     prev_line_text = ''

@@ -8,11 +8,14 @@ import pagexml.model.physical_document_model as pdm
 import pagexml.parser as parser
 
 
-def read_lines_from_line_files(pagexml_line_files: Union[str, List[str]]) -> Generator[str, None, None]:
+def read_lines_from_line_files(pagexml_line_files: Union[str, List[str]],
+                               has_headers: bool = True) -> Generator[str, None, None]:
     if isinstance(pagexml_line_files, str):
         pagexml_line_files = [pagexml_line_files]
-    for line_file in pagexml_line_files:
+    for li, line_file in enumerate(pagexml_line_files):
         with gzip.open(line_file, 'rt') as fh:
+            if has_headers is True and li > 0:
+                _headers = next(fh)
             for line in fh:
                 yield line
 
@@ -108,11 +111,11 @@ class LineReader(Iterable):
             raise TypeError(f"MUST use one of the following optional arguments: "
                             f"'pagexml_files', 'pagexml_docs' or 'pagexml_line_file'.")
         if pagexml_line_files:
-            self.pagexml_line_files = make_list(pagexml_line_files)
+            self.pagexml_line_files = sorted(make_list(pagexml_line_files))
         if pagexml_files:
-            self.pagexml_files = make_list(pagexml_files)
+            self.pagexml_files = sorted(make_list(pagexml_files))
         if pagexml_docs:
-            self.pagexml_docs = make_list(pagexml_docs)
+            self.pagexml_docs = sorted(make_list(pagexml_docs))
 
     def __iter__(self) -> Generator[Dict[str, str], None, None]:
         if self.groupby is None:
@@ -149,7 +152,7 @@ class LineReader(Iterable):
                 yield line
 
     def _iter_from_line_file(self) -> Generator[Dict[str, any], None, None]:
-        line_iterator = read_lines_from_line_files(self.pagexml_line_files)
+        line_iterator = read_lines_from_line_files(self.pagexml_line_files, has_headers=self.has_headers)
         if self.has_headers is True:
             header_line = next(line_iterator)
             self.line_file_headers = header_line.strip().split('\t')
@@ -190,7 +193,12 @@ def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_head
         # print(line_dict)
         doc_coords, tr_coords, line_coords = None, None, None
         if add_bounding_box is True:
-            doc_coords = transform_box_to_coords(line_dict['doc_box'])
+            try:
+                doc_coords = transform_box_to_coords(line_dict['doc_box'])
+            except ValueError:
+                print(line_dict['doc_box'])
+                print(line_dict)
+                raise
             tr_coords = transform_box_to_coords(line_dict['textregion_box'])
             # print('\t', tr_coords, line_dict['textregion_box'])
             if line_dict['line_box'] is None:

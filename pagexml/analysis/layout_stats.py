@@ -95,6 +95,17 @@ def interpolate_baseline_points(points: List[Tuple[int, int]],
     return interpolated_baseline_points
 
 
+def compute_points_distances(points1: List[Tuple[int, int]], points2: List[Tuple[int, int]],
+                             step: int = 50):
+    if points1 is None or points2 is None:
+        return np.array([])
+    b1_points = interpolate_baseline_points(points1, step=step)
+    b2_points = interpolate_baseline_points(points2, step=step)
+    distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
+                          if curr_x in b2_points])
+    return distances
+
+
 def compute_baseline_distances(line1: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
                                line2: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
                                step: int = 50) -> np.ndarray:
@@ -124,16 +135,26 @@ def compute_baseline_distances(line1: Union[pdm.PageXMLTextLine, List[pdm.PageXM
         points2 = line2.baseline.points if line2.baseline.points is not None else []
     else:
         points2 = [point for line in line2 for point in line.baseline.points if line.baseline.points is not None]
-    if points1 is None or points2 is None:
-        return np.array([])
-    b1_points = interpolate_baseline_points(points1, step=step)
-    b2_points = interpolate_baseline_points(points2, step=step)
-    distances = np.array([abs(b2_points[curr_x] - b1_points[curr_x]) for curr_x in b1_points
-                          if curr_x in b2_points])
+    distances = compute_points_distances(points1, points2, step=step)
     if len(distances) == 0:
         avg1 = average_baseline_height(line1)
         avg2 = average_baseline_height(line2)
         distances = np.array([abs(avg1 - avg2)])
+    return distances
+
+
+def get_bottom_points(line: pdm.PageXMLTextLine) -> List[Tuple[int, int]]:
+    right_most = [p for p in line.coords.points if p[0] == line.coords.right][0]
+    right_most_index = line.coords.points.index(right_most)
+    return line.coords.points[right_most_index:]
+
+
+def compute_bounding_box_distances(line1: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
+                                   line2: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
+                                   step: int = 50):
+    points1 = get_bottom_points(line1)
+    points2 = get_bottom_points(line2)
+    distances = compute_points_distances(points1, points2, step=step)
     return distances
 
 
@@ -179,8 +200,9 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
             return int(total_avg)
 
 
-def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, debug: int = 0) -> Tuple[List[Tuple[int, int]],
-                                                                                         List[Tuple[int, int]]]:
+def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
+                                     debug: int = 0) -> Tuple[List[Tuple[int, int]],
+                                                              List[Tuple[int, int]]]:
     """Split the list of bounding polygon coordinates of a line in sets of points above and below
     the baseline. When a line has no baseline or no bounding polygon, empty lists are
     returned
@@ -195,10 +217,17 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, debug: int = 0) 
     ci_c = 0
     below_baseline = []
     above_baseline = []
-    if line.baseline is None:
+    if line.baseline is None or line.coords is None:
+        return above_baseline, below_baseline
+    if not line.baseline or not line.coords:
+        return above_baseline, below_baseline
+    if line.coords.right < line.baseline.left:
+        return above_baseline, below_baseline
+    if line.coords.left > line.baseline.right:
         return above_baseline, below_baseline
     interpolated_baseline_points = [i for i in interpolate_baseline_points(line.baseline.points, step=50).items()]
     if debug > 2:
+        print('baseline_points:', line.baseline.points)
         print('interpolated_baseline_points:', interpolated_baseline_points)
     sorted_coord_points = sorted(line.coords.points, key=lambda p: p[0])
     if debug > 0:
@@ -206,7 +235,7 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, debug: int = 0) 
         print('len(sorted_coord_points):', len(sorted_coord_points))
     if debug > 1:
         print('ci_c:', ci_c)
-    num_baseline_points = len(line.baseline.points)
+    num_baseline_points = len(interpolated_baseline_points)
     num_coord_points = len(sorted_coord_points)
     for ci_b, curr_b in enumerate(interpolated_baseline_points):
         curr_bx, curr_by = curr_b
@@ -223,24 +252,28 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, debug: int = 0) 
             if debug > 0:
                 print(f'sort_above_below - curr_c ({ci_c}): {curr_c}')
             ci_c += 1
-            if curr_cy > curr_by:
-                if debug > 0:
-                    print(f'sort_above_below - below')
-                below_baseline.append(curr_c)
-            elif curr_cy < curr_by:
+            if curr_cy < curr_by:
                 if debug > 0:
                     print(f'sort_above_below - above')
                 above_baseline.append(curr_c)
             else:
                 if debug > 0:
-                    print(f'sort_above_below - neither')
-                pass
+                    print(f'sort_above_below - below')
+                below_baseline.append(curr_c)
 
     return above_baseline, below_baseline
 
 
-def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50) -> np.array:
-    above_baseline, below_baseline = sort_coords_above_below_baseline(line)
+def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50,
+                     ignore_errors: bool = True, debug: int = 0) -> np.array:
+    above_baseline, below_baseline = sort_coords_above_below_baseline(line, debug=debug)
+    if len(above_baseline) == 0:
+        if ignore_errors is False:
+            ValueError(f'line {line.id} has no bounding coordinates above baseline')
+        return None
+    if len(below_baseline) == 0:
+        if ignore_errors is False:
+            ValueError(f'Warning: line {line.id} has no bounding coordinates below baseline')
     int_base = interpolate_baseline_points(line.baseline.points, step=step)
     int_above = interpolate_baseline_points(above_baseline, step=step)
 
@@ -249,16 +282,37 @@ def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50) -> np.array:
         if x in int_above:
             height[x] = int_base[x] - int_above[x]
 
+    if len(height) == 0:
+        print()
+        return None
     return np.array(list(height.values()))
 
 
-def get_height_stats(line_heights: np.array) -> Dict[str, int]:
+def compute_height_stats(line_heights: np.array) -> Dict[str, int]:
     return {
         'max': line_heights.max(),
         'min': line_heights.min(),
         'mean': int(round(line_heights.mean())),
         'median': int(np.median(line_heights))
     }
+
+
+def get_line_height_stats(line: pdm.PageXMLTextLine, step: int = 50,
+                          ignore_errors: bool = False, debug: int = 0) -> Union[Dict[str, int], None]:
+    try:
+        line_heights = get_text_heights(line, step=step, ignore_errors=ignore_errors, debug=debug)
+        if debug > 0:
+            print('get_line_height_stats - line_heights:', line_heights)
+        if line_heights is None:
+            return None
+        return compute_height_stats(line_heights)
+    except IndexError:
+        print('ERROR INFO:')
+        print('get_line_height_stats - line.baseline:', line.baseline)
+        print('get_line_height_stats - line.coords:', line.coords)
+        raise
+    except AttributeError:
+        return None
 
 
 def get_line_distances(lines: List[pdm.PageXMLTextLine]) -> List[np.ndarray]:
@@ -268,7 +322,10 @@ def get_line_distances(lines: List[pdm.PageXMLTextLine]) -> List[np.ndarray]:
         if li + 1 < len(lines):
             next_line = lines[li + 1]
         if next_line:
-            distances = compute_baseline_distances(curr_line, next_line)
+            if curr_line.baseline and next_line.baseline:
+                distances = compute_baseline_distances(curr_line, next_line)
+            else:
+                distances = compute_bounding_box_distances(curr_line, next_line)
             all_distances.append(distances)
         return all_distances
 

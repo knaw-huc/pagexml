@@ -1,5 +1,6 @@
 import glob
 import json
+import os
 import re
 from xml.parsers import expat
 from datetime import datetime
@@ -346,7 +347,7 @@ def parse_pagexml_files_from_directory(pagexml_directories: List[str],
     if isinstance(pagexml_directories, str):
         pagexml_directories = [pagexml_directories]
     for pagexml_directory in pagexml_directories:
-        dir_files = glob.glob(pagexml_directory, recursive=True)
+        dir_files = glob.glob(os.path.join(pagexml_directory, '**/*.xml'), recursive=True)
         pagexml_files = [fname for fname in dir_files if fname.endswith('.xml')]
         if show_progress is True:
             for pagexml_file in tqdm(pagexml_files, desc=f'Parsing files from directory {pagexml_directory}'):

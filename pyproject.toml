@@ -19,7 +19,7 @@ packages = [{ include = "pagexml" }]
 
 [tool.poetry.dependencies]
 python = "^3.8,<3.12"
-fuzzy-search = "^1.5.0"
+fuzzy-search = "^2.0.0a"
 matplotlib = "^3.7.0"
 numpy = "^1.22.3"
 pandas = "^1.5.3"
