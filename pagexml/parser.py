@@ -143,7 +143,14 @@ def parse_custom_metadata_element_list(custom_string: str, custom_field: str) ->
             if part == '':
                 continue
             field, value = part.split(':')
-            metadata[field.strip()] = (value.strip())
+
+            field = field.strip()
+            value = value.strip()
+
+            if field in ('offset', 'length'):
+                metadata[field] = int(value)
+            else:
+                metadata[field] = value
 
         metadata_list.append(metadata)
 
