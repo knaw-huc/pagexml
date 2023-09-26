@@ -854,6 +854,29 @@ class PageXMLPage(PageXMLTextRegion):
         self.coords = parse_derived_coords(self.extra + self.columns + self.text_regions + self.lines)
         # print('stats after adding:', self.stats)
 
+    def get_all_text_regions(self):
+        text_regions = [tr for col in self.columns for tr in col.text_regions]
+        text_regions.extend([tr for tr in self.extra])
+        return text_regions
+
+    def get_text_regions_in_reading_order(self, include_extra: bool = True):
+        text_regions = []
+        if len(self.text_regions) > 0:
+            text_regions.extend(self.text_regions)
+        if hasattr(self, 'columns'):
+            for col in sorted(self.columns):
+                text_regions.extend(col.get_text_regions_in_reading_order())
+        if include_extra and hasattr(self, 'extra'):
+            text_regions.extend(sorted(self.extra))
+        return text_regions
+
+    def get_inner_text_regions(self) -> List[PageXMLTextRegion]:
+        text_regions = self.get_all_text_regions()
+        inner_trs = []
+        for tr in text_regions:
+            inner_trs.extend(tr.get_inner_text_regions())
+        return inner_trs
+
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
@@ -880,6 +903,7 @@ class PageXMLPage(PageXMLTextRegion):
         }
         if self.columns:
             stats['columns'] = len(self.columns)
+        if self.extra:
             stats['extra'] = len(self.extra)
         if self.text_regions:
             stats['text_regions'] = len(self.text_regions)

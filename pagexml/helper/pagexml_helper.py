@@ -24,6 +24,8 @@ def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
     if v_overlap / element2.coords.height > threshold:
         if h_overlap / element2.coords.width > threshold:
             return True
+        else:
+            return False
     else:
         return False
 
@@ -79,6 +81,43 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.Pa
     for line_group in horizontally_grouped_lines:
         line_group.sort(key=lambda line: line.coords.left)
     return horizontally_grouped_lines
+
+
+def merge_sets(sets: List[Set[any]], min_overlap: int = 1) -> List[Set[any]]:
+    merged_sets = []
+
+    while len(sets) > 0:
+        current_set = sets.pop(0)
+        merged_set = set(current_set)
+
+        i = 0
+        while i < len(sets):
+            if len(merged_set.intersection(sets[i])) >= min_overlap:
+                merged_set.update(sets[i])
+                sets.pop(i)
+            else:
+                i += 1
+
+        merged_sets.append(merged_set)
+
+    return merged_sets
+
+
+def merge_textregions(text_regions: List[pdm.PageXMLTextRegion],
+                      metadata: dict, doc_id: str = None) -> Union[pdm.PageXMLTextRegion, None]:
+    """Merge two text_regions into one, sorting lines by baseline height."""
+    if len(text_regions) == 0:
+        return None
+    merged_lines = [line for tr in text_regions for line in tr.get_lines()]
+    merged_lines = list(set(merged_lines))
+    sorted_lines = sorted(merged_lines, key=lambda x: x.baseline.y)
+    merged_coords = pdm.parse_derived_coords(sorted_lines)
+    merged_tr = pdm.PageXMLTextRegion(doc_id=doc_id, doc_type='index_text_region',
+                                      metadata=metadata, coords=merged_coords,
+                                      lines=sorted_lines)
+    if doc_id is None:
+        merged_tr.set_derived_id(text_regions[0].parent.id)
+    return merged_tr
 
 
 def horizontally_merge_lines(lines: List[pdm.PageXMLTextLine]) -> List[pdm.PageXMLTextLine]:
@@ -404,7 +443,8 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
                 if prev_line.text is not None:
                     do_merge, merge_word = text_stats.determine_word_break(curr_words, prev_words,
                                                                            wbd=wbd,
-                                                                           word_break_chars=word_break_chars)
+                                                                           word_break_chars=word_break_chars,
+                                                                           debug=False)
                     # print(do_merge, merge_word)
                     prev_line_text = make_line_text(prev_line, do_merge, prev_words[-1], merge_word,
                                                     word_break_chars=word_break_chars)
