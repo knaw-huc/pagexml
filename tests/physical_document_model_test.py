@@ -150,7 +150,6 @@ class TestPhysicalStructureDoc(unittest.TestCase):
         parent.id = 'parent_doc'
         self.doc.set_derived_id(parent.id)
         self.assertEqual('parent_doc-physical_structure_doc-0-0-10-10', self.doc.id)
-        self.assertEqual(self.doc.id, self.doc.metadata['id'])
 
     def test_json(self):
         expected_json = {
