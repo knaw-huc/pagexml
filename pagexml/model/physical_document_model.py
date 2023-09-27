@@ -443,7 +443,7 @@ class PhysicalStructureDoc(StructureDoc):
     def set_derived_id(self, parent_id: str):
         box_string = f"{self.coords.x}-{self.coords.y}-{self.coords.w}-{self.coords.h}"
         self.id = f"{parent_id}-{self.main_type}-{box_string}"
-        self.metadata['id'] = self.id
+        # self.metadata['id'] = self.id
 
 
 class LogicalStructureDoc(StructureDoc):
@@ -664,6 +664,7 @@ class PageXMLTextRegion(PageXMLDoc):
             self.text_regions.append(child)
         else:
             raise TypeError(f'unknown child type: {child.__class__.__name__}')
+        self.coords = parse_derived_coords(self.text_regions + self.lines)
 
     @property
     def json(self) -> Dict[str, any]:
@@ -726,7 +727,7 @@ class PageXMLTextRegion(PageXMLDoc):
     def get_lines(self) -> List[PageXMLTextLine]:
         lines: List[PageXMLTextLine] = []
         if self.text_regions:
-            if self.reading_order:
+            if self.reading_order and all([tr.id in self.reading_order for tr in self.text_regions]):
                 for tr in sorted(self.text_regions, key=lambda t: self.reading_order_number[t.id]):
                     lines += tr.get_lines()
             else:
@@ -741,7 +742,7 @@ class PageXMLTextRegion(PageXMLDoc):
         if self.text is not None:
             return self.text.split(' ')
         if self.lines:
-            for line in self.get_lines():
+            for line in self.lines:
                 if line.words:
                     words += line.words
                 elif line.text:
@@ -820,30 +821,61 @@ class PageXMLPage(PageXMLTextRegion):
             for column in sorted(self.columns):
                 lines += column.get_lines()
             # Second, add lines from text_regions
+        if self.extra:
             for tr in self.extra:
                 lines += tr.get_lines()
-        elif self.text_regions:
-            if self.reading_order:
+        if self.text_regions:
+            # print('get_lines - reading_order_number:', self.reading_order_number)
+            # print('get_lines - reading_order:', self.reading_order)
+            if self.reading_order and all([tr.id in self.reading_order for tr in self.text_regions]):
                 for tr in sorted(self.text_regions, key=lambda t: self.reading_order_number[t]):
                     lines += tr.get_lines()
             else:
                 for tr in sorted(self.text_regions):
                     lines += tr.get_lines()
+        if self.lines:
+            raise AttributeError(f'page {self.id} has lines as direct property')
         return lines
 
     def add_child(self, child: PageXMLDoc, as_extra: bool = False):
+        # print('as_extra:', as_extra)
+        # print('stats before adding:', self.stats)
         child.set_parent(self)
-        if isinstance(child, PageXMLColumn):
+        if as_extra and (isinstance(child, PageXMLColumn) or isinstance(child, PageXMLTextRegion)):
+            self.extra.append(child)
+        elif isinstance(child, PageXMLColumn) or child.__class__.__name__ == 'PageXMLColumn':
             self.columns.append(child)
         elif isinstance(child, PageXMLTextLine):
             self.lines.append(child)
         elif isinstance(child, PageXMLTextRegion):
-            if as_extra:
-                self.extra.append(child)
-            else:
-                self.text_regions.append(child)
+            self.text_regions.append(child)
         else:
             raise TypeError(f'unknown child type: {child.__class__.__name__}')
+        self.coords = parse_derived_coords(self.extra + self.columns + self.text_regions + self.lines)
+        # print('stats after adding:', self.stats)
+
+    def get_all_text_regions(self):
+        text_regions = [tr for col in self.columns for tr in col.text_regions]
+        text_regions.extend([tr for tr in self.extra])
+        return text_regions
+
+    def get_text_regions_in_reading_order(self, include_extra: bool = True):
+        text_regions = []
+        if len(self.text_regions) > 0:
+            text_regions.extend(self.text_regions)
+        if hasattr(self, 'columns'):
+            for col in sorted(self.columns):
+                text_regions.extend(col.get_text_regions_in_reading_order())
+        if include_extra and hasattr(self, 'extra'):
+            text_regions.extend(sorted(self.extra))
+        return text_regions
+
+    def get_inner_text_regions(self) -> List[PageXMLTextRegion]:
+        text_regions = self.get_all_text_regions()
+        inner_trs = []
+        for tr in text_regions:
+            inner_trs.extend(tr.get_inner_text_regions())
+        return inner_trs
 
     @property
     def json(self) -> Dict[str, any]:
@@ -871,8 +903,9 @@ class PageXMLPage(PageXMLTextRegion):
         }
         if self.columns:
             stats['columns'] = len(self.columns)
+        if self.extra:
             stats['extra'] = len(self.extra)
-        elif self.text_regions:
+        if self.text_regions:
             stats['text_regions'] = len(self.text_regions)
         return stats
 

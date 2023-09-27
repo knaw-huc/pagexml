@@ -1,5 +1,6 @@
 import glob
 import json
+import os
 import re
 from xml.parsers import expat
 from datetime import datetime
@@ -381,7 +382,9 @@ def parse_pagexml_files_from_directory(pagexml_directories: List[str],
     if isinstance(pagexml_directories, str):
         pagexml_directories = [pagexml_directories]
     for pagexml_directory in pagexml_directories:
-        dir_files = glob.glob(pagexml_directory, recursive=True)
+        # print('dir:', pagexml_directory)
+        dir_files = glob.glob(os.path.join(pagexml_directory, '**/*.xml'), recursive=True)
+        # print('num files:', len(dir_files))
         pagexml_files = [fname for fname in dir_files if fname.endswith('.xml')]
         if show_progress is True:
             for pagexml_file in tqdm(pagexml_files, desc=f'Parsing files from directory {pagexml_directory}'):
@@ -392,6 +395,7 @@ def parse_pagexml_files_from_directory(pagexml_directories: List[str],
 
 
 def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = False,
+                                     silent_mode: bool = False,
                                      encoding: str = 'utf-8') -> Generator[pdm.PageXMLScan, None, None]:
     """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
     PageXML file as a PageXMLScan object.
@@ -400,6 +404,8 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
     :type archive_file: str
     :param ignore_errors: whether to ignore errors when parsing individual PageXML files
     :type ignore_errors: bool
+    :param ignore_errors: whether to ignore errors warnings when parsing individual PageXML files
+    :type ignore_errors: bool
     :param encoding: the encoding of the file (default utf-8)
     :type encoding: str
     :return: a PageXMLScan object
@@ -407,14 +413,17 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
     """
     for pagefile_info, pagefile_data in read_page_archive_file(archive_file):
         try:
-            yield parse_pagexml_file(pagefile_info['archived_filename'], pagexml_data=pagefile_data,
-                                     encoding=encoding)
+            scan = parse_pagexml_file(pagefile_info['archived_filename'], pagexml_data=pagefile_data,
+                                      encoding=encoding)
+            scan.metadata['pagefile_info'] = pagefile_info
+            yield scan
         except (KeyError, AttributeError, IndexError,
                 ValueError, TypeError, FileNotFoundError,
                 expat.ExpatError) as err:
             if ignore_errors is True:
-                print(f"Skipping file with parser error: {pagefile_info['archived_filename']}")
-                print(err)
+                if silent_mode is False:
+                    print(f"Skipping file with parser error: {pagefile_info['archived_filename']}")
+                    print(err)
                 continue
             else:
                 raise

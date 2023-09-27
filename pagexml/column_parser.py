@@ -187,14 +187,16 @@ def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict, page_i
 
 def merge_columns(columns: List[pdm.PageXMLColumn],
                   doc_id: str, metadata: dict) -> pdm.PageXMLColumn:
-    """Merge two columns into one, sorting lines by baseline height."""
-    merged_lines = [line for col in columns for line in col.get_lines()]
-    merged_lines = list(set(merged_lines))
-    sorted_lines = sorted(merged_lines, key=lambda x: x.baseline.y)
-    merged_coords = pdm.parse_derived_coords(sorted_lines)
+    """Merge a list of columns into one. First, all text regions of all columns are
+    checked for spatial overlap, whereby overlapping text regions are merged.
+    Within the merged text regions, lines are sorted by baseline height."""
+    trs = [tr for col in columns for tr in col.text_regions]
+    merged_tr = pagexml_helper.merge_textregions(trs, metadata)
+    merged_coords = copy.deepcopy(merged_tr.coords)
     merged_col = pdm.PageXMLColumn(doc_id=doc_id, doc_type='index_column',
                                    metadata=metadata, coords=merged_coords,
-                                   lines=merged_lines)
+                                   text_regions=[merged_tr])
+    merged_col.set_as_parent([merged_tr])
     return merged_col
 
 

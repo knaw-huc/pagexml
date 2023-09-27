@@ -548,7 +548,6 @@ class WordBreakDetector(LineWordAnalyser):
                          min_common_freq: int = 1000) -> None:
         prev_words = []
         typical_start_words, typical_end_words = get_typical_start_end_words(self)
-        li = 0
         for li, line in enumerate(lines):
             if line["text"] is None:
                 continue
