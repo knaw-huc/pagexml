@@ -104,7 +104,7 @@ def merge_sets(sets: List[Set[any]], min_overlap: int = 1) -> List[Set[any]]:
 
 
 def merge_textregions(text_regions: List[pdm.PageXMLTextRegion],
-                      metadata: dict, doc_id: str = None) -> Union[pdm.PageXMLTextRegion, None]:
+                      metadata: dict = None, doc_id: str = None) -> Union[pdm.PageXMLTextRegion, None]:
     """Merge two text_regions into one, sorting lines by baseline height."""
     if len(text_regions) == 0:
         return None
