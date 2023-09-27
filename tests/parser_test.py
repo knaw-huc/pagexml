@@ -7,7 +7,7 @@ class TestParser(unittest.TestCase):
 
     def setUp(self) -> None:
         self.page_file = 'data/example.xml'
-        self.page_doc = parser.parse_pagexml_file(self.page_file)
+        self.page_doc = parser.parse_pagexml_file(self.page_file, custom_tags=['date', 'place'])
 
     def test_parentage_is_set(self):
         for tr in self.page_doc.text_regions:
