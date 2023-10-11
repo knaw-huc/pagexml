@@ -2,9 +2,9 @@ import glob
 import json
 import os
 import re
-from xml.parsers import expat
 from datetime import datetime
 from typing import Generator, List, Dict, Union, Iterable
+from xml.parsers import expat
 
 import xmltodict
 from dateutil.parser import parse as date_parse
@@ -139,7 +139,7 @@ def parse_custom_metadata_element_list(custom_string: str, custom_field: str) ->
         tag = match.group(1)
         metadata = {"type": tag}
         structure_parts = match.group(2).strip().split(';')
-        
+
         for part in structure_parts:
             if part == '':
                 continue
@@ -235,7 +235,7 @@ def parse_page_metadata(metadata_json: dict) -> dict:
                     metadata[field] = date_parse(metadata_json[field]).isoformat()
         elif isinstance(metadata_json[field], dict):
             metadata[field] = metadata_json[field]
-        elif metadata_json[field].isdigit():
+        elif hasattr(metadata_json[field], 'isdigit') and metadata_json[field].isdigit():
             metadata[field] = int(metadata_json[field])
         else:
             metadata[field] = metadata_json[field]
@@ -311,7 +311,7 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
         return fh.read()
 
 
-def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None, custom_tags: Iterable = {}, 
+def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None, custom_tags: Iterable = {},
                        encoding: str = 'utf-8') -> pdm.PageXMLScan:
     """Read PageXML from file (or content of file passed separately if read from elsewhere,
     e.g. tarball) and return a PageXMLScan object.
