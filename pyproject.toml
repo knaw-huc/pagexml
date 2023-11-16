@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pagexml-tools"
-version = "0.4.0"
+version = "0.4.1"
 description = "Utility functions for reading PageXML files"
 authors = ["Marijn Koolen <marijn.koolen@huygens.knaw.nl>", "Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
 readme = "README.md"
@@ -18,15 +18,15 @@ classifiers = [
 packages = [{ include = "pagexml" }]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.12"
+python = ">=3.8 <4.0"
 fuzzy-search = "^2.0.0a"
 matplotlib = "^3.7.0"
 numpy = "^1.22.3"
-pandas = "^1.5.3"
+pandas = ">=1.5.3 <3.0.0"
 py7zr = "^0.20.2"
 python-dateutil = "^2.8.2"
 scipy = "^1.7.0"
-seaborn = "^0.12.2"
+seaborn = "^0.13.0"
 tqdm = "^4.64.1"
 xmltodict = "^0.13.0"
 pyyaml = "^6.0"
