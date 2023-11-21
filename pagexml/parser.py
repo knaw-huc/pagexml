@@ -400,12 +400,12 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
     """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
     PageXML file as a PageXMLScan object.
 
-    :param archive_file: filepath of a archive (zip, tar) containing PageXML files
+    :param archive_file: filepath of an archive (zip, tar) containing PageXML files
     :type archive_file: str
     :param ignore_errors: whether to ignore errors when parsing individual PageXML files
     :type ignore_errors: bool
-    :param ignore_errors: whether to ignore errors warnings when parsing individual PageXML files
-    :type ignore_errors: bool
+    :param silent_mode: whether to ignore errors warnings when parsing individual PageXML files
+    :type silent_mode: bool
     :param encoding: the encoding of the file (default utf-8)
     :type encoding: str
     :return: a PageXMLScan object
