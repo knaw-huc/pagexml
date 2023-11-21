@@ -6,6 +6,7 @@ from typing import Dict, List, Set, Tuple, Union
 
 import numpy as np
 from scipy.spatial import ConvexHull
+from scipy.spatial import QhullError
 
 
 def parse_points(points: Union[str, List[Tuple[int, int]]]) -> List[Tuple[int, int]]:
@@ -303,17 +304,21 @@ def parse_derived_coords(document_list: list) -> Coords:
 
 def coords_list_to_hull_coords(coords_list):
     # print(coords_list)
-    points = np.array([point for coords in coords_list for point in coords.points])
+    points = [point for coords in coords_list for point in coords.points]
+    points_array = np.array(points)
     # print(points)
     try:
-        edges = points_to_hull_edges(points)
+        edges = points_to_hull_edges(points_array)
+        # print(edges)
+        hull_points = edges_to_hull_points(edges)
+        return Coords(hull_points)
     except IndexError:
         print([coords for coords in coords_list])
         print('points:', points)
         raise
-    # print(edges)
-    hull_points = edges_to_hull_points(edges)
-    return Coords(hull_points)
+    except QhullError:
+        print('points:', points)
+        return Coords([point for point in points])
 
 
 def points_to_hull_edges(points):
@@ -343,15 +348,19 @@ def edges_to_hull_points(edges):
 class StructureDoc:
 
     def __init__(self, doc_id: Union[None, str] = None, doc_type: Union[None, str, List[str]] = None,
+                 main_type: Union[None, str] = None,
                  metadata: Dict[str, any] = None, reading_order: Dict[int, str] = None):
         self.id = doc_id
-        self.type = doc_type
-        self.main_type = 'doc'
+        self.type = "structure_doc"
         self.metadata = metadata if metadata else {}
-        # if self.id and 'id' not in self.metadata:
-        #     self.metadata['id'] = self.id
-        # if self.metadata and 'type' not in self.metadata:
-        #     self.metadata['type'] = self.type
+        self.main_type = 'structure_doc'
+        if doc_type:
+            self.type = doc_type
+            if isinstance(doc_type, str):
+                self.main_type = main_type
+        if main_type:
+            self.main_type = main_type
+        self.domain = None
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
         self.reading_order_number = {}
         self.parent: Union[StructureDoc, None] = None
@@ -415,11 +424,36 @@ class StructureDoc:
         json_data = {
             'id': self.id,
             'type': self.type,
+            'domain': self.domain,
             'metadata': self.metadata
         }
         if self.reading_order:
             json_data['reading_order'] = self.reading_order
         return json_data
+
+
+def combine_doc_types(doc_type1: Union[str, List[str], None],
+                      doc_type2: Union[str, List[str], None]):
+    if doc_type1 is None:
+        return doc_type2
+    elif doc_type2 is None:
+        return doc_type1
+
+    # make a new list of combined type of doc_type1 so the original doc_type1 is unaffected
+    if isinstance(doc_type1, str):
+        combined_type = [doc_type1]
+    else:
+        combined_type = [dt for dt in doc_type1]
+
+    # make sure doc_type2 is a list
+    if isinstance(doc_type2, str):
+        doc_type2 = [doc_type2]
+
+    # add new doc 2 types to the combined type
+    for dt2 in doc_type2:
+        if dt2 not in doc_type1:
+            combined_type.append(dt2)
+    return combined_type
 
 
 class PhysicalStructureDoc(StructureDoc):
@@ -429,13 +463,17 @@ class PhysicalStructureDoc(StructureDoc):
                  metadata: Dict[str, any] = None,
                  coords: Coords = None,
                  reading_order: Dict[int, str] = None):
-        super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
+        super().__init__(doc_id=doc_id, doc_type='physical_structure_doc', metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
-        self.main_type = 'physical_structure_doc'
+        if doc_type:
+            self.main_type = doc_type
+            self.add_type(doc_type)
+        self.domain = 'physical'
 
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
+        doc_json['domain'] = self.domain
         if self.coords:
             doc_json['coords'] = self.coords.points
         return doc_json
@@ -445,16 +483,27 @@ class PhysicalStructureDoc(StructureDoc):
         self.id = f"{parent_id}-{self.main_type}-{box_string}"
         # self.metadata['id'] = self.id
 
+    def add_parent_id_to_metadata(self):
+        if self.parent:
+            self.metadata['parent_type'] = self.parent.main_type
+            self.metadata['parent_id'] = self.parent.id
+            if hasattr(self.parent, 'main_type') and self.parent.main_type is not None:
+                self.metadata[f'{self.parent.main_type}_id'] = self.parent.id
+
 
 class LogicalStructureDoc(StructureDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, lines: List[PageXMLTextLine] = None,
                  text_regions: List[PageXMLTextRegion] = None, reading_order: Dict[int, str] = None):
-        super().__init__(doc_id, doc_type, metadata, reading_order=reading_order)
+        super().__init__(doc_id, doc_type="logical_structure_doc", metadata=metadata, reading_order=reading_order)
         self.lines: List[PageXMLTextLine] = lines if lines else []
         self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions else []
         self.logical_parent: Union[StructureDoc, None] = None
+        if doc_type:
+            self.add_type(doc_type)
+            self.main_type = doc_type
+        self.domain = "logical"
 
     def set_logical_parent(self, parent: StructureDoc):
         """Set parent document and add metadata of parent to this document's metadata"""
@@ -479,10 +528,11 @@ class PageXMLDoc(PhysicalStructureDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None, reading_order: Dict[int, str] = None):
-        super().__init__(doc_id=doc_id, doc_type="pagexml_doc", metadata=metadata, reading_order=reading_order)
+        if doc_type is None:
+            doc_type = 'pagexml_doc'
+        super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
-        self.add_type(doc_type)
-        self.main_type = 'pagexml_doc'
+        self.add_type('pagexml_doc')
 
     @property
     def stats(self):
@@ -494,7 +544,7 @@ class PageXMLWord(PageXMLDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  conf: float = None, text: str = None):
-        super().__init__(doc_id, "word", metadata, coords)
+        super().__init__(doc_id=doc_id, doc_type="word", metadata=metadata, coords=coords)
         self.conf = conf
         self.text = text
         self.main_type = 'word'
