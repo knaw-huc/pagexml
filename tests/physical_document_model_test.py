@@ -1,12 +1,13 @@
 import unittest
 from unittest.mock import Mock
 
-from pagexml.model.physical_document_model import Coords, StructureDoc, PhysicalStructureDoc, LogicalStructureDoc
+import pagexml.model.physical_document_model as pdm
+# from pagexml.model.physical_document_model import pdm.Coords, pdm.StructureDoc, PhysicalStructureDoc, pdm.LogicalStructureDoc
 
 
 class TestCoords(unittest.TestCase):
     def test_valid_points(self):
-        coords = Coords([(0, 0), (1, 1), (2, 2)])
+        coords = pdm.Coords([(0, 0), (1, 1), (2, 2)])
         self.assertEqual([(0, 0), (1, 1), (2, 2)], coords.points)
         self.assertEqual(0, coords.left)
         self.assertEqual(0, coords.top)
@@ -18,56 +19,80 @@ class TestCoords(unittest.TestCase):
         self.assertEqual({'type': 'coords', 'points': [(0, 0), (1, 1), (2, 2)]}, coords.json)
 
     def test_point_string(self):
-        coords = Coords([(0, 0), (1, 1), (2, 2)])
+        coords = pdm.Coords([(0, 0), (1, 1), (2, 2)])
         self.assertEqual('0,0 1,1 2,2', coords.point_string)
 
     def test_invalid_points(self):
         with self.assertRaises(ValueError):
-            coords = Coords('invalid points')
+            coords = pdm.Coords('invalid points')
+
+
+class TestHullCoords(unittest.TestCase):
+
+    def test_list_of_coords_to_hull_of_coords(self):
+        coords1 = pdm.Coords([(0, 0), (1, 1), (2, 2)])
+        coords2 = pdm.Coords([(3, 8), (4, 7), (6, 5)])
+        hull_coords = pdm.coords_list_to_hull_coords([coords1, coords2])
+        x_points = [point[0] for point in coords1.points + coords2.points]
+        y_points = [point[1] for point in coords1.points + coords2.points]
+        self.assertEqual(hull_coords.left, min(x_points))
+        self.assertEqual(hull_coords.right, max(x_points))
+        self.assertEqual(hull_coords.top, min(y_points))
+        self.assertEqual(hull_coords.bottom, max(y_points))
+
+    def test_list_of_line_point_coords_to_hull_of_coords(self):
+        # two points form a line, no convex hull
+        coords1 = pdm.Coords([(0, 0)])
+        coords2 = pdm.Coords([(0, 5)])
+        # hull coords should just be the two points
+        hull_coords = pdm.coords_list_to_hull_coords([coords1, coords2])
+        for pi, point in enumerate(coords1.points + coords2.points):
+            with self.subTest(pi):
+                self.assertIn(point, hull_coords.points)
 
 
 class TestStructureDoc(unittest.TestCase):
 
     def test_init(self):
-        doc = StructureDoc()
+        doc = pdm.StructureDoc()
         self.assertIsNone(doc.id)
-        self.assertIsNone(doc.type)
-        self.assertEqual('doc', doc.main_type)
+        self.assertEqual('structure_doc', doc.type)
+        self.assertEqual('structure_doc', doc.main_type)
         self.assertEqual({}, doc.metadata)
         self.assertEqual({}, doc.reading_order)
         self.assertEqual({}, doc.reading_order_number)
         self.assertIsNone(doc.parent)
 
     def test_set_parent(self):
-        parent_doc = StructureDoc(doc_id='parent_doc')
-        child_doc = StructureDoc(doc_id='child_doc')
+        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
+        child_doc = pdm.StructureDoc(doc_id='child_doc')
 
         child_doc.set_parent(parent_doc)
 
         self.assertEqual(parent_doc, child_doc.parent)
-        self.assertEqual('doc', child_doc.metadata['parent_type'])
+        self.assertEqual('structure_doc', child_doc.metadata['parent_type'])
         self.assertEqual('parent_doc', child_doc.metadata['parent_id'])
 
     def test_add_type(self):
-        doc = StructureDoc(doc_type='doc')
+        doc = pdm.StructureDoc(doc_type='structure_doc')
 
         # Add a new type
         doc.add_type('report')
-        self.assertEqual(['doc', 'report'], doc.type)
+        self.assertEqual(['structure_doc', 'report'], doc.type)
 
         # Add the same type twice
-        doc.add_type('doc')
-        self.assertEqual(['doc', 'report'], doc.type)
+        doc.add_type('structure_doc')
+        self.assertEqual(['structure_doc', 'report'], doc.type)
 
         # Add multiple types at once
         doc.add_type(['pdf', 'ocr'])
-        self.assertEqual(['doc', 'report', 'pdf', 'ocr'], doc.type)
+        self.assertEqual(['structure_doc', 'report', 'pdf', 'ocr'], doc.type)
 
     def test_remove_type(self):
-        doc = StructureDoc(doc_type=['doc', 'report'])
+        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Remove an existing type
-        doc.remove_type('doc')
+        doc.remove_type('structure_doc')
         self.assertEqual('report', doc.type)
 
         # Remove a non-existing type
@@ -79,48 +104,48 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual([], doc.type)
 
     def test_has_type(self):
-        doc = StructureDoc(doc_type=['doc', 'report'])
+        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Check for an existing type
-        self.assertTrue(doc.has_type('doc'))
+        self.assertTrue(doc.has_type('structure_doc'))
 
         # Check for a non-existing type
         self.assertFalse(doc.has_type('pdf'))
 
     def test_types(self):
-        doc = StructureDoc(doc_type=['doc', 'report'])
+        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Get all types
-        self.assertEqual({'doc', 'report'}, doc.types)
+        self.assertEqual({'structure_doc', 'report'}, doc.types)
 
     def test_set_as_parent(self):
-        parent_doc = StructureDoc(doc_id='parent_doc')
-        child_doc1 = StructureDoc(doc_id='child_doc1')
-        child_doc2 = StructureDoc(doc_id='child_doc2')
+        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
+        child_doc1 = pdm.StructureDoc(doc_id='child_doc1')
+        child_doc2 = pdm.StructureDoc(doc_id='child_doc2')
         child_docs = [child_doc1, child_doc2]
 
         parent_doc.set_as_parent(child_docs)
 
         self.assertEqual(child_doc1.parent, parent_doc)
         self.assertEqual(child_doc2.parent, parent_doc)
-        self.assertEqual(child_doc1.metadata['parent_type'], 'doc')
+        self.assertEqual(child_doc1.metadata['parent_type'], 'structure_doc')
         self.assertEqual(child_doc1.metadata['parent_id'], 'parent_doc')
-        self.assertEqual(child_doc2.metadata['parent_type'], 'doc')
+        self.assertEqual(child_doc2.metadata['parent_type'], 'structure_doc')
         self.assertEqual(child_doc2.metadata['parent_id'], 'parent_doc')
 
     def test_add_parent_id_to_metadata(self):
-        parent_doc = StructureDoc(doc_id='parent_doc')
-        child_doc = StructureDoc(doc_id='child_doc')
+        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
+        child_doc = pdm.StructureDoc(doc_id='child_doc')
 
         child_doc.set_parent(parent_doc)
         child_doc.add_parent_id_to_metadata()
 
-        self.assertEqual('doc', child_doc.metadata['parent_type'])
+        self.assertEqual('structure_doc', child_doc.metadata['parent_type'])
         self.assertEqual('parent_doc', child_doc.metadata['parent_id'])
-        self.assertEqual('parent_doc', child_doc.metadata['doc_id'])
+        self.assertEqual('parent_doc', child_doc.metadata['structure_doc_id'])
 
     def test_json(self):
-        doc = StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
+        doc = pdm.StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
         json_data = doc.json
         self.assertEqual('doc1', json_data['id'])
         self.assertEqual('book', json_data['type'])
@@ -136,26 +161,27 @@ class TestPhysicalStructureDoc(unittest.TestCase):
 
     def setUp(self):
         self.metadata = {'author': 'Jane Doe'}
-        self.coords = Coords([(0, 0), (0, 10), (10, 10), (10, 0)])
-        self.doc = PhysicalStructureDoc(doc_id='doc1', doc_type='book', metadata=self.metadata, coords=self.coords)
+        self.coords = pdm.Coords([(0, 0), (0, 10), (10, 10), (10, 0)])
+        self.doc = pdm.PhysicalStructureDoc(doc_id='doc1', doc_type='book', metadata=self.metadata, coords=self.coords)
 
     def test_init(self):
         self.assertEqual('doc1', self.doc.id)
-        self.assertEqual('book', self.doc.type)
+        self.assertEqual(['physical_structure_doc', 'book'], self.doc.type)
         self.assertEqual(self.metadata, self.doc.metadata)
         self.assertEqual(self.coords, self.doc.coords)
 
     def test_set_derived_id(self):
-        parent = Mock(spec=StructureDoc)
+        parent = Mock(spec=pdm.StructureDoc)
         parent.id = 'parent_doc'
         self.doc.set_derived_id(parent.id)
-        self.assertEqual('parent_doc-physical_structure_doc-0-0-10-10', self.doc.id)
+        self.assertEqual('parent_doc-book-0-0-10-10', self.doc.id)
 
     def test_json(self):
         expected_json = {
             'id': 'doc1',
-            'type': 'book',
-            'metadata': {'author': 'Jane Doe'},
+            'type': ['physical_structure_doc', 'book'],
+            'domain': 'physical',
+            'metadata': {'author': 'Jane Doe', 'book_id': 'doc1'},
             'coords': [(0, 0), (0, 10), (10, 10), (10, 0)]
         }
         self.assertEqual(expected_json, self.doc.json)
@@ -163,7 +189,7 @@ class TestPhysicalStructureDoc(unittest.TestCase):
 
 class TestLogicalStructureDoc(unittest.TestCase):
     def setUp(self):
-        self.doc = LogicalStructureDoc(
+        self.doc = pdm.LogicalStructureDoc(
             doc_id='doc_001',
             doc_type='article',
             metadata={'author': 'John Doe'},
@@ -172,7 +198,7 @@ class TestLogicalStructureDoc(unittest.TestCase):
         )
 
     def test_set_logical_parent(self):
-        parent_doc = LogicalStructureDoc(
+        parent_doc = pdm.LogicalStructureDoc(
             doc_id='doc_002',
             doc_type='journal',
             metadata={'publisher': 'New York Times'},
@@ -182,14 +208,14 @@ class TestLogicalStructureDoc(unittest.TestCase):
         self.doc.set_logical_parent(parent_doc)
         self.assertEqual(self.doc.logical_parent, parent_doc)
         self.assertIn('logical_parent_type', self.doc.metadata)
-        self.assertEqual('doc', self.doc.metadata['logical_parent_type'])
-        self.assertIn('logical_parent_id', self.doc.metadata)
+        self.assertEqual('journal', self.doc.metadata['logical_parent_type'])
+        self.assertIn('article_id', self.doc.metadata)
         self.assertEqual('doc_002', self.doc.metadata['logical_parent_id'])
-        self.assertIn('doc_id', self.doc.metadata)
-        self.assertEqual('doc_002', self.doc.metadata['doc_id'])
+        self.assertIn('journal_id', self.doc.metadata)
+        self.assertEqual('doc_002', self.doc.metadata['journal_id'])
 
     def test_add_logical_parent_id_to_metadata(self):
-        parent_doc = LogicalStructureDoc(
+        parent_doc = pdm.LogicalStructureDoc(
             doc_id='doc_002',
             doc_type='journal',
             metadata={'publisher': 'New York Times'},
@@ -199,11 +225,11 @@ class TestLogicalStructureDoc(unittest.TestCase):
         self.doc.logical_parent = parent_doc
         self.doc.add_logical_parent_id_to_metadata()
         self.assertIn('logical_parent_type', self.doc.metadata)
-        self.assertEqual('doc', self.doc.metadata['logical_parent_type'])
+        self.assertEqual('journal', self.doc.metadata['logical_parent_type'])
         self.assertIn('logical_parent_id', self.doc.metadata)
         self.assertEqual('doc_002', self.doc.metadata['logical_parent_id'])
-        self.assertIn('doc_id', self.doc.metadata)
-        self.assertEqual('doc_002', self.doc.metadata['doc_id'])
+        self.assertIn('journal_id', self.doc.metadata)
+        self.assertEqual('doc_002', self.doc.metadata['journal_id'])
 
 
 if __name__ == '__main__':
