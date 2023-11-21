@@ -181,7 +181,7 @@ class TestPhysicalStructureDoc(unittest.TestCase):
             'id': 'doc1',
             'type': ['physical_structure_doc', 'book'],
             'domain': 'physical',
-            'metadata': {'author': 'Jane Doe', 'book_id': 'doc1'},
+            'metadata': {'author': 'Jane Doe'},
             'coords': [(0, 0), (0, 10), (10, 10), (10, 0)]
         }
         self.assertEqual(expected_json, self.doc.json)
@@ -209,7 +209,6 @@ class TestLogicalStructureDoc(unittest.TestCase):
         self.assertEqual(self.doc.logical_parent, parent_doc)
         self.assertIn('logical_parent_type', self.doc.metadata)
         self.assertEqual('journal', self.doc.metadata['logical_parent_type'])
-        self.assertIn('article_id', self.doc.metadata)
         self.assertEqual('doc_002', self.doc.metadata['logical_parent_id'])
         self.assertIn('journal_id', self.doc.metadata)
         self.assertEqual('doc_002', self.doc.metadata['journal_id'])

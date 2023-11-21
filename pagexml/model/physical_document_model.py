@@ -360,18 +360,11 @@ class StructureDoc:
                 self.main_type = main_type
         if main_type:
             self.main_type = main_type
-        if self.main_type:
-            self.set_main_type_id()
         self.domain = None
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
         self.reading_order_number = {}
         self.parent: Union[StructureDoc, None] = None
         self.logical_parent: Union[StructureDoc, None] = None
-
-    def set_main_type_id(self):
-        main_type_id = f'{self.main_type}_id'
-        if self.main_type and self.id and main_type_id not in self.metadata:
-            self.metadata[main_type_id] = self.id
 
     def set_parent(self, parent: StructureDoc):
         """Set parent document and add metadata of parent to this document's metadata"""
@@ -474,7 +467,6 @@ class PhysicalStructureDoc(StructureDoc):
         self.coords: Union[None, Coords] = coords
         if doc_type:
             self.main_type = doc_type
-            self.set_main_type_id()
             self.add_type(doc_type)
         self.domain = 'physical'
 
@@ -504,7 +496,6 @@ class LogicalStructureDoc(StructureDoc):
         if doc_type:
             self.add_type(doc_type)
             self.main_type = doc_type
-            self.set_main_type_id()
         self.domain = "logical"
 
     def set_logical_parent(self, parent: StructureDoc):
