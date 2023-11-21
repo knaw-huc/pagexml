@@ -350,7 +350,7 @@ def read_line_format_file(line_format_files: Union[str, List[str]],
                 else:
                     if len(row) > len(headers):
                         raise IndexError(
-                            f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
+                            f"Missing columns. Header has {len(headers)} columns while line {li + 1} in row "
                             f"has {len(row)} columns")
                     yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
 
@@ -380,18 +380,19 @@ def get_custom_tags(doc: pdm.PageXMLDoc) -> List[Dict[str, any]]:
                 offset = tag_el["offset"]
                 length = tag_el["length"]
 
-                value = line.text[offset:offset+length]
+                value = line.text[offset:offset + length]
 
                 custom_tags.append({
-                    "type": tag, 
-                    "value": value, 
-                    "region_id": region.id, 
-                    "line_id": line.id,                     
-                    "offset": offset, 
+                    "type": tag,
+                    "value": value,
+                    "region_id": region.id,
+                    "line_id": line.id,
+                    "offset": offset,
                     "length": length,
                 })
 
     return custom_tags
+
 
 class LineIterable:
 
@@ -532,5 +533,3 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_word_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
-
-
