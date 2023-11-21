@@ -483,6 +483,13 @@ class PhysicalStructureDoc(StructureDoc):
         self.id = f"{parent_id}-{self.main_type}-{box_string}"
         # self.metadata['id'] = self.id
 
+    def add_parent_id_to_metadata(self):
+        if self.parent:
+            self.metadata['parent_type'] = self.parent.main_type
+            self.metadata['parent_id'] = self.parent.id
+            if hasattr(self.parent, 'main_type') and self.parent.main_type is not None:
+                self.metadata[f'{self.parent.main_type}_id'] = self.parent.id
+
 
 class LogicalStructureDoc(StructureDoc):
 

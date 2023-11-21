@@ -176,6 +176,14 @@ class TestPhysicalStructureDoc(unittest.TestCase):
         self.doc.set_derived_id(parent.id)
         self.assertEqual('parent_doc-book-0-0-10-10', self.doc.id)
 
+    def test_add_parent_id_to_metadata(self):
+        child = pdm.PhysicalStructureDoc(doc_id='doc2', doc_type='chapter')
+        child.id = 'parent_doc'
+        self.doc.set_as_parent([child])
+        self.doc.add_parent_id_to_metadata()
+        self.assertIn('book_id', child.metadata)
+        self.assertEqual('doc1', child.metadata['book_id'])
+
     def test_json(self):
         expected_json = {
             'id': 'doc1',
