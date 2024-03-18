@@ -1,9 +1,9 @@
 import unittest
 from typing import List, Tuple
 
-from pagexml.parser import parse_pagexml_file
 import pagexml.helper.pagexml_helper as helper
 import pagexml.model.physical_document_model as pdm
+from pagexml.parser import parse_pagexml_file
 
 
 def make_region(points: List[Tuple[int, int]], doc_id: str = 'doc') -> pdm.PageXMLTextRegion:

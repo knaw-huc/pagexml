@@ -71,8 +71,7 @@ def regions_overlap(region1: pdm.PageXMLDoc, region2: pdm.PageXMLDoc,
     if v_overlap / height2 > threshold:
         if h_overlap / width2 > threshold:
             return True
-    else:
-        return False
+    return False
 
 
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
