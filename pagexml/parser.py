@@ -2,9 +2,9 @@ import glob
 import json
 import os
 import re
-from xml.parsers import expat
 from datetime import datetime
-from typing import Generator, List, Dict, Union
+from typing import Generator, List, Dict, Union, Iterable
+from xml.parsers import expat
 
 import xmltodict
 from dateutil.parser import parse as date_parse
@@ -79,13 +79,13 @@ def parse_text_equiv(text_equiv: dict) -> Union[str, None]:
         return None
 
 
-def parse_textline(textline: dict) -> pdm.PageXMLTextLine:
+def parse_textline(textline: dict, custom_tags: Iterable = []) -> pdm.PageXMLTextLine:
     text = parse_text_equiv(textline['TextEquiv']) if 'TextEquiv' in textline else None
     try:
         return pdm.PageXMLTextLine(
             xheight=int(textline['@xheight']) if '@xheight' in textline else None,
             doc_id=textline['@id'] if '@id' in textline else None,
-            metadata=parse_custom_metadata(textline)
+            metadata=parse_custom_metadata(textline, custom_tags)
             if '@custom' in textline
             else None,
             coords=parse_coords(textline['Coords']),
@@ -111,8 +111,8 @@ def parse_conf(text_element: dict) -> Union[float, None]:
         return None
 
 
-def parse_textline_list(textline_list: list) -> List[pdm.PageXMLTextLine]:
-    return [parse_textline(textline) for textline in textline_list]
+def parse_textline_list(textline_list: list, custom_tags: Iterable = []) -> List[pdm.PageXMLTextLine]:
+    return [parse_textline(textline, custom_tags) for textline in textline_list]
 
 
 def parse_custom_metadata_element(custom_string: str, custom_field: str) -> Dict[str, str]:
@@ -130,7 +130,35 @@ def parse_custom_metadata_element(custom_string: str, custom_field: str) -> Dict
     return metadata
 
 
-def parse_custom_metadata(text_element: Dict[str, any]) -> Dict[str, any]:
+def parse_custom_metadata_element_list(custom_string: str, custom_field: str) -> List[Dict[str, str]]:
+    metadata_list = []
+
+    matches = re.finditer(r'\b(' + custom_field + r') {(.*?)}', custom_string)
+
+    for match in matches:
+        tag = match.group(1)
+        metadata = {"type": tag}
+        structure_parts = match.group(2).strip().split(';')
+
+        for part in structure_parts:
+            if part == '':
+                continue
+            field, value = part.split(':')
+
+            field = field.strip()
+            value = value.strip()
+
+            if field in ('offset', 'length'):
+                metadata[field] = int(value)
+            else:
+                metadata[field] = value
+
+        metadata_list.append(metadata)
+
+    return metadata_list
+
+
+def parse_custom_metadata(text_element: Dict[str, any], custom_tags: Iterable = []) -> Dict[str, any]:
     """Parse custom metadata, like readingOrder, structure."""
     metadata = {}
     if '@custom' not in text_element:
@@ -141,10 +169,15 @@ def parse_custom_metadata(text_element: Dict[str, any]) -> Dict[str, any]:
         metadata['structure'] = parse_custom_metadata_element(text_element['@custom'], 'structure')
         if 'type' in metadata['structure']:
             metadata['type'] = metadata['structure']['type']
+    if 'textStyle {' in text_element['@custom']:
+        metadata['text_style'] = parse_custom_metadata_element_list(text_element['@custom'], 'textStyle')
+    if custom_tags:
+        regex_tags = r'(?:' + '|'.join(custom_tags) + r')'
+        metadata['custom_tags'] = parse_custom_metadata_element_list(text_element['@custom'], regex_tags)
     return metadata
 
 
-def parse_textregion(text_region_dict: dict) -> Union[pdm.PageXMLTextRegion, None]:
+def parse_textregion(text_region_dict: dict, custom_tags: Iterable = []) -> Union[pdm.PageXMLTextRegion, None]:
     text_region = pdm.PageXMLTextRegion(
         doc_id=text_region_dict['@id'] if '@id' in text_region_dict else None,
         orientation=float(text_region_dict['@orientation']) if '@orientation' in text_region_dict else None,
@@ -158,9 +191,9 @@ def parse_textregion(text_region_dict: dict) -> Union[pdm.PageXMLTextRegion, Non
             text_region.text = parse_text_equiv(text_region_dict[child])
         if child == 'TextLine':
             if isinstance(text_region_dict['TextLine'], list):
-                text_region.lines = parse_textline_list(text_region_dict['TextLine'])
+                text_region.lines = parse_textline_list(text_region_dict['TextLine'], custom_tags)
             else:
-                text_region.lines = [parse_textline(text_region_dict['TextLine'])]
+                text_region.lines = [parse_textline(text_region_dict['TextLine'], custom_tags)]
             text_region.set_as_parent(text_region.lines)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.lines)
@@ -168,7 +201,7 @@ def parse_textregion(text_region_dict: dict) -> Union[pdm.PageXMLTextRegion, Non
             text_region.text_regions = []
             if isinstance(text_region_dict['TextRegion'], list) is False:
                 text_region_dict['TextRegion'] = [text_region_dict['TextRegion']]
-            for tr in parse_textregion_list(text_region_dict['TextRegion']):
+            for tr in parse_textregion_list(text_region_dict['TextRegion'], custom_tags):
                 if tr is not None:
                     text_region.text_regions.append(tr)
             text_region.set_as_parent(text_region.text_regions)
@@ -181,8 +214,8 @@ def parse_textregion(text_region_dict: dict) -> Union[pdm.PageXMLTextRegion, Non
     return text_region
 
 
-def parse_textregion_list(textregion_dict_list: list) -> List[pdm.PageXMLTextRegion]:
-    return [parse_textregion(textregion_dict) for textregion_dict in textregion_dict_list]
+def parse_textregion_list(textregion_dict_list: list, custom_tags: Iterable = []) -> List[pdm.PageXMLTextRegion]:
+    return [parse_textregion(textregion_dict, custom_tags) for textregion_dict in textregion_dict_list]
 
 
 def parse_page_metadata(metadata_json: dict) -> dict:
@@ -202,7 +235,7 @@ def parse_page_metadata(metadata_json: dict) -> dict:
                     metadata[field] = date_parse(metadata_json[field]).isoformat()
         elif isinstance(metadata_json[field], dict):
             metadata[field] = metadata_json[field]
-        elif metadata_json[field].isdigit():
+        elif hasattr(metadata_json[field], 'isdigit') and metadata_json[field].isdigit():
             metadata[field] = int(metadata_json[field])
         else:
             metadata[field] = metadata_json[field]
@@ -234,7 +267,7 @@ def parse_page_reading_order(page_json: dict) -> dict:
     return reading_order
 
 
-def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> pdm.PageXMLScan:
+def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable = []) -> pdm.PageXMLScan:
     """Parse a JSON/xmltodict representation of a PageXML file and return a PageXMLScan object."""
     doc_id = pagexml_file
     coords, text_regions = None, None
@@ -255,7 +288,7 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict) -> pdm.PageXMLScan:
         text_regions = []
         if isinstance(scan_json['TextRegion'], list) is False:
             scan_json['TextRegion'] = [scan_json['TextRegion']]
-        for tr in parse_textregion_list(scan_json['TextRegion']):
+        for tr in parse_textregion_list(scan_json['TextRegion'], custom_tags=custom_tags):
             if tr is not None:
                 text_regions.append(tr)
     if 'ReadingOrder' in scan_json and scan_json['ReadingOrder']:
@@ -278,7 +311,7 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
         return fh.read()
 
 
-def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
+def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None, custom_tags: Iterable = {},
                        encoding: str = 'utf-8') -> pdm.PageXMLScan:
     """Read PageXML from file (or content of file passed separately if read from elsewhere,
     e.g. tarball) and return a PageXMLScan object.
@@ -287,6 +320,8 @@ def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
     :type pagexml_file: str
     :param pagexml_data: string representation of PageXML document (corresponding to the content of pagexml_file)
     :type pagexml_data: str
+    :param custom_tags: list of custom tags to be parsed in the metadata
+    :type custom_tags: list
     :param encoding: the encoding of the file (default utf-8)
     :type encoding: str
     :return: a pdm.PageXMLScan object
@@ -296,7 +331,7 @@ def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
         pagexml_data = read_pagexml_file(pagexml_file, encoding=encoding)
     scan_json = xmltodict.parse(pagexml_data)
     try:
-        scan_doc = parse_pagexml_json(pagexml_file, scan_json)
+        scan_doc = parse_pagexml_json(pagexml_file, scan_json, custom_tags=custom_tags)
     except BaseException:
         print(f'Error parsing file {pagexml_file}')
         raise
@@ -365,12 +400,12 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
     """Parse a list of PageXML files from an archive (e.g. zip, tar) and return each
     PageXML file as a PageXMLScan object.
 
-    :param archive_file: filepath of a archive (zip, tar) containing PageXML files
+    :param archive_file: filepath of an archive (zip, tar) containing PageXML files
     :type archive_file: str
     :param ignore_errors: whether to ignore errors when parsing individual PageXML files
     :type ignore_errors: bool
-    :param ignore_errors: whether to ignore errors warnings when parsing individual PageXML files
-    :type ignore_errors: bool
+    :param silent_mode: whether to ignore errors warnings when parsing individual PageXML files
+    :type silent_mode: bool
     :param encoding: the encoding of the file (default utf-8)
     :type encoding: str
     :return: a PageXMLScan object

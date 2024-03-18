@@ -38,8 +38,8 @@ class Coords:
         )
 
         self.x = min([point[0] for point in self.points])
-        self.y = min(point[1] for point in self.points)
-        self.w = max(point[0] for point in self.points) - self.x
+        self.y = min([point[1] for point in self.points])
+        self.w = max([point[0] for point in self.points]) - self.x
         self.h = max([point[1] for point in self.points]) - self.y
         self.type = "coords"
 

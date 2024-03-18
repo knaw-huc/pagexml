@@ -395,9 +395,48 @@ def read_line_format_file(line_format_files: Union[str, List[str]],
                 else:
                     if len(row) > len(headers):
                         raise IndexError(
-                            f"Missing columns. Header has {len(headers)} columns while line {li+1} in row "
+                            f"Missing columns. Header has {len(headers)} columns while line {li + 1} in row "
                             f"has {len(row)} columns")
                     yield {header: row[hi] if len(row) > hi else None for hi, header in enumerate(headers)}
+
+
+def get_custom_tags(doc: pdm.PageXMLDoc) -> List[Dict[str, any]]:
+    """
+    Get all custom tags and their textual values from a PageXMLDoc.
+
+    This function assumes that the PageXML document is generated with
+    input of some `custom_tags` in the parse_pagexml_file function.
+    This helper retrieves those tags from all TextLines and finds the
+    corresponding text from their offset and length. It returns a
+    dictionary with the tag type, the textual value, region and line
+    id, and the offset and length.
+
+    :param doc: A PageXMLDoc
+    :type doc: pdm.PageXMLDoc
+    :return: List of custom tags
+    :rtype: List[Dict[str, any]]
+    """
+    custom_tags = []
+
+    for region in doc.text_regions:
+        for line in region.lines:
+            for tag_el in line.metadata.get("custom_tags", []):
+                tag = tag_el["type"]
+                offset = tag_el["offset"]
+                length = tag_el["length"]
+
+                value = line.text[offset:offset + length]
+
+                custom_tags.append({
+                    "type": tag,
+                    "value": value,
+                    "region_id": region.id,
+                    "line_id": line.id,
+                    "offset": offset,
+                    "length": length,
+                })
+
+    return custom_tags
 
 
 class LineIterable:
@@ -539,5 +578,3 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_word_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
-
-
