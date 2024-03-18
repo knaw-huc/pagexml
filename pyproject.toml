@@ -18,7 +18,7 @@ classifiers = [
 packages = [{ include = "pagexml" }]
 
 [tool.poetry.dependencies]
-python = "^3.8 <4.0"
+python = ">=3.8 <4.0"
 fuzzy-search = "^2.1.0"
 matplotlib = ">=3.7.0"
 numpy = ">=1.22.3"
