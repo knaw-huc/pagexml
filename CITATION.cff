@@ -8,5 +8,5 @@ authors:
   given-names: Bram
   orcid: https://orcid.org/0000-0002-3755-5929
 title: pagexml-tools
-version: 0.4.2
-date-released: 2023-11-22
+version: 0.5.0
+date-released: 2024-03-18
