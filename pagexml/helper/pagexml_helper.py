@@ -3,6 +3,7 @@ import gzip
 import re
 import string
 from collections import Counter
+from enum import Enum
 from typing import Dict, Generator, List, Set, Tuple, Union
 
 import numpy as np
@@ -13,21 +14,64 @@ import pagexml.helper.text_helper as text_helper
 import pagexml.model.physical_document_model as pdm
 
 
-def elements_overlap(element1: pdm.PageXMLDoc, element2: pdm.PageXMLDoc,
-                     threshold: float = 0.5) -> bool:
-    """Check if two elements have overlapping coordinates."""
-    v_overlap = pdm.get_vertical_overlap(element1, element2)
-    h_overlap = pdm.get_horizontal_overlap(element1, element2)
-    if v_overlap / element1.coords.height > threshold:
-        if h_overlap / element1.coords.width > threshold:
-            return True
-    if v_overlap / element2.coords.height > threshold:
-        if h_overlap / element2.coords.width > threshold:
-            return True
-        else:
-            return False
-    else:
+def is_point_inside(point: Tuple[int, int], element: pdm.PageXMLDoc) -> bool:
+    x, y = point
+    if x < element.coords.left or x > element.coords.right:
         return False
+    if y < element.coords.top or y > element.coords.bottom:
+        return False
+    return True
+
+
+class RegionType(Enum):
+
+    POINT = 1
+    HLINE = 2
+    VLINE = 3
+    BOX = 4
+
+
+def get_region_type(element: pdm.PageXMLDoc) -> RegionType:
+    if element.coords.height == 0:
+        if element.coords.width == 0:
+            return RegionType.POINT
+        else:
+            return RegionType.HLINE
+    elif element.coords.width == 0:
+        return RegionType.VLINE
+    else:
+        return RegionType.BOX
+
+
+def same_point(point1: Tuple[int, int], point2: Tuple[int, int]) -> bool:
+    """Check if two points are the same."""
+    return point1[0] == point2[0] and point1[1] == point2[1]
+
+
+def regions_overlap(region1: pdm.PageXMLDoc, region2: pdm.PageXMLDoc,
+                    threshold: float = 0.5) -> bool:
+    """Check if two regions have overlapping coordinates.
+
+    Assumption: points are pixels, so regions with at least one point have at least
+    a width, height and area of 1."""
+    if region1.coords is None or region2.coords is None:
+        return False
+
+    height1 = region1.coords.height + 1
+    width1 = region1.coords.width + 1
+    height2 = region2.coords.height + 1
+    width2 = region2.coords.width + 1
+
+    v_overlap = pdm.get_vertical_overlap(region1, region2)
+    h_overlap = pdm.get_horizontal_overlap(region1, region2)
+
+    if v_overlap / height1 > threshold:
+        if h_overlap / width1 > threshold:
+            return True
+    if v_overlap / height2 > threshold:
+        if h_overlap / width2 > threshold:
+            return True
+    return False
 
 
 def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRegion]:
