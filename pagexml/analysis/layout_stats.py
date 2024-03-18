@@ -96,7 +96,7 @@ def interpolate_baseline_points(points: List[Tuple[int, int]],
 
 
 def compute_points_distances(points1: List[Tuple[int, int]], points2: List[Tuple[int, int]],
-                             step: int = 50):
+                             step: int = 50) -> np.ndarray:
     if points1 is None or points2 is None:
         return np.array([])
     b1_points = interpolate_baseline_points(points1, step=step)
@@ -158,12 +158,15 @@ def compute_bounding_box_distances(line1: Union[pdm.PageXMLTextLine, List[pdm.Pa
     return distances
 
 
-def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]]) -> int:
+def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTextLine]],
+                            debug: int = 0) -> int:
     """Compute the average (mean) baseline height for comparing lines that
     are not horizontally aligned.
 
     :param line: a TextLine or a list of adjacent lines
     :type line: PageXMLTextLine
+    :param debug: Boolean to show debug information or not
+    :type debug: bool
     :return: the average (mean) baseline height across all its baseline points
     :rtype: int
     """
@@ -179,7 +182,8 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
         # segment contributes its average height times its width
         total_avg += segment_avg * abs(next_point[0] - curr_point[0])
     if total_avg < 0:
-        print(f'total_avg: {total_avg}\n')
+        print(f'pagexml.analysis.layout_stats.average_baseline_height - '
+              f'negative total_avg {total_avg} for line {line.id}\n')
 
     # average is total of average heights divided by total width
     x = sorted([point[0] for point in points])
@@ -189,8 +193,9 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
     else:
         # this should not happen, but if it does, we need to calculate
         # the average differently, to avoid a division by zero error
-        print(f"total_avg={total_avg}")
-        print(f"baseline.points[-1][0]={points[-1][0]}")
+        if debug > 0:
+            print(f"total_avg={total_avg}")
+            print(f"baseline.points[-1][0]={points[-1][0]}")
         xcoords = [p[0] for p in points]
         left_x = min(xcoords)
         right_x = max(xcoords)
@@ -200,7 +205,7 @@ def average_baseline_height(line: Union[pdm.PageXMLTextLine, List[pdm.PageXMLTex
             return int(total_avg)
 
 
-def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
+def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, step: int = 50,
                                      debug: int = 0) -> Tuple[List[Tuple[int, int]],
                                                               List[Tuple[int, int]]]:
     """Split the list of bounding polygon coordinates of a line in sets of points above and below
@@ -209,6 +214,8 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
 
     :param line: a PageXML text line
     :type line: PageXMLTextLine
+    :param step: number of pixels between interpolated points
+    :type step: int
     :param debug: the detail level of debug information (0 = none, higher is more)
     :type debug: int
     :return: two lists of bounding polygon points
@@ -225,12 +232,14 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
         return above_baseline, below_baseline
     if line.coords.left > line.baseline.right:
         return above_baseline, below_baseline
-    interpolated_baseline_points = [i for i in interpolate_baseline_points(line.baseline.points, step=50).items()]
+    interpolated_baseline_points = [i for i in interpolate_baseline_points(line.baseline.points, step=step).items()]
     if debug > 2:
+        print('sort_coords_above_below_baseline - line.id:', line.id)
+        print('sort_coords_above_below_baseline - line.coords.points:', line.coords.points)
         print('baseline_points:', line.baseline.points)
         print('interpolated_baseline_points:', interpolated_baseline_points)
     sorted_coord_points = sorted(line.coords.points, key=lambda p: p[0])
-    if debug > 0:
+    if debug > 1:
         print('sorted_coord_points:', sorted_coord_points)
         print('len(sorted_coord_points):', len(sorted_coord_points))
     if debug > 1:
@@ -240,7 +249,7 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
     for ci_b, curr_b in enumerate(interpolated_baseline_points):
         curr_bx, curr_by = curr_b
         next_b = interpolated_baseline_points[ci_b + 1] if ci_b + 1 < num_baseline_points else None
-        if debug > 0:
+        if debug > 1:
             print(f'sort_above_below - curr_b: {curr_b}')
             print('\tci_c:', ci_c, '\tnum_coord_points:', num_coord_points)
         if ci_c == num_coord_points:
@@ -249,24 +258,29 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine,
             curr_cx, curr_cy = curr_c
             if next_b and abs(next_b[0] - curr_cx) < abs(curr_b[0] - curr_cx):
                 break
-            if debug > 0:
+            if debug > 1:
                 print(f'sort_above_below - curr_c ({ci_c}): {curr_c}')
             ci_c += 1
             if curr_cy < curr_by:
-                if debug > 0:
+                if debug > 1:
                     print(f'sort_above_below - above')
                 above_baseline.append(curr_c)
             else:
-                if debug > 0:
+                if debug > 1:
                     print(f'sort_above_below - below')
                 below_baseline.append(curr_c)
 
+    if debug > 2:
+        print('sort_coords_above_below_baseline - above_baseline:', above_baseline)
+        print('sort_coords_above_below_baseline - below_baseline:', below_baseline)
     return above_baseline, below_baseline
 
 
 def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50,
                      ignore_errors: bool = True, debug: int = 0) -> np.array:
-    above_baseline, below_baseline = sort_coords_above_below_baseline(line, debug=debug)
+    if line.baseline.width <= step:
+        step = 5
+    above_baseline, below_baseline = sort_coords_above_below_baseline(line, step=step, debug=debug)
     if len(above_baseline) == 0:
         if ignore_errors is False:
             ValueError(f'line {line.id} has no bounding coordinates above baseline')
@@ -276,6 +290,10 @@ def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50,
             ValueError(f'Warning: line {line.id} has no bounding coordinates below baseline')
     int_base = interpolate_baseline_points(line.baseline.points, step=step)
     int_above = interpolate_baseline_points(above_baseline, step=step)
+    if debug > 1:
+        print('get_text_heights - line.id:', line.id)
+        print('get_text_heights - int_base:', int_base)
+        print('get_text_heights - int_above:', int_above)
 
     height = {}
     for x in int_base:
@@ -327,7 +345,7 @@ def get_line_distances(lines: List[pdm.PageXMLTextLine]) -> List[np.ndarray]:
             else:
                 distances = compute_bounding_box_distances(curr_line, next_line)
             all_distances.append(distances)
-        return all_distances
+    return all_distances
 
 
 def get_textregion_line_distances(text_region: pdm.PageXMLTextRegion) -> List[np.ndarray]:
@@ -593,7 +611,7 @@ def get_line_widths(pagexml_files: List[Union[str, pdm.PageXMLTextRegion]] = Non
 
 
 def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int = 50,
-                                    min_ratio: float = 0.25) -> List[int]:
+                                    min_ratio: float = 0.25, debug: int = 0) -> List[int]:
     """Find the minima in the distribution of line widths relative to the peaks in the distribution.
     These minima represent the boundaries between clusters of lines within the same line width
     intervals.
@@ -619,29 +637,37 @@ def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int =
     curr_max_width = None
     curr_min_width = None
     prev_freq = 0
+    if debug > 0:
+        print(f"find_line_width_boundary_points - total_widths: {total_widths}")
+        print(f"find_line_width_boundary_points - max_width: {max_width}")
+        print(f"find_line_width_boundary_points - max_freq: {max_freq}")
 
     for w in range(0, max_width + 1, line_bin_size):
         f = width_freq[w]
         if f > curr_max_freq:
-            # print(f'\tfreq {f} bigger than curr max: {curr_max_freq}')
+            if debug > 0:
+                print(f'\tfreq {f} bigger than curr max: {curr_max_freq}')
             curr_max_freq = f
             curr_max_width = w
         if f < prev_freq and f < curr_min_freq:
-            # print(f'\twidth: {w}\tfreq {f} smaller than prev freq: {prev_freq} and than curr min {curr_min_freq}')
+            if debug > 0:
+                print(f'\twidth: {w}\tfreq {f} smaller than prev freq: {prev_freq} and than curr min {curr_min_freq}')
             curr_min_freq = f
             curr_min_width = w
         if f / num_lines > 0.01 and f > prev_freq and f > curr_min_freq:
-            # print(f'\twidth: {w}\tfreq {f} bigger than prev freq: {prev_freq} and than curr min {curr_min_freq}')
-            # if prev_freq > 0 and f / prev_freq > 1.2 and (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
-            # print('\t\tRatio:', (curr_max_freq - curr_min_freq) / curr_max_freq)
+            if debug > 0:
+                print(f'\twidth: {w}\tfreq {f} bigger than prev freq: {prev_freq} and than curr min {curr_min_freq}')
+                # if prev_freq > 0 and f / prev_freq > 1.2 and (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
+                print('\t\tRatio:', (curr_max_freq - curr_min_freq) / curr_max_freq)
             if (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
                 boundary_points.append((curr_min_width, curr_min_freq))
                 curr_max_freq = 0
                 curr_max_width = 0
                 curr_min_freq = max_freq + 1
-        # print(f"width: {w: >5}\tfreq: {f: >8}\tprev_freq: {prev_freq: >8}"
-        #       f"\tcurr_min_freq: {curr_min_freq: >8}"
-        #       f"\tcurr_max_freq: {curr_max_freq}\tboundary points: {boundary_points}")
+        if debug > 0:
+            print(f"width: {w: >5}\tfreq: {f: >8}\tprev_freq: {prev_freq: >8}"
+                  f"\tcurr_min_freq: {curr_min_freq: >8}"
+                  f"\tcurr_max_freq: {curr_max_freq}\tboundary points: {boundary_points}")
         prev_freq = f
     return [bp[0] for bp in boundary_points]
 

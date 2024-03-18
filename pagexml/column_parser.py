@@ -79,7 +79,7 @@ def column_bounding_box_surrounds_lines(column: pdm.PageXMLColumn) -> bool:
     """Check if the column coordinates contain the coordinate
     boxes of the column lines."""
     for line in column.get_lines():
-        if not pagexml_helper.elements_overlap(column, line, threshold=0.6):
+        if not pagexml_helper.regions_overlap(column, line, threshold=0.6):
             return False
     return True
 

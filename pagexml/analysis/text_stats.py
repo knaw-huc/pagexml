@@ -927,13 +927,16 @@ def get_typical_start_end_words(wbd: WordBreakDetector,
     return typical_start_words, typical_end_words
 
 
-def get_words_per_line(lines: List[pdm.PageXMLTextLine], use_re_word_boundaries: bool = False):
+def get_words_per_line(lines: List[pdm.PageXMLTextLine], use_re_word_boundaries: bool = False,
+                       alpha_words_only: bool = False):
     """Return a Counter of the number of words per line of a PageXML pagexml_doc object.
 
     :param lines: a list of PageXMLTextLine objects
     :type lines: List[PageXMLTextLine]
     :param use_re_word_boundaries: whether to split words of a line using RegEx word boundaries
     :type use_re_word_boundaries: bool
+    :param alpha_words_only: whether to only count words consisting of alpha characters (e.g. no numbers)
+    :type alpha_words_only: bool
     :return: a counter of the number of words per line of a pagexml_doc
     :rtype: Counter
     """
@@ -944,9 +947,12 @@ def get_words_per_line(lines: List[pdm.PageXMLTextLine], use_re_word_boundaries:
         if line.text is None or line.text == '':
             words = []
         elif use_re_word_boundaries:
-            words = [w.replace(' ', '') for w in re.split(r'\b', line.text) if w != ' ' and w != '']
+            words = [w.replace(' ', '') for w in re.split(r'\b', line.text)]
         else:
             words = [w for w in line.text.split(' ')]
+        words = [w for w in words if w != ' ' and w != '']
+        if alpha_words_only is True:
+            words = [w for w in words if w.isalpha()]
         # words_per_line.update([len(words)])
         if len(words) in wpl_to_cat:
             wpl_cat = wpl_to_cat[len(words)]
@@ -991,6 +997,7 @@ def get_word_cat_stats(words, stop_words=None, max_word_length: int = 30,
     word_length_freq = Counter([len(w) for w in words if len(w) <= max_word_length])
     word_cat_stats = {
         'num_words': len(words),
+        'num_alpha_words': len([w for w in words if w.isalpha()]),
         'num_number_words': len([w for w in words if w.isdigit()]),
         'num_title_words': len([w for w in words if w.istitle()]),
         'num_non_title_words': len([w for w in words if w.istitle() is False]),

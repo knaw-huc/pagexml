@@ -7,6 +7,7 @@ from typing import Dict, List, Set, Tuple, Union
 import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial import QhullError
+from shapely.geometry import Polygon
 
 
 def parse_points(points: Union[str, List[Tuple[int, int]]]) -> List[Tuple[int, int]]:
@@ -30,6 +31,7 @@ def parse_points(points: Union[str, List[Tuple[int, int]]]) -> List[Tuple[int, i
 class Coords:
 
     def __init__(self, points: Union[str, List[Tuple[int, int]]]):
+        """Coordinates of a PageXML region based on a set of points."""
         self.points: List[Tuple[int, int]] = parse_points(points)
         self.point_string = " ".join(
             ",".join([str(point[0]), str(point[1])]) for point in self.points
@@ -149,13 +151,13 @@ def get_horizontal_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
     else:
         overlap_left = max([doc1.coords.left, doc2.coords.left])
         overlap_right = min([doc1.coords.right, doc2.coords.right])
-    return overlap_right - overlap_left if overlap_right > overlap_left else 0
+    return overlap_right - overlap_left + 1 if overlap_right >= overlap_left else 0
 
 
 def get_vertical_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
     overlap_top = max([doc1.coords.top, doc2.coords.top])
     overlap_bottom = min([doc1.coords.bottom, doc2.coords.bottom])
-    return overlap_bottom - overlap_top if overlap_bottom > overlap_top else 0
+    return overlap_bottom - overlap_top + 1 if overlap_bottom >= overlap_top else 0
 
 
 def is_vertically_overlapping(region1: PageXMLDoc,
@@ -299,34 +301,40 @@ def sort_lines(line1: PageXMLTextLine, line2: PageXMLTextLine, as_column: bool =
 def parse_derived_coords(document_list: list) -> Coords:
     """Derive scan coordinates for a composite document based on the list of documents it contains.
     A convex hull is drawn around all points of all contained documents."""
-    return coords_list_to_hull_coords([document.coords for document in document_list])
+    try:
+        return coords_list_to_hull_coords([document.coords for document in document_list])
+    except (IndexError, QhullError) as err:
+        print('pagexml.model.physical_document_model.parse_derived_coords - '
+              'Error with coords in list of documents with the following ids:\n',
+              [doc.id for doc in document_list])
+        raise
 
 
 def coords_list_to_hull_coords(coords_list):
     # print(coords_list)
     points = [point for coords in coords_list for point in coords.points]
-    points_array = np.array(points)
+    if len(points) <= 2:
+        return Coords(points)
     # print(points)
     try:
-        edges = points_to_hull_edges(points_array)
+        edges = points_to_hull_edges(points)
         # print(edges)
         hull_points = edges_to_hull_points(edges)
         return Coords(hull_points)
-    except IndexError:
-        print([coords for coords in coords_list])
-        print('points:', points)
+    except (IndexError, QhullError):
+        print('pagexml.model.physical_document_model.coords_list_to_hull_coords - IndexError')
+        print('coords in coords_list:', [coords for coords in coords_list])
+        print('points derived from list of coords:', points)
         raise
-    except QhullError:
-        print('points:', points)
-        return Coords([point for point in points])
 
 
-def points_to_hull_edges(points):
-    hull = ConvexHull(points)
+def points_to_hull_edges(points: List[Tuple[int, int]]):
+    points_array = np.array(points)
+    hull = ConvexHull(points_array)
     edges = defaultdict(dict)
     for simplex in hull.simplices:
-        p1 = (int(points[simplex, 0][0]), int(points[simplex, 1][0]))
-        p2 = (int(points[simplex, 0][1]), int(points[simplex, 1][1]))
+        p1 = (int(points_array[simplex, 0][0]), int(points_array[simplex, 1][0]))
+        p2 = (int(points_array[simplex, 0][1]), int(points_array[simplex, 1][1]))
         edges[p2][p1] = 1
         edges[p1][p2] = 1
     return edges
@@ -354,11 +362,11 @@ class StructureDoc:
         self.type = "structure_doc"
         self.metadata = metadata if metadata else {}
         self.main_type = 'structure_doc'
-        if doc_type:
-            self.type = doc_type
+        if doc_type is not None:
+            self.add_type(doc_type)
             if isinstance(doc_type, str):
-                self.main_type = main_type
-        if main_type:
+                self.main_type = doc_type
+        if main_type is not None:
             self.main_type = main_type
         self.domain = None
         self.reading_order: Dict[int, str] = reading_order if reading_order else {}
@@ -375,6 +383,8 @@ class StructureDoc:
         doc_types = [doc_type] if isinstance(doc_type, str) else doc_type
         if isinstance(self.type, str):
             self.type = [self.type]
+        elif isinstance(self.type, set):
+            self.type = list(self.type)
         for doc_type in doc_types:
             if doc_type not in self.type:
                 self.type.append(doc_type)
@@ -383,6 +393,8 @@ class StructureDoc:
         doc_types = [doc_type] if isinstance(doc_type, str) else doc_type
         if isinstance(self.type, str):
             self.type = [self.type]
+        elif isinstance(self.type, set):
+            self.type = list(self.type)
         for doc_type in doc_types:
             if doc_type in self.type:
                 self.type.remove(doc_type)
@@ -423,7 +435,8 @@ class StructureDoc:
     def json(self) -> Dict[str, any]:
         json_data = {
             'id': self.id,
-            'type': self.type,
+            'type': list(self.type) if isinstance(self.type, set) else self.type,
+            'main_type': self.main_type,
             'domain': self.domain,
             'metadata': self.metadata
         }
@@ -465,10 +478,26 @@ class PhysicalStructureDoc(StructureDoc):
                  reading_order: Dict[int, str] = None):
         super().__init__(doc_id=doc_id, doc_type='physical_structure_doc', metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
+        self._area = None
         if doc_type:
             self.main_type = doc_type
             self.add_type(doc_type)
         self.domain = 'physical'
+
+    @property
+    def area(self):
+        """Returns the size of the area represented by the convex hull of the coordinates.
+
+         The area is calculated the first time this function is called and stored in a
+         private property for later calls. The reason to not call it at object instantiation
+         is that it probably not often needed and only computing it when needed is more
+         efficient."""
+        if self._area is None:
+            if self.coords is None:
+                self._area = 0
+            else:
+                self._area = poly_area(self.coords.points)
+        return self._area
 
     @property
     def json(self) -> Dict[str, any]:
@@ -489,6 +518,28 @@ class PhysicalStructureDoc(StructureDoc):
             self.metadata['parent_id'] = self.parent.id
             if hasattr(self.parent, 'main_type') and self.parent.main_type is not None:
                 self.metadata[f'{self.parent.main_type}_id'] = self.parent.id
+
+
+def poly_area(points: List[Tuple[int, int]]):
+    """Compute the surface area of a polygon represented by a set of Points."""
+    if points is None:
+        return 0
+    if len(points) <= 2:
+        # two points represent a line, which has an area of zero
+        return 0
+    hull_points = points_to_hull_edges(points)
+    polygon = Polygon(hull_points)
+    return polygon.area
+
+
+class EmptyRegionDoc(PhysicalStructureDoc):
+
+    def __init__(self, doc_id: str = None, doc_type: str = None, metadata: Dict[str, any] = None,
+                 coords: Coords = None):
+        super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, coords=coords)
+        self.add_type('empty')
+        if doc_type is None:
+            self.main_type = 'empty'
 
 
 class LogicalStructureDoc(StructureDoc):
@@ -689,6 +740,7 @@ class PageXMLTextRegion(PageXMLDoc):
             self.set_text_regions_in_reader_order()
         if doc_type:
             self.add_type(doc_type)
+        self.empty_regions = []
 
     def __repr__(self):
         stats = json.dumps(self.stats)

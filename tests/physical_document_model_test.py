@@ -1,8 +1,8 @@
+import math
 import unittest
 from unittest.mock import Mock
 
 import pagexml.model.physical_document_model as pdm
-# from pagexml.model.physical_document_model import pdm.Coords, pdm.StructureDoc, PhysicalStructureDoc, pdm.LogicalStructureDoc
 
 
 class TestCoords(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestCoords(unittest.TestCase):
 
     def test_invalid_points(self):
         with self.assertRaises(ValueError):
-            coords = pdm.Coords('invalid points')
+            pdm.Coords('invalid points')
 
 
 class TestHullCoords(unittest.TestCase):
@@ -49,6 +49,19 @@ class TestHullCoords(unittest.TestCase):
         for pi, point in enumerate(coords1.points + coords2.points):
             with self.subTest(pi):
                 self.assertIn(point, hull_coords.points)
+
+
+class TestHelperFunctions(unittest.TestCase):
+
+    def test_poly_area_correctly_calculates_square_area(self):
+        side = 50
+        square_points = [(0, 0), (0, side), (side, side), (side, 0)]
+        self.assertEqual(side**2, pdm.poly_area(square_points))
+
+    def test_poly_area_ignores_inner_points(self):
+        side = 50
+        square_points = [(0, 0), (0, side), (side, side), (side, 0), (side/2, side/2)]
+        self.assertEqual(side**2, pdm.poly_area(square_points))
 
 
 class TestStructureDoc(unittest.TestCase):
@@ -146,9 +159,11 @@ class TestStructureDoc(unittest.TestCase):
 
     def test_json(self):
         doc = pdm.StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
+        print('TEST_JSON - doc.main_type:', doc.main_type)
         json_data = doc.json
         self.assertEqual('doc1', json_data['id'])
-        self.assertEqual('book', json_data['type'])
+        self.assertIn('book', json_data['type'])
+        self.assertEqual('book', json_data['main_type'])
         self.assertEqual({'title': 'The Great Gatsby'}, json_data['metadata'])
         self.assertEqual({}, json_data.get('reading_order', {}))
 
@@ -166,7 +181,7 @@ class TestPhysicalStructureDoc(unittest.TestCase):
 
     def test_init(self):
         self.assertEqual('doc1', self.doc.id)
-        self.assertEqual(['physical_structure_doc', 'book'], self.doc.type)
+        self.assertEqual(['structure_doc', 'physical_structure_doc', 'book'], self.doc.type)
         self.assertEqual(self.metadata, self.doc.metadata)
         self.assertEqual(self.coords, self.doc.coords)
 
@@ -187,12 +202,48 @@ class TestPhysicalStructureDoc(unittest.TestCase):
     def test_json(self):
         expected_json = {
             'id': 'doc1',
-            'type': ['physical_structure_doc', 'book'],
+            'type': ['structure_doc', 'physical_structure_doc', 'book'],
+            'main_type': 'book',
             'domain': 'physical',
             'metadata': {'author': 'Jane Doe'},
             'coords': [(0, 0), (0, 10), (10, 10), (10, 0)]
         }
         self.assertEqual(expected_json, self.doc.json)
+
+
+class TestPhysicalDocArea(unittest.TestCase):
+
+    def setUp(self) -> None:
+        points = [(0, 100), (300, 100), (300, 200), (0, 200), (150, 150)]
+        coords = pdm.Coords(points)
+        self.doc = pdm.PhysicalStructureDoc(doc_id='doc1', coords=coords)
+
+    def test_doc_has_no_initial_area(self):
+        self.assertEqual(None, self.doc._area)
+
+    def test_doc_has_area(self):
+        self.assertEqual(100*300, self.doc.area)
+
+    def test_doc_area_sets_area(self):
+        area = self.doc.area
+        self.assertEqual(area, self.doc._area)
+
+    def test_diamoned_shape_has_correct_area(self):
+        points = [(0, 100), (100, 0), (200, 100), (100, 200)]
+        coords = pdm.Coords(points)
+        diamond = pdm.PhysicalStructureDoc(doc_id='doc1', coords=coords)
+        side = math.sqrt(100**2 + 100**2)
+        area = side * side
+        self.assertEqual(area, diamond.area)
+
+
+class TestEmptyRegion(unittest.TestCase):
+
+    def test_create_empty_region(self):
+        points = [(0, 100), (300, 100), (300, 200), (0, 200), (150, 150)]
+        coords = pdm.Coords(points)
+        empty_region = pdm.EmptyRegionDoc(doc_id='empty', coords=coords)
+        self.assertEqual(300 * 100, empty_region.area)
 
 
 class TestLogicalStructureDoc(unittest.TestCase):
