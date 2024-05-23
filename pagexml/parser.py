@@ -124,7 +124,7 @@ def parse_custom_metadata_element(custom_string: str, custom_field: str) -> Dict
     parse_custom_attribute_part."""
     match = re.search(r'\b' + custom_field + r' {(.*?)}', custom_string)
     if not match:
-        print(custom_string)
+        print(f'pagexml.parser.parse_custom_metadata_element - custom_string:\n\n{custom_string}\n')
         raise ValueError('Invalid structure metadata in custom attribute.')
     metadata = parse_custom_attribute_parts(match.group(1))
     return metadata
@@ -212,7 +212,6 @@ def parse_custom_metadata(text_element: Dict[str, any], custom_tags: Iterable = 
     if custom_tags:
         regex_tags = r'(?:' + '|'.join(custom_tags) + r')'
         metadata['custom_tags'] = parse_custom_metadata_element_list(text_element['@custom'], regex_tags)
-    print(f"parser.parse_custom_metadata - metadata: {metadata}")
     return metadata
 
 
