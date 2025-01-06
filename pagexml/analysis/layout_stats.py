@@ -273,6 +273,8 @@ def sort_coords_above_below_baseline(line: pdm.PageXMLTextLine, step: int = 50,
     if debug > 2:
         print('sort_coords_above_below_baseline - above_baseline:', above_baseline)
         print('sort_coords_above_below_baseline - below_baseline:', below_baseline)
+    # make sure below points are sorted from right to left
+    below_baseline = sorted(below_baseline, key=lambda p: p[0], reverse=True)
     return above_baseline, below_baseline
 
 
@@ -308,8 +310,8 @@ def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50,
 
 def compute_height_stats(line_heights: np.array) -> Dict[str, int]:
     return {
-        'max': line_heights.max(),
-        'min': line_heights.min(),
+        'max': int(line_heights.max()),
+        'min': int(line_heights.min()),
         'mean': int(round(line_heights.mean())),
         'median': int(np.median(line_heights))
     }

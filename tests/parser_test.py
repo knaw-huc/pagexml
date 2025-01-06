@@ -15,6 +15,17 @@ class TestParser(unittest.TestCase):
             for line in tr.lines:
                 self.assertEqual(True, line.parent == tr)
 
+    def test_custom_attributes_are_property(self):
+        for ti, tr in enumerate(self.page_doc.text_regions):
+            with self.subTest(ti):
+                self.assertTrue(len(tr.custom) > 0)
+
+    def test_custom_index_property_is_integer(self):
+        for ti, tr in enumerate(self.page_doc.text_regions):
+            reading_orders = [c for c in tr.custom if c['tag_name'] == 'readingOrder']
+            with self.subTest(ti):
+                self.assertTrue(all(isinstance(tag['index'], int) for tag in reading_orders))
+
     def test_parsing_from_json_retains_stats(self):
         page_json = self.page_doc.json
         new_page = parser.parse_pagexml_from_json(page_json)
@@ -63,12 +74,14 @@ class TestCustomParser(unittest.TestCase):
         expected = {'offset': 9, 'length': 5}
         self.assertEqual(expected, attributes)
 
+    """
     def test_parse_custom_attribute_part_returns_text_with_offset(self):
         text = "this is a text"
         attribute = parser.parse_custom_attribute_parts('offset:9; length:5', element_text=text)
         attrib_text = text[9:9+5]
         self.assertEqual(True, 'text' in attribute)
         self.assertEqual(attrib_text, attribute['text'])
+    """
 
     def test_parse_custom_attributes_returns_list(self):
         attributes = parser.parse_custom_attributes('unclear {offset:9; length:5}')
@@ -109,6 +122,7 @@ class TestCustomParser(unittest.TestCase):
         tag_types = {'readingOrder', 'unclear', 'abbrev', 'textStyle', 'madeup'}
         self.assertEqual(tag_types, {attr['tag_name'] for attr in custom['custom_attributes']})
 
+    """
     def test_parse_custom_metadata_returns_text_with_offset(self):
         text = "this is a text"
         custom = parser.parse_custom_metadata(self.element, element_text=text)
@@ -116,6 +130,7 @@ class TestCustomParser(unittest.TestCase):
         unclears = [attr for attr in custom['custom_attributes'] if attr['tag_name'] == 'unclear']
         self.assertEqual(True, 'text' in unclears[0])
         self.assertEqual(attrib_text, unclears[0]['text'])
+    """
 
     def test_parse_custom_metadata_extracts_unique_tag_as_dict(self):
         custom = parser.parse_custom_metadata(self.element)

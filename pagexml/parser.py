@@ -168,8 +168,8 @@ def parse_custom_attribute_parts(attribute_string: str, element_text: str = None
     1. attributes are always and only separated by semicolons (;)
     2. attribute key/value pairs are always separated by a colon (:)
     3. there is no nesting of attributes. The attributes are a flat list
-    4. attribute values contain only alphanumeric characters, no punctuation or,
-       quotes, whitespace other symbols
+    4. attribute values contain only alphanumeric characters, no punctuation
+       or quotes, whitespace other symbols
     """
     structure_parts = attribute_string.strip().split(';')
     metadata = {}
@@ -181,15 +181,18 @@ def parse_custom_attribute_parts(attribute_string: str, element_text: str = None
         field = field.strip()
         value = value.strip()
 
-        if field in ('offset', 'length'):
+        if field in ('offset', 'length', 'index'):
             metadata[field] = int(value)
         else:
             metadata[field] = value
+        # Update 2025-01-06: remove the text field to stick as close to the PageXML as possible
+        """
         if 'offset' in metadata and 'length' in metadata:
             offset = metadata['offset']
             length = metadata['length']
             if element_text is not None:
                 metadata['text'] = element_text[offset:offset+length]
+        """
     return metadata
 
 
@@ -455,6 +458,12 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
                                       encoding=encoding)
             scan.metadata['pagefile_info'] = pagefile_info
             yield scan
+        except expat.ExpatError:
+            if pagefile_info['archived_filename'].endswith('.xml') is False:
+                continue
+            else:
+                print('Error parsing file', pagefile_info['archived_filename'])
+                raise
         except (KeyError, AttributeError, IndexError,
                 ValueError, TypeError, FileNotFoundError,
                 expat.ExpatError) as err:
