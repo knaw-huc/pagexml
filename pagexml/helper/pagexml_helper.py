@@ -49,7 +49,7 @@ def same_point(point1: Tuple[int, int], point2: Tuple[int, int]) -> bool:
 
 
 def regions_overlap(region1: pdm.PageXMLDoc, region2: pdm.PageXMLDoc,
-                    threshold: float = 0.5) -> bool:
+                    threshold: float = 0.5, debug: int = 0) -> bool:
     """Check if two regions have overlapping coordinates.
 
     Assumption: points are pixels, so regions with at least one point have at least
@@ -65,12 +65,24 @@ def regions_overlap(region1: pdm.PageXMLDoc, region2: pdm.PageXMLDoc,
     v_overlap = pdm.get_vertical_overlap(region1, region2)
     h_overlap = pdm.get_horizontal_overlap(region1, region2)
 
+    if debug > 4:
+        print(f"pagexml.pagexml_helper.regions_overlap\n\tregion 1: {region1.id}\n\tregion 2: {region2.id}")
+        print(f"\th_overlap: {h_overlap}\tv_overlap: {v_overlap}")
+
     if v_overlap / height1 > threshold:
         if h_overlap / width1 > threshold:
+            if debug > 4:
+                print(f'\tboxes 1 and 2: {region1.coords.box} {region2.coords.box}')
+                print(f'\toverlap True based on height1 and width1')
             return True
     if v_overlap / height2 > threshold:
         if h_overlap / width2 > threshold:
+            if debug > 4:
+                print(f'\tboxes 1 and 2: {region1.coords.box} {region2.coords.box}')
+                print(f'\toverlap True based on height2 and width2')
             return True
+    if debug > 4:
+        print(f'\toverlap False')
     return False
 
 
@@ -577,3 +589,13 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_word_break: bool = Fals
         text += curr_line.text
     return pdm.PageXMLTextLine(metadata=copy.deepcopy(lines[0].metadata),
                                coords=coords, text=text)
+
+
+def make_baseline_string(line: pdm.PageXMLTextLine):
+    b = line.baseline
+    return f"{b.left: >4}-{b.right: <4}\t{b.top: >4}-{b.bottom: <4}"
+
+
+def make_coords_string(line: pdm.PageXMLTextLine):
+    c = line.coords
+    return f"{c.left: >4}-{c.right: <4}\t{c.top: >4}-{c.bottom: <4}"

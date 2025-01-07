@@ -51,12 +51,13 @@ def parse_line_words(textline: dict) -> List[pdm.PageXMLWord]:
             unicode_string = ""
         try:
             conf = None
+            custom = parse_custom_metadata(word_dict, element_text=unicode_string)
             if word_dict["TextEquiv"] is not None:
                 if "@conf" in word_dict["TextEquiv"]:
                     conf = word_dict["TextEquiv"]["@conf"]
             word = pdm.PageXMLWord(text=unicode_string,
                                    doc_id=word_dict['@id'] if '@id' in word_dict else None,
-                                   metadata=parse_custom_metadata(word_dict) if '@custom' in word_dict else None,
+                                   metadata=custom,
                                    coords=parse_coords(word_dict["Coords"]),
                                    conf=conf)
             words.append(word)
@@ -79,13 +80,13 @@ def parse_text_equiv(text_equiv: dict) -> Union[str, None]:
         return None
 
 
-def parse_textline(textline: dict, custom_tags: Iterable = []) -> pdm.PageXMLTextLine:
+def parse_textline(textline: dict, custom_tags: Iterable = None) -> pdm.PageXMLTextLine:
     text = parse_text_equiv(textline['TextEquiv']) if 'TextEquiv' in textline else None
     try:
         return pdm.PageXMLTextLine(
             xheight=int(textline['@xheight']) if '@xheight' in textline else None,
             doc_id=textline['@id'] if '@id' in textline else None,
-            metadata=parse_custom_metadata(textline, custom_tags)
+            metadata=parse_custom_metadata(textline, custom_tags=custom_tags, element_text=text)
             if '@custom' in textline
             else None,
             coords=parse_coords(textline['Coords']),
@@ -111,58 +112,98 @@ def parse_conf(text_element: dict) -> Union[float, None]:
         return None
 
 
-def parse_textline_list(textline_list: list, custom_tags: Iterable = []) -> List[pdm.PageXMLTextLine]:
+def parse_textline_list(textline_list: list, custom_tags: Iterable = None) -> List[pdm.PageXMLTextLine]:
+    """Parse a list TextLine dictionaries into a list of PageXMLTextLine objects."""
     return [parse_textline(textline, custom_tags) for textline in textline_list]
 
 
 def parse_custom_metadata_element(custom_string: str, custom_field: str) -> Dict[str, str]:
+    """Parse a custom metadata element from the custom attribute string.
+
+    Deprecated and kept for backwards compatibility. Please use parse_custom_attribute and
+    parse_custom_attribute_part."""
     match = re.search(r'\b' + custom_field + r' {(.*?)}', custom_string)
     if not match:
-        print(custom_string)
+        print(f'pagexml.parser.parse_custom_metadata_element - custom_string:\n\n{custom_string}\n')
         raise ValueError('Invalid structure metadata in custom attribute.')
-    structure_parts = match.group(1).strip().split(';')
-    metadata = {}
-    for part in structure_parts:
-        if part == '':
-            continue
-        field, value = part.split(':')
-        metadata[field] = value
+    metadata = parse_custom_attribute_parts(match.group(1))
     return metadata
 
 
 def parse_custom_metadata_element_list(custom_string: str, custom_field: str) -> List[Dict[str, str]]:
+    """Parse a repeated custom metadata element from the custom attribute string.
+
+    Deprecated and kept for backwards compatibility. Please use parse_custom_attribute and
+    parse_custom_attribute_part."""
     metadata_list = []
 
     matches = re.finditer(r'\b(' + custom_field + r') {(.*?)}', custom_string)
 
     for match in matches:
         tag = match.group(1)
-        metadata = {"type": tag}
-        structure_parts = match.group(2).strip().split(';')
-
-        for part in structure_parts:
-            if part == '':
-                continue
-            field, value = part.split(':')
-
-            field = field.strip()
-            value = value.strip()
-
-            if field in ('offset', 'length'):
-                metadata[field] = int(value)
-            else:
-                metadata[field] = value
-
+        metadata = parse_custom_attribute_parts(match.group(2))
+        metadata['type'] = tag
         metadata_list.append(metadata)
 
     return metadata_list
 
 
-def parse_custom_metadata(text_element: Dict[str, any], custom_tags: Iterable = []) -> Dict[str, any]:
-    """Parse custom metadata, like readingOrder, structure."""
+def parse_custom_attributes(custom_string: str, element_text: str = None) -> List[Dict[str, any]]:
+    """Parse the custom attribute string of a PageXML element."""
+
+    matches = re.finditer(r'\b(\w+) {(.*?)}', custom_string)
+    custom_attributes = []
+    for match in matches:
+        attribute = parse_custom_attribute_parts(match.group(2), element_text=element_text)
+        attribute['tag_name'] = match.group(1)
+        custom_attributes.append(attribute)
+    return custom_attributes
+
+
+def parse_custom_attribute_parts(attribute_string: str, element_text: str = None) -> Dict[str, any]:
+    """Parse the string of custom attributes into a dictionary.
+
+    Assumptions:
+
+    1. attributes are always and only separated by semicolons (;)
+    2. attribute key/value pairs are always separated by a colon (:)
+    3. there is no nesting of attributes. The attributes are a flat list
+    4. attribute values contain only alphanumeric characters, no punctuation
+       or quotes, whitespace other symbols
+    """
+    structure_parts = attribute_string.strip().split(';')
     metadata = {}
+    for part in structure_parts:
+        if part == '':
+            continue
+        field, value = part.split(':')
+
+        field = field.strip()
+        value = value.strip()
+
+        if field in ('offset', 'length', 'index'):
+            metadata[field] = int(value)
+        else:
+            metadata[field] = value
+        # Update 2025-01-06: remove the text field to stick as close to the PageXML as possible
+        """
+        if 'offset' in metadata and 'length' in metadata:
+            offset = metadata['offset']
+            length = metadata['length']
+            if element_text is not None:
+                metadata['text'] = element_text[offset:offset+length]
+        """
+    return metadata
+
+
+def parse_custom_metadata(text_element: Dict[str, any], custom_tags: Iterable = None,
+                          element_text: str = None) -> Dict[str, any]:
+    """Parse custom metadata, like readingOrder, structure, textStyle, unclear, abbrev."""
     if '@custom' not in text_element:
-        return metadata
+        return {}
+    metadata = {
+        'custom_attributes': parse_custom_attributes(text_element['@custom'], element_text=element_text)
+    }
     if 'readingOrder {' in text_element['@custom']:
         metadata['reading_order'] = parse_custom_metadata_element(text_element['@custom'], 'readingOrder')
     if 'structure {' in text_element['@custom']:
@@ -177,7 +218,7 @@ def parse_custom_metadata(text_element: Dict[str, any], custom_tags: Iterable = 
     return metadata
 
 
-def parse_textregion(text_region_dict: dict, custom_tags: Iterable = []) -> Union[pdm.PageXMLTextRegion, None]:
+def parse_textregion(text_region_dict: dict, custom_tags: Iterable = None) -> Union[pdm.PageXMLTextRegion, None]:
     text_region = pdm.PageXMLTextRegion(
         doc_id=text_region_dict['@id'] if '@id' in text_region_dict else None,
         orientation=float(text_region_dict['@orientation']) if '@orientation' in text_region_dict else None,
@@ -214,7 +255,7 @@ def parse_textregion(text_region_dict: dict, custom_tags: Iterable = []) -> Unio
     return text_region
 
 
-def parse_textregion_list(textregion_dict_list: list, custom_tags: Iterable = []) -> List[pdm.PageXMLTextRegion]:
+def parse_textregion_list(textregion_dict_list: list, custom_tags: Iterable = None) -> List[pdm.PageXMLTextRegion]:
     return [parse_textregion(textregion_dict, custom_tags) for textregion_dict in textregion_dict_list]
 
 
@@ -267,7 +308,7 @@ def parse_page_reading_order(page_json: dict) -> dict:
     return reading_order
 
 
-def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable = []) -> pdm.PageXMLScan:
+def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable = None) -> pdm.PageXMLScan:
     """Parse a JSON/xmltodict representation of a PageXML file and return a PageXMLScan object."""
     doc_id = pagexml_file
     coords, text_regions = None, None
@@ -311,8 +352,8 @@ def read_pagexml_file(pagexml_file: str, encoding: str = 'utf-8') -> str:
         return fh.read()
 
 
-def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None, custom_tags: Iterable = {},
-                       encoding: str = 'utf-8') -> pdm.PageXMLScan:
+def parse_pagexml_file(pagexml_file: str, pagexml_data: Union[str, None] = None,
+                       custom_tags: Iterable = None, encoding: str = 'utf-8') -> pdm.PageXMLScan:
     """Read PageXML from file (or content of file passed separately if read from elsewhere,
     e.g. tarball) and return a PageXMLScan object.
 
@@ -417,6 +458,12 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
                                       encoding=encoding)
             scan.metadata['pagefile_info'] = pagefile_info
             yield scan
+        except expat.ExpatError:
+            if pagefile_info['archived_filename'].endswith('.xml') is False:
+                continue
+            else:
+                print('Error parsing file', pagefile_info['archived_filename'])
+                raise
         except (KeyError, AttributeError, IndexError,
                 ValueError, TypeError, FileNotFoundError,
                 expat.ExpatError) as err:

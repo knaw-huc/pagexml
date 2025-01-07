@@ -311,14 +311,11 @@ def parse_derived_coords(document_list: list) -> Coords:
 
 
 def coords_list_to_hull_coords(coords_list):
-    # print(coords_list)
     points = [point for coords in coords_list for point in coords.points]
     if len(points) <= 2:
         return Coords(points)
-    # print(points)
     try:
         edges = points_to_hull_edges(points)
-        # print(edges)
         hull_points = edges_to_hull_points(edges)
         return Coords(hull_points)
     except (IndexError, QhullError):
@@ -520,14 +517,22 @@ class PhysicalStructureDoc(StructureDoc):
                 self.metadata[f'{self.parent.main_type}_id'] = self.parent.id
 
 
-def poly_area(points: List[Tuple[int, int]]):
+def poly_area(points: Union[List[Tuple[int, int]], Coords, PhysicalStructureDoc],
+              debug: int = 0):
     """Compute the surface area of a polygon represented by a set of Points."""
-    if points is None:
+    if isinstance(points, PhysicalStructureDoc):
+        points = points.coords.points
+    elif isinstance(points, Coords):
+        points = points.points
+    elif points is None:
         return 0
     if len(points) <= 2:
         # two points represent a line, which has an area of zero
         return 0
-    hull_points = points_to_hull_edges(points)
+    hull_edges = points_to_hull_edges(points)
+    hull_points = edges_to_hull_points(hull_edges)
+    if debug > 0:
+        print(f'physical_document_model.poly_area - hull_points: {hull_points}')
     polygon = Polygon(hull_points)
     return polygon.area
 
@@ -578,7 +583,8 @@ class LogicalStructureDoc(StructureDoc):
 class PageXMLDoc(PhysicalStructureDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
-                 metadata: Dict[str, any] = None, coords: Coords = None, reading_order: Dict[int, str] = None):
+                 metadata: Dict[str, any] = None,
+                 coords: Coords = None, reading_order: Dict[int, str] = None):
         if doc_type is None:
             doc_type = 'pagexml_doc'
         super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
@@ -588,6 +594,13 @@ class PageXMLDoc(PhysicalStructureDoc):
     @property
     def stats(self):
         return {}
+
+    @property
+    def custom(self):
+        if 'custom_attributes' in self.metadata:
+            return self.metadata['custom_attributes']
+        else:
+            return {}
 
 
 class PageXMLWord(PageXMLDoc):
@@ -648,6 +661,10 @@ class PageXMLTextLine(PageXMLDoc):
         if other == self:
             return False
         return sort_lines(self, other, as_column=True)
+
+    @property
+    def length(self):
+        return len(self.text) if self.text is not None else 0
 
     @property
     def json(self) -> Dict[str, any]:
@@ -764,6 +781,7 @@ class PageXMLTextRegion(PageXMLDoc):
             self.lines.append(child)
         elif isinstance(child, PageXMLTextRegion):
             self.text_regions.append(child)
+            self.set_as_parent([child])
         else:
             raise TypeError(f'unknown child type: {child.__class__.__name__}')
         self.coords = parse_derived_coords(self.text_regions + self.lines)
@@ -927,8 +945,6 @@ class PageXMLPage(PageXMLTextRegion):
             for tr in self.extra:
                 lines += tr.get_lines()
         if self.text_regions:
-            # print('get_lines - reading_order_number:', self.reading_order_number)
-            # print('get_lines - reading_order:', self.reading_order)
             if self.reading_order and all([tr.id in self.reading_order for tr in self.text_regions]):
                 for tr in sorted(self.text_regions, key=lambda t: self.reading_order_number[t]):
                     lines += tr.get_lines()
@@ -940,8 +956,6 @@ class PageXMLPage(PageXMLTextRegion):
         return lines
 
     def add_child(self, child: PageXMLDoc, as_extra: bool = False):
-        # print('as_extra:', as_extra)
-        # print('stats before adding:', self.stats)
         child.set_parent(self)
         if as_extra and (isinstance(child, PageXMLColumn) or isinstance(child, PageXMLTextRegion)):
             self.extra.append(child)
@@ -954,7 +968,6 @@ class PageXMLPage(PageXMLTextRegion):
         else:
             raise TypeError(f'unknown child type: {child.__class__.__name__}')
         self.coords = parse_derived_coords(self.extra + self.columns + self.text_regions + self.lines)
-        # print('stats after adding:', self.stats)
 
     def get_all_text_regions(self):
         text_regions = [tr for col in self.columns for tr in col.text_regions]
