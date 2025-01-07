@@ -99,6 +99,8 @@ def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRe
         doc_text_regions.extend(doc.text_regions)
     if hasattr(doc, 'extra') and doc.extra:
         doc_text_regions.extend(doc.extra)
+
+
     if doc_text_regions:
         sub_text_regions = []
         for text_region in sorted(doc_text_regions, key=lambda x: (x.coords.top, x.coords.left)):
@@ -506,7 +508,7 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
 
     :param lines: a list of PageXML text lines belonging to the same text region
     :type lines: List[PageXMLTextLine]
-    :param word_break_chars: a lsit of characters that signal a word-break
+    :param word_break_chars: a list of characters that signal a word-break
     :type word_break_chars: List[str]
     :param wbd: a line break detector object
     :type wbd: LineBreakDetector
