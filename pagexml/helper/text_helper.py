@@ -68,7 +68,8 @@ def make_list(var) -> list:
 class LineReader(Iterable):
 
     def __init__(self, pagexml_files: Union[str, List[str]] = None,
-                 pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
+                 pagexml_docs: Union[pdm.PageXMLDoc, List[
+                     pdm.PageXMLDoc]] = None,
                  pagexml_line_files: Union[str, List[str]] = None,
                  line_file_headers: List[str] = None,
                  has_headers: bool = True,
@@ -181,7 +182,8 @@ def transform_box_to_coords(box_string: str) -> pdm.Coords:
 
 def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_headers: bool = True,
                                      headers: List[str] = None,
-                                     add_bounding_box: bool = True) -> Generator[pdm.PageXMLTextRegion, None, None]:
+                                     add_bounding_box: bool = True) -> Generator[
+    pdm.PageXMLTextRegion, None, None]:
     """Read lines from one or more PageXML line format files and return them
     as PageXMLTextLine objects, grouped by their PageXML document."""
     line_iterator = LineReader(pagexml_line_files=line_files, line_file_headers=headers,
@@ -216,7 +218,7 @@ def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_head
             # print(f'creating tr with id {curr_tr.id} and appending to doc with id {curr_doc.id}')
             # print(curr_tr.coords)
         line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
-                                   text=line_dict['text'], coords=line_coords)
+                                                                    text=line_dict['text'], coords=line_coords)
         curr_tr.add_child(line)
         # print('curr_doc:', curr_doc.id, '\tline doc_id:', line_dict['doc_id'])
         # print('curr_tr:', curr_tr.id, '\tline textregion_id:', line_dict['textregion_id'])

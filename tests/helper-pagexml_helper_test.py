@@ -2,13 +2,14 @@ import unittest
 from typing import List, Tuple
 
 import pagexml.helper.pagexml_helper as helper
+import pagexml.model.pagexml_document_model
 import pagexml.model.physical_document_model as pdm
 from pagexml.parser import parse_pagexml_file
 
 
-def make_region(points: List[Tuple[int, int]], doc_id: str = 'doc') -> pdm.PageXMLTextRegion:
+def make_region(points: List[Tuple[int, int]], doc_id: str = 'doc') -> pagexml.model.pagexml_document_model.PageXMLTextRegion:
     coords = pdm.Coords(points)
-    return pdm.PageXMLTextRegion(doc_id=doc_id, coords=coords)
+    return pagexml.model.pagexml_document_model.PageXMLTextRegion(doc_id=doc_id, coords=coords)
 
 
 class TestRegionType(unittest.TestCase):
@@ -43,14 +44,14 @@ class TestPageXMLHelper(unittest.TestCase):
         vline_coords1 = pdm.Coords([(0, 0), (0, 10)])
         vline_coords2 = pdm.Coords([(0, 5), (0, 15)])
         vline_coords3 = pdm.Coords([(5, 0), (5, 10)])
-        self.no_coords_region = pdm.PageXMLTextRegion(doc_id='no_coords')
-        self.point_coords_region1 = pdm.PageXMLTextRegion(doc_id='point_coords1', coords=point_coords1)
+        self.no_coords_region = pagexml.model.pagexml_document_model.PageXMLTextRegion(doc_id='no_coords')
+        self.point_coords_region1 = pagexml.model.pagexml_document_model.PageXMLTextRegion(doc_id='point_coords1', coords=point_coords1)
         self.page_file = 'data/example.xml'
         self.page_doc = parse_pagexml_file(self.page_file)
 
     def test_element_overlap_no_coords(self):
         tr1 = make_region([(1, 1)])
-        tr2 = pdm.PageXMLTextRegion(doc_id='no_coords')
+        tr2 = pagexml.model.pagexml_document_model.PageXMLTextRegion(doc_id='no_coords')
         self.assertEqual(False, helper.regions_overlap(tr1, tr2))
         self.assertEqual(False, helper.regions_overlap(tr2, tr1))
 

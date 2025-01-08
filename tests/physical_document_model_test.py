@@ -2,6 +2,9 @@ import math
 import unittest
 from unittest.mock import Mock
 
+import pagexml.model.basic_document_model
+import pagexml.model.coords
+import pagexml.model.logical_document_model
 import pagexml.model.physical_document_model as pdm
 
 
@@ -32,7 +35,7 @@ class TestHullCoords(unittest.TestCase):
     def test_list_of_coords_to_hull_of_coords(self):
         coords1 = pdm.Coords([(0, 0), (1, 1), (2, 2)])
         coords2 = pdm.Coords([(3, 8), (4, 7), (6, 5)])
-        hull_coords = pdm.coords_list_to_hull_coords([coords1, coords2])
+        hull_coords = pagexml.model.coords.coords_list_to_hull_coords([coords1, coords2])
         x_points = [point[0] for point in coords1.points + coords2.points]
         y_points = [point[1] for point in coords1.points + coords2.points]
         self.assertEqual(hull_coords.left, min(x_points))
@@ -45,7 +48,7 @@ class TestHullCoords(unittest.TestCase):
         coords1 = pdm.Coords([(0, 0)])
         coords2 = pdm.Coords([(0, 5)])
         # hull coords should just be the two points
-        hull_coords = pdm.coords_list_to_hull_coords([coords1, coords2])
+        hull_coords = pagexml.model.coords.coords_list_to_hull_coords([coords1, coords2])
         for pi, point in enumerate(coords1.points + coords2.points):
             with self.subTest(pi):
                 self.assertIn(point, hull_coords.points)
@@ -79,18 +82,18 @@ class TestHelperFunctions(unittest.TestCase):
     def test_poly_area_correctly_calculates_square_area(self):
         side = 50
         square_points = [(0, 0), (0, side), (side, side), (side, 0)]
-        self.assertEqual(side**2, pdm.poly_area(square_points))
+        self.assertEqual(side ** 2, pagexml.model.basic_document_model.poly_area(square_points))
 
     def test_poly_area_ignores_inner_points(self):
         side = 50
         square_points = [(0, 0), (0, side), (side, side), (side, 0), (side/2, side/2)]
-        self.assertEqual(side**2, pdm.poly_area(square_points))
+        self.assertEqual(side ** 2, pagexml.model.basic_document_model.poly_area(square_points))
 
 
 class TestStructureDoc(unittest.TestCase):
 
     def test_init(self):
-        doc = pdm.StructureDoc()
+        doc = pagexml.model.basic_document_model.StructureDoc()
         self.assertIsNone(doc.id)
         self.assertEqual('structure_doc', doc.type)
         self.assertEqual('structure_doc', doc.main_type)
@@ -100,8 +103,8 @@ class TestStructureDoc(unittest.TestCase):
         self.assertIsNone(doc.parent)
 
     def test_set_parent(self):
-        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
-        child_doc = pdm.StructureDoc(doc_id='child_doc')
+        parent_doc = pagexml.model.basic_document_model.StructureDoc(doc_id='parent_doc')
+        child_doc = pagexml.model.basic_document_model.StructureDoc(doc_id='child_doc')
 
         child_doc.set_parent(parent_doc)
 
@@ -110,7 +113,7 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual('parent_doc', child_doc.metadata['parent_id'])
 
     def test_add_type(self):
-        doc = pdm.StructureDoc(doc_type='structure_doc')
+        doc = pagexml.model.basic_document_model.StructureDoc(doc_type='structure_doc')
 
         # Add a new type
         doc.add_type('report')
@@ -125,7 +128,7 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual(['structure_doc', 'report', 'pdf', 'ocr'], doc.type)
 
     def test_remove_type(self):
-        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
+        doc = pagexml.model.basic_document_model.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Remove an existing type
         doc.remove_type('structure_doc')
@@ -140,7 +143,7 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual([], doc.type)
 
     def test_has_type(self):
-        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
+        doc = pagexml.model.basic_document_model.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Check for an existing type
         self.assertTrue(doc.has_type('structure_doc'))
@@ -149,15 +152,15 @@ class TestStructureDoc(unittest.TestCase):
         self.assertFalse(doc.has_type('pdf'))
 
     def test_types(self):
-        doc = pdm.StructureDoc(doc_type=['structure_doc', 'report'])
+        doc = pagexml.model.basic_document_model.StructureDoc(doc_type=['structure_doc', 'report'])
 
         # Get all types
         self.assertEqual({'structure_doc', 'report'}, doc.types)
 
     def test_set_as_parent(self):
-        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
-        child_doc1 = pdm.StructureDoc(doc_id='child_doc1')
-        child_doc2 = pdm.StructureDoc(doc_id='child_doc2')
+        parent_doc = pagexml.model.basic_document_model.StructureDoc(doc_id='parent_doc')
+        child_doc1 = pagexml.model.basic_document_model.StructureDoc(doc_id='child_doc1')
+        child_doc2 = pagexml.model.basic_document_model.StructureDoc(doc_id='child_doc2')
         child_docs = [child_doc1, child_doc2]
 
         parent_doc.set_as_parent(child_docs)
@@ -170,8 +173,8 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual(child_doc2.metadata['parent_id'], 'parent_doc')
 
     def test_add_parent_id_to_metadata(self):
-        parent_doc = pdm.StructureDoc(doc_id='parent_doc')
-        child_doc = pdm.StructureDoc(doc_id='child_doc')
+        parent_doc = pagexml.model.basic_document_model.StructureDoc(doc_id='parent_doc')
+        child_doc = pagexml.model.basic_document_model.StructureDoc(doc_id='child_doc')
 
         child_doc.set_parent(parent_doc)
         child_doc.add_parent_id_to_metadata()
@@ -181,7 +184,7 @@ class TestStructureDoc(unittest.TestCase):
         self.assertEqual('parent_doc', child_doc.metadata['structure_doc_id'])
 
     def test_json(self):
-        doc = pdm.StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
+        doc = pagexml.model.basic_document_model.StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
         print('TEST_JSON - doc.main_type:', doc.main_type)
         json_data = doc.json
         self.assertEqual('doc1', json_data['id'])
@@ -200,7 +203,7 @@ class TestPhysicalStructureDoc(unittest.TestCase):
     def setUp(self):
         self.metadata = {'author': 'Jane Doe'}
         self.coords = pdm.Coords([(0, 0), (0, 10), (10, 10), (10, 0)])
-        self.doc = pdm.PhysicalStructureDoc(doc_id='doc1', doc_type='book', metadata=self.metadata, coords=self.coords)
+        self.doc = pagexml.model.basic_document_model.PhysicalStructureDoc(doc_id='doc1', doc_type='book', metadata=self.metadata, coords=self.coords)
 
     def test_init(self):
         self.assertEqual('doc1', self.doc.id)
@@ -209,13 +212,13 @@ class TestPhysicalStructureDoc(unittest.TestCase):
         self.assertEqual(self.coords, self.doc.coords)
 
     def test_set_derived_id(self):
-        parent = Mock(spec=pdm.StructureDoc)
+        parent = Mock(spec=pagexml.model.basic_document_model.StructureDoc)
         parent.id = 'parent_doc'
         self.doc.set_derived_id(parent.id)
         self.assertEqual('parent_doc-book-0-0-10-10', self.doc.id)
 
     def test_add_parent_id_to_metadata(self):
-        child = pdm.PhysicalStructureDoc(doc_id='doc2', doc_type='chapter')
+        child = pagexml.model.basic_document_model.PhysicalStructureDoc(doc_id='doc2', doc_type='chapter')
         child.id = 'parent_doc'
         self.doc.set_as_parent([child])
         self.doc.add_parent_id_to_metadata()
@@ -239,7 +242,7 @@ class TestPhysicalDocArea(unittest.TestCase):
     def setUp(self) -> None:
         points = [(0, 100), (300, 100), (300, 200), (0, 200), (150, 150)]
         coords = pdm.Coords(points)
-        self.doc = pdm.PhysicalStructureDoc(doc_id='doc1', coords=coords)
+        self.doc = pagexml.model.basic_document_model.PhysicalStructureDoc(doc_id='doc1', coords=coords)
 
     def test_doc_has_no_initial_area(self):
         self.assertEqual(None, self.doc._area)
@@ -254,7 +257,7 @@ class TestPhysicalDocArea(unittest.TestCase):
     def test_diamoned_shape_has_correct_area(self):
         points = [(0, 100), (100, 0), (200, 100), (100, 200)]
         coords = pdm.Coords(points)
-        diamond = pdm.PhysicalStructureDoc(doc_id='doc1', coords=coords)
+        diamond = pagexml.model.basic_document_model.PhysicalStructureDoc(doc_id='doc1', coords=coords)
         side = math.sqrt(100**2 + 100**2)
         area = side * side
         self.assertEqual(area, diamond.area)
@@ -265,13 +268,13 @@ class TestEmptyRegion(unittest.TestCase):
     def test_create_empty_region(self):
         points = [(0, 100), (300, 100), (300, 200), (0, 200), (150, 150)]
         coords = pdm.Coords(points)
-        empty_region = pdm.EmptyRegionDoc(doc_id='empty', coords=coords)
+        empty_region = pagexml.model.basic_document_model.EmptyRegionDoc(doc_id='empty', coords=coords)
         self.assertEqual(300 * 100, empty_region.area)
 
 
 class TestLogicalStructureDoc(unittest.TestCase):
     def setUp(self):
-        self.doc = pdm.LogicalStructureDoc(
+        self.doc = pagexml.model.logical_document_model.LogicalStructureDoc(
             doc_id='doc_001',
             doc_type='article',
             metadata={'author': 'John Doe'},
@@ -280,7 +283,7 @@ class TestLogicalStructureDoc(unittest.TestCase):
         )
 
     def test_set_logical_parent(self):
-        parent_doc = pdm.LogicalStructureDoc(
+        parent_doc = pagexml.model.logical_document_model.LogicalStructureDoc(
             doc_id='doc_002',
             doc_type='journal',
             metadata={'publisher': 'New York Times'},
@@ -296,7 +299,7 @@ class TestLogicalStructureDoc(unittest.TestCase):
         self.assertEqual('doc_002', self.doc.metadata['journal_id'])
 
     def test_add_logical_parent_id_to_metadata(self):
-        parent_doc = pdm.LogicalStructureDoc(
+        parent_doc = pagexml.model.logical_document_model.LogicalStructureDoc(
             doc_id='doc_002',
             doc_type='journal',
             metadata={'publisher': 'New York Times'},
