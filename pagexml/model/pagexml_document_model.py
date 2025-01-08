@@ -14,11 +14,13 @@ class PageXMLDoc(PhysicalStructureDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None,
-                 coords: Coords = None, reading_order: Dict[int, str] = None):
+                 coords: Coords = None, reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         if doc_type is None:
             doc_type = 'pagexml_doc'
         super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
+        self.reading_order_attributes = reading_order_attributes
         self.pagexml_type = None
         self.add_type('pagexml_doc')
 
@@ -124,9 +126,11 @@ class PageXMLTextLine(PageXMLDoc):
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  baseline: Baseline = None, xheight: int = None,
                  conf: float = None, text: str = None, words: List[PageXMLWord] = None,
-                 reading_order: Dict[int, str] = None):
+                 reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="line", metadata=metadata,
-                         coords=coords, reading_order=reading_order)
+                         coords=coords, reading_order=reading_order,
+                         reading_order_attributes=reading_order_attributes)
         self.main_type = 'line'
         self.pagexml_type = 'TextLine'
         self.conf = conf
@@ -243,9 +247,11 @@ class PageXMLTextRegion(PageXMLDoc):
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  text_regions: List[PageXMLTextRegion] = None,
                  lines: List[PageXMLTextLine] = None, text: str = None,
-                 orientation: float = None, reading_order: Dict[int, str] = None):
+                 orientation: float = None, reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
-                         coords=coords, reading_order=reading_order)
+                         coords=coords, reading_order=reading_order,
+                         reading_order_attributes=reading_order_attributes)
         self.main_type = 'text_region'
         self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions is not None else []
         self.lines: List[PageXMLTextLine] = lines if lines is not None else []
@@ -414,9 +420,11 @@ class PageXMLColumn(PageXMLTextRegion):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  text_regions: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
-                 reading_order: Dict[int, str] = None):
+                 reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="column", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order)
+                         text_regions=text_regions, reading_order=reading_order,
+                         reading_order_attributes=reading_order_attributes)
         self.main_type = 'column'
         if doc_type:
             self.add_type(doc_type)
@@ -446,9 +454,11 @@ class PageXMLPage(PageXMLTextRegion):
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  columns: List[PageXMLColumn] = None, text_regions: List[PageXMLTextRegion] = None,
                  extra: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
-                 reading_order: Dict[int, str] = None):
+                 reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="page", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order)
+                         text_regions=text_regions, reading_order=reading_order,
+                         reading_order_attributes=reading_order_attributes)
         self.main_type = 'page'
         self.columns: List[PageXMLColumn] = columns if columns else []
         self.extra: List[PageXMLTextRegion] = extra if extra else []
@@ -563,9 +573,11 @@ class PageXMLScan(PageXMLTextRegion):
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  pages: List[PageXMLPage] = None, columns: List[PageXMLColumn] = None,
                  text_regions: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
-                 reading_order: Dict[int, str] = None):
+                 reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="scan", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order)
+                         text_regions=text_regions, reading_order=reading_order,
+                         reading_order_attributes=reading_order_attributes)
         self.main_type = 'scan'
         self.pages: List[PageXMLPage] = pages if pages else []
         self.columns: List[PageXMLColumn] = columns if columns else []
@@ -619,6 +631,9 @@ class PageXMLScan(PageXMLTextRegion):
         return stats
 
     def add_to_pagexml(self, scan_xml: etree.Element = None):
+        if self.reading_order:
+            xml.add_reading_order(scan_xml, self.reading_order,
+                                  reading_order_attributes=self.reading_order_attributes)
         for tr in self.text_regions:
             tr.add_to_pagexml(scan_xml)
 

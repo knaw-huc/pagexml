@@ -58,7 +58,8 @@ def make_empty_pagexml(metadata: Dict[str, any] = None, imageFilename: str = '',
     if metadata is not None:
         for field in ['Creator', 'Created', 'LastChange']:
             if field in metadata:
-                metadata_ele.set(field, metadata[field])
+                field_xml = add_pagexml_sub_element(metadata_ele, field)
+                field_xml.text = metadata[field]
     if page_attributes is None:
         page_attributes = {
             'imageFilename': imageFilename,
@@ -75,10 +76,8 @@ def make_empty_pagexml(metadata: Dict[str, any] = None, imageFilename: str = '',
 def make_custom_string(custom):
     element_strings = []
     for custom_element in custom:
-        tag_string = ''
         tag_fields = [field for field in custom_element if field != 'tag_name']
-        for field in tag_fields:
-            tag_string += f"{field}:{custom_element[field]};"
+        tag_string = ' '.join([f"{field}:{custom_element[field]};" for field in tag_fields])
         element_string = custom_element['tag_name'] + ' {' + tag_string + '} '
         element_strings.append(element_string)
 
@@ -120,9 +119,9 @@ def is_valid_pagexml_sub_element(parent_tag: str, child_tag: str):
     child_tag = child_tag.replace(PAGE, '')
 
     if parent_tag == 'TextRegion':
-        return child_tag in {'TextRegion', 'TextLine', 'TextEquiv', 'Coords'}
+        return child_tag in {'TextRegion', 'TextLine', 'TextEquiv', 'Coords', 'ReadingOrder'}
     elif parent_tag == 'TextLine':
-        return child_tag in {'Word', 'TextEquiv', 'TextStyle', 'Coords', 'Baseline'}
+        return child_tag in {'Word', 'TextEquiv', 'TextStyle', 'Coords', 'Baseline', 'ReadingOrder'}
     elif parent_tag == 'Word':
         return child_tag in {'TextEquiv', 'TextStyle', 'Coords'}
     elif parent_tag == 'TextEquiv':
@@ -217,6 +216,23 @@ def add_pagexml_text(element: etree.Element, text: str,
     unicode.text = text
     plaintext = etree.SubElement(text_equiv, PAGE + 'PlainText')
     plaintext.text = text
+
+
+def add_reading_order(element: etree.Element, reading_order: Dict[int, any],
+                      reading_order_attributes: Dict[str, any] = None):
+    if element.tag == PAGE + 'PcGts':
+        element = element.find(f".//{PAGE + 'Page'}")
+    elif not is_valid_pagexml_sub_element(element.tag, PAGE + 'ReadingOrder'):
+        raise ValueError(f"No Page element in passed element {element.tag}.")
+    reading_xml = add_pagexml_sub_element(element, 'ReadingOrder')
+    ordered_xml = add_pagexml_sub_element(reading_xml, 'OrderedGroup')
+    if reading_order_attributes:
+        for attr in reading_order_attributes:
+            ordered_xml.set(attr, reading_order_attributes[attr])
+    for index in reading_order:
+        indexed_xml = add_pagexml_sub_element(ordered_xml, 'RegionRefIndexed')
+        indexed_xml.set('index', str(index))
+        indexed_xml.set('regionRef', reading_order[index])
 
 
 def stringify_xml(page: etree.Element):

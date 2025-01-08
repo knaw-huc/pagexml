@@ -9,6 +9,12 @@ class TestParser(unittest.TestCase):
         self.page_file = 'data/example.xml'
         self.page_doc = parser.parse_pagexml_file(self.page_file, custom_tags=['date', 'place'])
 
+    def test_reading_order_is_set(self):
+        self.assertEqual(2, len(self.page_doc.reading_order))
+
+    def test_reading_order_is_set(self):
+        self.assertEqual(2, len(self.page_doc.reading_order_attributes))
+
     def test_parentage_is_set(self):
         for tr in self.page_doc.text_regions:
             self.assertEqual(True, tr.parent == self.page_doc)

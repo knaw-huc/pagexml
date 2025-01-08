@@ -144,6 +144,51 @@ class TestMakeElements(TestCase):
         self.assertEqual(self.baseline.point_string, baseline.attrib['points'])
 
 
+class TestReadingOrder(TestCase):
+
+    def setUp(self) -> None:
+        self.reading_order = {0: 'r1', 1: 'r2'}
+        self.reading_order_attributes = {'id': 'group1'}
+        self.pagexml_doc = xml.make_empty_pagexml()
+        self.page_xml = self.pagexml_doc.find(f".//{xml.PAGE + 'Page'}")
+
+    def test_can_add_reading_order_to_pcgts(self):
+        xml.add_reading_order(self.pagexml_doc, self.reading_order)
+        reading_xml = self.pagexml_doc.find(f".//{xml.PAGE + 'ReadingOrder'}")
+        self.assertNotEqual(None, reading_xml)
+
+    def test_can_add_reading_order_to_page(self):
+        xml.add_reading_order(self.page_xml, self.reading_order)
+        reading_xml = self.pagexml_doc.find(f".//{xml.PAGE + 'ReadingOrder'}")
+        self.assertNotEqual(None, reading_xml)
+
+    def test_can_add_reading_order_to_text_region(self):
+        text_region = xml.make_pagexml_element('TextRegion', ele_id='tr1')
+        xml.add_reading_order(text_region, self.reading_order)
+        reading_xml = text_region.find(f".//{xml.PAGE + 'ReadingOrder'}")
+        self.assertNotEqual(None, reading_xml)
+
+    def test_cannot_add_reading_order_to_word(self):
+        word = xml.make_pagexml_element('Word', ele_id='w1')
+        self.assertRaises(ValueError, xml.add_reading_order, word, self.reading_order)
+
+    def test_make_reading_order_adds_ordered_group(self):
+        xml.add_reading_order(self.page_xml, self.reading_order)
+        ordered_xml = self.page_xml.find(f".//{xml.PAGE + 'OrderedGroup'}")
+        self.assertNotEqual(None, ordered_xml)
+
+    def test_make_reading_order_adds_ordered_group_attributes(self):
+        xml.add_reading_order(self.page_xml, self.reading_order,
+                              reading_order_attributes=self.reading_order_attributes)
+        ordered_xml = self.page_xml.find(f".//{xml.PAGE + 'OrderedGroup'}")
+        self.assertEqual(self.reading_order_attributes, ordered_xml.attrib)
+
+    def test_make_reading_order_adds_region_ref_indexed(self):
+        xml.add_reading_order(self.page_xml, self.reading_order)
+        indexed_xml = self.page_xml.find(f".//{xml.PAGE + 'RegionRefIndexed'}")
+        self.assertNotEqual(None, indexed_xml)
+
+
 class TestAddSubElements(TestCase):
 
     def test_element_cannot_add_multiple_of_singleton_element(self):

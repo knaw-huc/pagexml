@@ -3,7 +3,7 @@ import json
 import os
 import re
 from datetime import datetime
-from typing import Generator, List, Dict, Union, Iterable
+from typing import Dict, Generator, Iterable, List, Tuple, Union
 from xml.parsers import expat
 
 import xmltodict
@@ -293,22 +293,29 @@ def parse_page_image_size(page_json: dict) -> Coords:
     return Coords(points=points)
 
 
-def parse_page_reading_order(page_json: dict) -> dict:
+def parse_page_reading_order(page_json: dict) -> Tuple[Dict[int, any], Dict[str, any]]:
     order_dict = page_json['ReadingOrder']
     reading_order = {}
     if order_dict is None:
-        return {}
+        return {}, {}
+    reading_order_attribs = {}
     if 'OrderedGroup' in order_dict and 'RegionRefIndexed' in order_dict['OrderedGroup']:
-        if isinstance(order_dict['OrderedGroup']['RegionRefIndexed'], list):
-            group_list = order_dict['OrderedGroup']['RegionRefIndexed']
-            for region_ref in group_list:
-                if '@regionRef' in region_ref:
-                    reading_order[int(region_ref['@index'])] = region_ref['@regionRef']
+        region_ref_indexed = order_dict['OrderedGroup']['RegionRefIndexed']
+        if isinstance(region_ref_indexed, list):
+            group_list = region_ref_indexed
         else:
-            group_item = order_dict['OrderedGroup']['RegionRefIndexed']
-            if '@regionRef' in group_item:
-                reading_order[int(group_item['@index'])] = group_item['@regionRef']
-    return reading_order
+            group_list = [region_ref_indexed]
+        for region_ref in group_list:
+            if '@regionRef' in region_ref:
+                reading_order[int(region_ref['@index'])] = region_ref['@regionRef']
+        if '@id' in order_dict['OrderedGroup']:
+            reading_order_attribs['id'] = order_dict['OrderedGroup']['@id']
+        if '@caption' in order_dict['OrderedGroup']:
+            reading_order_attribs['caption'] = order_dict['OrderedGroup']['@caption']
+    elif 'UnorderedGroup' in order_dict:
+        # unordered means no order is established, so ignore
+        pass
+    return reading_order, reading_order_attribs
 
 
 def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable = None) -> pdm.PageXMLScan:
@@ -338,7 +345,7 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable
             if tr is not None:
                 text_regions.append(tr)
     if 'ReadingOrder' in scan_json and scan_json['ReadingOrder']:
-        reading_order = parse_page_reading_order(scan_json)
+        reading_order, reading_order_attributes = parse_page_reading_order(scan_json)
     else:
         reading_order = {}
     scan_doc = pdm.PageXMLScan(
@@ -347,6 +354,7 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable
         coords=coords,
         text_regions=text_regions,
         reading_order=reading_order,
+        reading_order_attributes=reading_order_attributes
     )
     return scan_doc
 
