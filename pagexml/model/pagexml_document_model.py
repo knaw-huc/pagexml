@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import csv
 from typing import Union, List, Dict, Set
 
 from lxml import etree
@@ -144,7 +145,8 @@ class PageXMLTextLine(PageXMLDoc):
             self.add_type(doc_type)
 
     def __repr__(self):
-        content_string = f"id={self.id}, type={self.type}, text=\"{self.text}\" conf={self.conf}"
+        content_string = (f"\n\tid={self.id}, \n\ttype={self.type}, \n\ttext=\"{self.text}\" "
+                          f"\n\tconf={self.conf}\n")
         return f"{self.__class__.__name__}({content_string})"
 
     def __lt__(self, other: PageXMLTextLine):
@@ -241,11 +243,245 @@ class PageXMLTextLine(PageXMLDoc):
         self.add_to_pagexml(tr_xml)
 
 
+def get_num_columns(rows: List[PageXMLTableRow]):
+    return max(len(row) for row in rows) if len(rows) > 0 else 0
+
+
+class PageXMLTableRegion(PageXMLDoc):
+
+    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None, coords: Coords = None,
+                 rows: List[PageXMLTableRow] = None, orientation: float = None):
+        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+                         coords=coords, reading_order=None,
+                         reading_order_attributes=None)
+        self.main_type = 'table_region'
+        self.rows: List[PageXMLTableRow] = rows if rows is not None else []
+        self.orientation: Union[None, float] = orientation
+        self.reading_order_number = {}
+        if doc_type:
+            self.add_type(doc_type)
+        self.empty_regions = []
+
+    def __getitem__(self, idx):
+        return self.rows[idx]
+
+    def __len__(self):
+        return len(self.rows)
+
+    def __repr__(self):
+        stats = json.dumps(self.stats)
+        content_string = f"\n\tid={self.id}, \n\ttype={self.type}, \n\tstats={stats}"
+        return f"{self.__class__.__name__}({content_string}\n)"
+
+    @property
+    def num_columns(self):
+        return get_num_columns(self.rows)
+
+    @property
+    def values(self):
+        return [row.values for row in self.rows]
+
+    @property
+    def shape(self):
+        return len(self.rows), self.num_columns
+
+    def cell(self, row: int, cell: int):
+        return self.rows[row].cells[cell]
+
+    def get_lines(self):
+        return [line for row in self.rows for line in row.get_lines()]
+
+    def get_words(self):
+        return [word for row in self.rows for word in row.get_words()]
+
+    def num_rows(self):
+        return len(self.rows)
+
+    def num_cells(self):
+        return sum(row.num_cells() for row in self.rows)
+
+    def num_lines(self):
+        return len(self.get_lines())
+
+    def num_words(self):
+        return len(self.get_words())
+
+    def to_csv(self, csv_file: str, separator: str = '\t'):
+        with open(csv_file, 'w') as fh:
+            table_writer = csv.writer(fh, delimiter=separator, quotechar='|')
+            for row in self.rows:
+                table_writer.writerows(row.values)
+
+    @property
+    def stats(self):
+        return {
+            'rows': self.num_rows(),
+            'cells': self.num_cells(),
+            'lines': self.num_lines(),
+            'words': self.num_words()
+        }
+
+
+def check_cell_row_consisency(cells: List[PageXMLTableCell]):
+    row_idxs = [cell.row for cell in cells]
+    if len(set(row_idxs)) > 1:
+        message = f"Cannot make a row of cells with different row indexes:"
+        for cell in cells:
+            message += f"\n\tcell id '{cell.id}'\tcol: {cell.col}"
+        raise ValueError(message)
+
+
+class PageXMLTableRow(PageXMLDoc):
+
+    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None, coords: Coords = None,
+                 cells: List[PageXMLTableCell] = None, orientation: float = None):
+        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+                         coords=coords, reading_order=None,
+                         reading_order_attributes=None)
+        self.main_type = 'table_region'
+        self.cells: List[Union[PageXMLTableCell, None]] = cells if cells is not None else []
+        self.column_cells = []
+        if cells is not None:
+            check_cell_row_consisency(cells)
+            for cell in self.cells:
+                if cell.col > len(self.column_cells):
+                    self.pad_columns(cell.col)
+                self.column_cells.append(cell)
+            # also set the row index
+            self.row_idx = cells[0].row
+        self.orientation: Union[None, float] = orientation
+        self.reading_order_number = {}
+        if doc_type:
+            self.add_type(doc_type)
+        self.empty_regions = []
+
+    def __getitem__(self, col_idx):
+        if self.column_cells[col_idx] is None:
+            return PageXMLTableCell(row=self.row_idx, col=col_idx, doc_type='empty_cell')
+        return self.column_cells[col_idx]
+
+    def __len__(self):
+        return len(self.cells)
+
+    def __repr__(self):
+        stats = json.dumps(self.stats)
+        content_string = f"\n\tid={self.id}, \n\ttype={self.main_type}, \n\tstats={stats}"
+        return f"{self.__class__.__name__}({content_string}\n)"
+
+    def pad_columns(self, col_idx: int):
+        padding = [None] * (col_idx - len(self.column_cells))
+        self.column_cells.extend(padding)
+
+    @property
+    def num_columns(self):
+        if isinstance(self.parent, PageXMLTableRegion):
+            return self.parent.num_columns
+        else:
+            return max(cell.col for cell in self.cells)
+
+    @property
+    def values(self):
+        values = ['' if cell is None else cell.value for cell in self.column_cells]
+        # values: List[Union[None, str]] = [cell if cell is None else cell.value for cell in self.column_cells]
+        # print(f"num_columns: {num_columns}\tlen(values): {len(values)}")
+        # print(f"values step 1: {values}")
+        if len(values) < self.num_columns:
+            values.extend([''] * (self.num_columns - len(values)))
+        # print(f"values step 2: {values}")
+        return values
+
+    def get_lines(self):
+        return [line for cell in self.cells for line in cell.get_lines()]
+
+    def get_words(self):
+        return [word for cell in self.cells for word in cell.get_words()]
+
+    def num_cells(self):
+        return len(self.cells)
+
+    def num_lines(self):
+        return len(self.get_lines())
+
+    def num_words(self):
+        return len(self.get_words())
+
+    @property
+    def stats(self):
+        return {
+            'cells': self.num_cells(),
+            'lines': self.num_lines(),
+            'words': self.num_words()
+        }
+
+
+class PageXMLTableCell(PageXMLDoc):
+
+    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None, coords: Coords = None,
+                 row: int = None, col: int = None, row_span: int = None, cell_span: int = None,
+                 header: bool = None, cornerpoints: List[int] = None,
+                 lines: List[PageXMLTextLine] = None, orientation: float = None):
+        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+                         coords=coords, reading_order=None,
+                         reading_order_attributes=None)
+        self.main_type = 'table_region'
+        self.lines: List[PageXMLTextLine] = lines if lines is not None else []
+        # Initial value is concatenated text of lines, but can be overwritten by user
+        # with e.g. interpreted/evaluated text
+        self.value = " ".join([line.text for line in self.lines])
+        self.row = row
+        self.col = col
+        self.row_span = row_span
+        self.cell_span = cell_span
+        self.header = header
+        self.cornerpoints = cornerpoints
+        self.orientation: Union[None, float] = orientation
+        self.reading_order_number = {}
+        if doc_type:
+            self.add_type(doc_type)
+        self.empty_regions = []
+
+    def __repr__(self):
+        stats = json.dumps(self.stats)
+        content_string = (f"\n\tid={self.id}, \n\ttype={self.main_type}, "
+                          f"\n\trow={self.row}, col={self.col}\n\tstats={stats}")
+        return f"{self.__class__.__name__}({content_string}\n)"
+
+    def get_lines(self):
+        return self.lines
+
+    def get_words(self):
+        words = []
+        if self.lines:
+            for line in self.lines:
+                if line.words:
+                    words += line.words
+                elif line.text:
+                    words += line.text.split(' ')
+        return words
+
+    def num_lines(self):
+        return len(self.lines)
+
+    def num_words(self):
+        return len(self.get_words())
+
+    @property
+    def stats(self):
+        return {
+            'lines': self.num_lines(),
+            'words': self.num_words()
+        }
+
+
 class PageXMLTextRegion(PageXMLDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  text_regions: List[PageXMLTextRegion] = None,
+                 table_regions: List[PageXMLTableRegion] = None,
                  lines: List[PageXMLTextLine] = None, text: str = None,
                  orientation: float = None, reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
@@ -254,6 +490,11 @@ class PageXMLTextRegion(PageXMLDoc):
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'text_region'
         self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions is not None else []
+        self.table_regions: List[PageXMLTableRegion] = table_regions if table_regions is not None else []
+        for table in self.table_regions:
+            for row in table.rows:
+                if len(row) < table.num_columns:
+                    row.pad_columns(table.num_columns)
         self.lines: List[PageXMLTextLine] = lines if lines is not None else []
         self.orientation: Union[None, float] = orientation
         self.reading_order_number = {}
@@ -306,6 +547,8 @@ class PageXMLTextRegion(PageXMLDoc):
             doc_json['lines'] = [line.json for line in self.lines]
         if self.text_regions:
             doc_json['text_regions'] = [text_region.json for text_region in self.text_regions]
+        if self.table_regions:
+            doc_json['table_regions'] = [table_region.json for table_region in self.table_regions]
         if self.orientation:
             doc_json['orientation'] = self.orientation
         doc_json['stats'] = self.stats
@@ -355,32 +598,43 @@ class PageXMLTextRegion(PageXMLDoc):
             text_regions.append(self)
         return text_regions
 
-    def get_lines(self) -> List[PageXMLTextLine]:
+    def get_table_regions(self):
+        table_regions = [tr for tr in self.table_regions]
+        for tr in self.text_regions:
+            table_regions.extend(tr.get_table_regions())
+        return table_regions
+
+    def get_regions(self, ignore_reading_order: bool = False):
+        all_regions = [tr for tr in self.text_regions]
+        all_regions.extend(tr for tr in self.table_regions)
+        if self.reading_order and not ignore_reading_order:
+            ordered_regions = [tr for tr in all_regions if tr.id in self.reading_order]
+            unordered_regions = [tr for tr in all_regions if tr.id not in self.reading_order]
+        else:
+            ordered_regions = []
+            unordered_regions = all_regions
+        all_regions = sorted(ordered_regions, key=lambda t: self.reading_order_number[t.id])
+        all_regions.extend(unordered_regions)
+        return all_regions
+
+    def get_lines(self, ignore_reading_order: bool = False) -> List[PageXMLTextLine]:
         lines: List[PageXMLTextLine] = []
-        if self.text_regions:
-            if self.reading_order and all([tr.id in self.reading_order for tr in self.text_regions]):
-                for tr in sorted(self.text_regions, key=lambda t: self.reading_order_number[t.id]):
-                    lines += tr.get_lines()
-            else:
-                for text_region in sorted(self.text_regions):
-                    lines += text_region.get_lines()
+        all_regions = self.get_regions(ignore_reading_order=ignore_reading_order)
+        for tr in all_regions:
+            lines.extend(tr.get_lines())
         if self.lines:
             lines += self.lines
         return lines
 
-    def get_words(self) -> Union[List[str], List[PageXMLWord]]:
+    def get_words(self, ignore_reading_order: bool = False) -> Union[List[str], List[PageXMLWord]]:
         words = []
         if self.text is not None:
             return self.text.split(' ')
-        if self.lines:
-            for line in self.lines:
-                if line.words:
-                    words += line.words
-                elif line.text:
-                    words += line.text.split(' ')
-        if self.text_regions:
-            for tr in self.text_regions:
-                words += tr.get_words()
+        for line in self.get_lines(ignore_reading_order=ignore_reading_order):
+            if line.words:
+                words += line.words
+            elif line.text:
+                words += line.text.split(' ')
         return words
 
     @property
@@ -396,12 +650,19 @@ class PageXMLTextRegion(PageXMLDoc):
         return len(self.text_regions)
 
     @property
+    def num_table_regions(self):
+        return len(self.get_table_regions())
+
+    @property
     def stats(self):
-        return {
+        stats = {
             'lines': self.num_lines,
             'words': self.num_words,
-            'text_regions': self.num_text_regions
+            'text_regions': self.num_text_regions,
         }
+        if self.table_regions:
+            stats['table_regions'] = len(self.table_regions)
+        return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
         tr_xml = add_pagexml_sub_element(parent, 'TextRegion', sub_id=self.id, custom=self.custom,
@@ -419,11 +680,14 @@ class PageXMLColumn(PageXMLTextRegion):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
-                 text_regions: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
+                 text_regions: List[PageXMLTextRegion] = None,
+                 table_regions: List[PageXMLTableRegion] = None,
+                 lines: List[PageXMLTextLine] = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="column", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order,
+                         text_regions=text_regions, table_regions=table_regions,
+                         reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'column'
         if doc_type:
@@ -452,12 +716,16 @@ class PageXMLPage(PageXMLTextRegion):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
-                 columns: List[PageXMLColumn] = None, text_regions: List[PageXMLTextRegion] = None,
-                 extra: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
+                 columns: List[PageXMLColumn] = None,
+                 text_regions: List[PageXMLTextRegion] = None,
+                 table_regions: List[PageXMLTableRegion] = None,
+                 extra: List[PageXMLTextRegion] = None,
+                 lines: List[PageXMLTextLine] = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="page", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order,
+                         text_regions=text_regions, table_regions=table_regions,
+                         reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'page'
         self.columns: List[PageXMLColumn] = columns if columns else []
@@ -467,23 +735,16 @@ class PageXMLPage(PageXMLTextRegion):
         if doc_type:
             self.add_type(doc_type)
 
-    def get_lines(self):
+    def get_lines(self, ignore_reading_order: bool = False):
         lines = []
-        if self.columns:
-            # First, add lines from columns
-            for column in sorted(self.columns):
-                lines += column.get_lines()
-            # Second, add lines from text_regions
-        if self.extra:
-            for tr in self.extra:
-                lines += tr.get_lines()
-        if self.text_regions:
-            if self.reading_order and all([tr.id in self.reading_order for tr in self.text_regions]):
-                for tr in sorted(self.text_regions, key=lambda t: self.reading_order_number[t]):
-                    lines += tr.get_lines()
-            else:
-                for tr in sorted(self.text_regions):
-                    lines += tr.get_lines()
+        # First, add lines from columns
+        for column in sorted(self.columns):
+            lines += column.get_lines(ignore_reading_order=ignore_reading_order)
+        # Second, add lines from text_regions
+        all_regions = self.get_regions(ignore_reading_order=ignore_reading_order)
+        all_regions.extend(self.extra)
+        for tr in all_regions:
+            lines += tr.get_lines(ignore_reading_order=ignore_reading_order)
         if self.lines:
             raise AttributeError(f'page {self.id} has lines as direct property')
         return lines
@@ -525,6 +786,18 @@ class PageXMLPage(PageXMLTextRegion):
             inner_trs.extend(tr.get_inner_text_regions())
         return inner_trs
 
+    def get_table_regions(self):
+        table_regions = []
+        if self.table_regions:
+            table_regions.extend(table_regions)
+        for column in self.columns:
+            table_regions.extend(column.get_table_regions())
+        for tr in self.text_regions:
+            table_regions.extend(tr.get_table_regions())
+        for tr in self.extra:
+            table_regions.extend(tr.get_table_regions())
+        return table_regions
+
     @property
     def json(self) -> Dict[str, any]:
         doc_json = super().json
@@ -555,6 +828,8 @@ class PageXMLPage(PageXMLTextRegion):
             stats['extra'] = len(self.extra)
         if self.text_regions:
             stats['text_regions'] = len(self.text_regions)
+        if self.table_regions:
+            stats['table_regions'] = len(self.get_table_regions())
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
@@ -565,6 +840,8 @@ class PageXMLPage(PageXMLTextRegion):
             column.add_to_pagexml(page_xml)
         for tr in self.text_regions:
             tr.add_to_pagexml(page_xml)
+        for tr in self.extra:
+            tr.add_to_pagexml(page_xml)
 
 
 class PageXMLScan(PageXMLTextRegion):
@@ -572,11 +849,16 @@ class PageXMLScan(PageXMLTextRegion):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  pages: List[PageXMLPage] = None, columns: List[PageXMLColumn] = None,
-                 text_regions: List[PageXMLTextRegion] = None, lines: List[PageXMLTextLine] = None,
+                 text_regions: List[PageXMLTextRegion] = None,
+                 table_regions: List[PageXMLTableRegion] = None,
+                 lines: List[PageXMLTextLine] = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
-        super().__init__(doc_id=doc_id, doc_type="scan", metadata=metadata, coords=coords, lines=lines,
-                         text_regions=text_regions, reading_order=reading_order,
+        super().__init__(doc_id=doc_id, doc_type="scan",
+                         metadata=metadata, coords=coords,
+                         text_regions=text_regions, table_regions=table_regions,
+                         lines=lines,
+                         reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'scan'
         self.pages: List[PageXMLPage] = pages if pages else []

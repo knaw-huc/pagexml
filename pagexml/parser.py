@@ -2,6 +2,7 @@ import glob
 import json
 import os
 import re
+from collections import defaultdict
 from datetime import datetime
 from typing import Dict, Generator, Iterable, List, Tuple, Union
 from xml.parsers import expat
@@ -115,6 +116,8 @@ def parse_conf(text_element: dict) -> Union[float, None]:
 
 def parse_textline_list(textline_list: list, custom_tags: Iterable = None) -> List[pdm.PageXMLTextLine]:
     """Parse a list TextLine dictionaries into a list of PageXMLTextLine objects."""
+    if isinstance(textline_list, dict):
+        textline_list = [textline_list]
     return [parse_textline(textline, custom_tags) for textline in textline_list]
 
 
@@ -233,10 +236,7 @@ def parse_textregion(text_region_dict: dict,
         if child == 'TextEquiv':
             text_region.text = parse_text_equiv(text_region_dict[child])
         if child == 'TextLine':
-            if isinstance(text_region_dict['TextLine'], list):
-                text_region.lines = parse_textline_list(text_region_dict['TextLine'], custom_tags)
-            else:
-                text_region.lines = [parse_textline(text_region_dict['TextLine'], custom_tags)]
+            text_region.lines = parse_textline_list(text_region_dict['TextLine'], custom_tags)
             text_region.set_as_parent(text_region.lines)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.lines)
@@ -260,6 +260,67 @@ def parse_textregion(text_region_dict: dict,
 def parse_textregion_list(textregion_dict_list: list,
                           custom_tags: Iterable = None) -> List[pdm.PageXMLTextRegion]:
     return [parse_textregion(textregion_dict, custom_tags) for textregion_dict in textregion_dict_list]
+
+
+def parse_table_cell(table_cell_dict: Dict[str, any], custom_tags: Iterable = None) -> pdm.PageXMLTableCell:
+    lines = []
+    if 'TextLine' in table_cell_dict:
+        lines = parse_textline_list(table_cell_dict['TextLine'], custom_tags)
+    table_cell = pdm.PageXMLTableCell(
+        doc_id=table_cell_dict['@id'],
+        row=int(table_cell_dict['@row']) if '@row' in table_cell_dict else None,
+        col=int(table_cell_dict['@col']) if '@col' in table_cell_dict else None,
+        row_span=int(table_cell_dict['@rowSpan']) if '@rowSpan' in table_cell_dict else None,
+        cell_span=int(table_cell_dict['@cellSpan']) if '@cellSpan' in table_cell_dict else None,
+        header=table_cell_dict['@header'] if '@header' in table_cell_dict else None,
+        orientation=float(table_cell_dict['@orientation']) if '@orientation' in table_cell_dict else None,
+        coords=parse_coords(table_cell_dict['Coords']) if 'Coords' in table_cell_dict else None,
+        metadata=parse_custom_metadata(table_cell_dict) if '@custom' in table_cell_dict else None,
+        cornerpoints=parse_corner_points(table_cell_dict['CornerPts']) if 'CornerPts' in table_cell_dict else None,
+        lines=lines
+    )
+    return table_cell
+
+
+def parse_corner_points(cornerpoints_dict: Dict[str, any]) -> Tuple[int, int, int, int]:
+    if isinstance(cornerpoints_dict, str):
+        cornerpoints = cornerpoints_dict
+    elif isinstance(cornerpoints_dict, dict):
+        cornerpoints = cornerpoints_dict['#text']
+    else:
+        raise TypeError(f"invalid cornerpoints: {cornerpoints_dict}")
+    p1, p2, p3, p4 = [int(point) for point in cornerpoints.split()]
+    return p1, p2, p3, p4
+
+
+def parse_tableregion(table_region_dict, custom_tags: Iterable = None):
+    table_region = pdm.PageXMLTableRegion(
+        doc_id=table_region_dict['@id'] if '@id' in table_region_dict else None,
+        orientation=float(table_region_dict['@orientation']) if '@orientation' in table_region_dict else None,
+        coords=parse_coords(table_region_dict['Coords']) if 'Coords' in table_region_dict else None,
+        metadata=parse_custom_metadata(table_region_dict) if '@custom' in table_region_dict else None,
+    )
+    if table_region.metadata and 'type' in table_region.metadata:
+        table_region.add_type(table_region.metadata['type'])
+    cells = defaultdict(list)
+    for child in table_region_dict:
+        if child == 'TableCell':
+            table_cell_dicts = table_region_dict['TableCell']
+            for table_cell_dict in table_cell_dicts:
+                cell = parse_table_cell(table_cell_dict, custom_tags)
+                cells[cell.row].append(cell)
+    for row_id in cells:
+        row_coords = parse_derived_coords(cells[row_id])
+        table_row = pdm.PageXMLTableRow(doc_id=row_id, coords=row_coords, cells=cells[row_id])
+        table_row.set_as_parent(table_row.cells)
+        table_region.rows.append(table_row)
+    table_region.set_as_parent(table_region.rows)
+    return table_region
+
+
+def parse_tableregion_list(tableregion_dict_list: list,
+                           custom_tags: Iterable = None) -> List[pdm.PageXMLTableRegion]:
+    return [parse_tableregion(tableregion_dict, custom_tags) for tableregion_dict in tableregion_dict_list]
 
 
 def parse_page_metadata(metadata_json: dict) -> dict:
@@ -323,6 +384,9 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable
     doc_id = pagexml_file
     coords, text_regions = None, None
     metadata = {}
+    text_regions = []
+    table_regions = []
+    reading_order, reading_order_attributes = {}, {}
     if 'PcGts' not in scan_json:
         # print('SCAN_JSON:', scan_json)
         raise TypeError(f'Not a PageXML file: {pagexml_file}')
@@ -338,21 +402,25 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable
         metadata['scan_width'] = int(scan_json['@imageWidth'])
         metadata['scan_height'] = int(scan_json['@imageHeight'])
     if 'TextRegion' in scan_json:
-        text_regions = []
         if isinstance(scan_json['TextRegion'], list) is False:
             scan_json['TextRegion'] = [scan_json['TextRegion']]
         for tr in parse_textregion_list(scan_json['TextRegion'], custom_tags=custom_tags):
             if tr is not None:
                 text_regions.append(tr)
+    if 'TableRegion' in scan_json:
+        if isinstance(scan_json['TableRegion'], list) is False:
+            scan_json['TableRegion'] = [scan_json['TableRegion']]
+        for tr in parse_tableregion_list(scan_json['TableRegion'], custom_tags=custom_tags):
+            if tr is not None:
+                table_regions.append(tr)
     if 'ReadingOrder' in scan_json and scan_json['ReadingOrder']:
         reading_order, reading_order_attributes = parse_page_reading_order(scan_json)
-    else:
-        reading_order = {}
     scan_doc = pdm.PageXMLScan(
         doc_id=doc_id,
         metadata=metadata,
         coords=coords,
         text_regions=text_regions,
+        table_regions=table_regions,
         reading_order=reading_order,
         reading_order_attributes=reading_order_attributes
     )

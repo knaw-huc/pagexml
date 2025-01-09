@@ -5,6 +5,7 @@ from typing import List, Union
 from pagexml.model.coords import Baseline, Coords
 from pagexml.model.basic_document_model import StructureDoc
 from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLTextLine, PageXMLTextRegion
+from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
 from pagexml.model.pagexml_document_model import sort_lines
 from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_horizontally_overlapping
