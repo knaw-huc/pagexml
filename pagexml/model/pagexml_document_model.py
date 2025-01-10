@@ -16,12 +16,13 @@ class PageXMLDoc(PhysicalStructureDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None,
                  coords: Coords = None, reading_order: Dict[int, str] = None,
-                 reading_order_attributes: Dict[str, any] = None):
+                 reading_order_attributes: Dict[str, any] = None, orientation: float = None):
         if doc_type is None:
             doc_type = 'pagexml_doc'
         super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
         self.reading_order_attributes = reading_order_attributes
+        self.orientation = orientation
         self.pagexml_type = None
         self.add_type('pagexml_doc')
 
@@ -55,6 +56,13 @@ class PageXMLDoc(PhysicalStructureDoc):
             return xml_string.decode()
         else:
             return doc_pagexml
+
+
+def get_doc_attributes(doc: PageXMLDoc):
+    attributes = {}
+    if doc.orientation:
+        attributes['orientation'] = doc.orientation
+    return attributes
 
 
 def get_image_width(doc: PageXMLDoc):
@@ -252,9 +260,9 @@ class PageXMLTableRegion(PageXMLDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  rows: List[PageXMLTableRow] = None, orientation: float = None):
-        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+        super().__init__(doc_id=doc_id, doc_type="table_region", metadata=metadata,
                          coords=coords, reading_order=None,
-                         reading_order_attributes=None)
+                         reading_order_attributes=None, orientation=orientation)
         self.main_type = 'table_region'
         self.rows: List[PageXMLTableRow] = rows if rows is not None else []
         self.orientation: Union[None, float] = orientation
@@ -322,8 +330,34 @@ class PageXMLTableRegion(PageXMLDoc):
             'words': self.num_words()
         }
 
+    @property
+    def json(self):
+        doc_json = {
+            'id': self.id,
+            'type': self.type,
+            'coords': self.coords,
+            'metadata': self.metadata,
+            'num_rows': self.shape[0],
+            'num_cols': self.shape[1],
+            'rows': [row.json for row in self.rows]
+        }
+        if self.orientation:
+            doc_json['orientation'] = self.orientation
+        doc_json['stats'] = self.stats
+        return doc_json
 
-def check_cell_row_consisency(cells: List[PageXMLTableCell]):
+    def add_to_pagexml(self, parent: etree.Element = None):
+        attributes = {}
+        if self.orientation:
+            attributes['orientation'] = self.orientation
+        tr_xml = add_pagexml_sub_element(parent, 'TableRegion', sub_id=self.id, custom=self.custom,
+                                         coords=self.coords, attributes=attributes)
+
+    def _to_pagexml(self, page_xml: etree.Element):
+        self.add_to_pagexml(page_xml)
+
+
+def check_cell_row_consistency(cells: List[PageXMLTableCell]):
     row_idxs = [cell.row for cell in cells]
     if len(set(row_idxs)) > 1:
         message = f"Cannot make a row of cells with different row indexes:"
@@ -337,14 +371,14 @@ class PageXMLTableRow(PageXMLDoc):
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  cells: List[PageXMLTableCell] = None, orientation: float = None):
-        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+        super().__init__(doc_id=doc_id, doc_type="table_row", metadata=metadata,
                          coords=coords, reading_order=None,
-                         reading_order_attributes=None)
-        self.main_type = 'table_region'
+                         reading_order_attributes=None, orientation=orientation)
+        self.main_type = 'table_row'
         self.cells: List[Union[PageXMLTableCell, None]] = cells if cells is not None else []
         self.column_cells = []
         if cells is not None:
-            check_cell_row_consisency(cells)
+            check_cell_row_consistency(cells)
             for cell in self.cells:
                 if cell.col > len(self.column_cells):
                     self.pad_columns(cell.col)
@@ -415,18 +449,41 @@ class PageXMLTableRow(PageXMLDoc):
             'words': self.num_words()
         }
 
+    @property
+    def json(self):
+        doc_json = {
+            'id': self.id,
+            'type': self.type,
+            'metadata': self.metadata,
+            'num_cols': len(self.column_cells),
+            'cells': [cell.json for cell in self.cells]
+        }
+        if self.orientation:
+            doc_json['orientation'] = self.orientation
+        doc_json['stats'] = self.stats
+        return doc_json
+
+    def add_to_pagexml(self, parent: etree.Element = None):
+        for cell in self.cells:
+            cell.add_to_pagexml(parent)
+
+    def _to_pagexml(self, page_xml: etree.Element):
+        tr_xml = add_pagexml_sub_element(page_xml, 'TableRegion', custom=self.custom,
+                                         coords=self.coords)
+        self.add_to_pagexml(tr_xml)
+
 
 class PageXMLTableCell(PageXMLDoc):
 
     def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
                  metadata: Dict[str, any] = None, coords: Coords = None,
                  row: int = None, col: int = None, row_span: int = None, cell_span: int = None,
-                 header: bool = None, cornerpoints: List[int] = None,
+                 header: bool = None, cornerpoints: Union[List[int], str] = None,
                  lines: List[PageXMLTextLine] = None, orientation: float = None):
-        super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
+        super().__init__(doc_id=doc_id, doc_type="table_cell", metadata=metadata,
                          coords=coords, reading_order=None,
-                         reading_order_attributes=None)
-        self.main_type = 'table_region'
+                         reading_order_attributes=None, orientation=orientation)
+        self.main_type = 'table_cell'
         self.lines: List[PageXMLTextLine] = lines if lines is not None else []
         # Initial value is concatenated text of lines, but can be overwritten by user
         # with e.g. interpreted/evaluated text
@@ -475,6 +532,39 @@ class PageXMLTableCell(PageXMLDoc):
             'words': self.num_words()
         }
 
+    @property
+    def json(self):
+        doc_json = {
+            'id': self.id,
+            'type': self.type,
+            'metadata': self.metadata,
+            'lines': [line.json for line in self.lines]
+        }
+        if self.cornerpoints:
+            doc_json['cornerpoints'] = self.cornerpoints
+        if self.orientation:
+            doc_json['orientation'] = self.orientation
+        doc_json['stats'] = self.stats
+        return doc_json
+
+    def add_to_pagexml(self, parent: etree.Element = None):
+        attributes = get_doc_attributes(self)
+        cell_xml = add_pagexml_sub_element(parent, 'TableCell', sub_id=self.id, coords=self.coords,
+                                           custom=self.custom, attributes=attributes)
+        for line in self.lines:
+            line.add_to_pagexml(cell_xml)
+        if self.cornerpoints:
+            if isinstance(self.cornerpoints, str):
+                text = self.cornerpoints
+            else:
+                text = ' '.join(str(point) for point in self.cornerpoints)
+        add_pagexml_sub_element(cell_xml, 'CornerPts', text=text)
+
+    def _to_pagexml(self, page_xml: etree.Element):
+        tr_xml = add_pagexml_sub_element(page_xml, 'TableRegion', custom=self.custom,
+                                         coords=self.coords)
+        self.add_to_pagexml(tr_xml)
+
 
 class PageXMLTextRegion(PageXMLDoc):
 
@@ -487,7 +577,7 @@ class PageXMLTextRegion(PageXMLDoc):
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="text_region", metadata=metadata,
                          coords=coords, reading_order=reading_order,
-                         reading_order_attributes=reading_order_attributes)
+                         reading_order_attributes=reading_order_attributes, orientation=orientation)
         self.main_type = 'text_region'
         self.text_regions: List[PageXMLTextRegion] = text_regions if text_regions is not None else []
         self.table_regions: List[PageXMLTableRegion] = table_regions if table_regions is not None else []
@@ -496,7 +586,6 @@ class PageXMLTextRegion(PageXMLDoc):
                 if len(row) < table.num_columns:
                     row.pad_columns(table.num_columns)
         self.lines: List[PageXMLTextLine] = lines if lines is not None else []
-        self.orientation: Union[None, float] = orientation
         self.reading_order_number = {}
         self.text = text
         if self.lines is not None:
@@ -551,6 +640,10 @@ class PageXMLTextRegion(PageXMLDoc):
             doc_json['table_regions'] = [table_region.json for table_region in self.table_regions]
         if self.orientation:
             doc_json['orientation'] = self.orientation
+        if self.reading_order_attributes:
+            doc_json['reading_order_attributes'] = self.reading_order_attributes
+        if self.reading_order:
+            doc_json['reading_order'] = self.reading_order
         doc_json['stats'] = self.stats
         return doc_json
 
@@ -665,11 +758,14 @@ class PageXMLTextRegion(PageXMLDoc):
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
+        attributes = get_doc_attributes(self)
         tr_xml = add_pagexml_sub_element(parent, 'TextRegion', sub_id=self.id, custom=self.custom,
-                                         coords=self.coords)
+                                         coords=self.coords, attributes=attributes)
         for line in self.lines:
             line.add_to_pagexml(tr_xml)
         for sub_tr in self.text_regions:
+            sub_tr.add_to_pagexml(tr_xml)
+        for sub_tr in self.table_regions:
             sub_tr.add_to_pagexml(tr_xml)
 
     def _to_pagexml(self, page_xml: etree.Element):
@@ -684,10 +780,11 @@ class PageXMLColumn(PageXMLTextRegion):
                  table_regions: List[PageXMLTableRegion] = None,
                  lines: List[PageXMLTextLine] = None,
                  reading_order: Dict[int, str] = None,
-                 reading_order_attributes: Dict[str, any] = None):
+                 reading_order_attributes: Dict[str, any] = None,
+                 orientation: float = None):
         super().__init__(doc_id=doc_id, doc_type="column", metadata=metadata, coords=coords, lines=lines,
                          text_regions=text_regions, table_regions=table_regions,
-                         reading_order=reading_order,
+                         orientation=orientation, reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'column'
         if doc_type:
@@ -705,11 +802,14 @@ class PageXMLColumn(PageXMLTextRegion):
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
-        column_attrib = {'type': 'column'}
+        attributes = get_doc_attributes(self)
+        attributes['type'] = 'column'
         column_xml = add_pagexml_sub_element(parent, 'TextRegion', sub_id=self.id, custom=self.custom,
-                                             coords=self.coords, attributes=column_attrib)
+                                             coords=self.coords, attributes=attributes)
         for tr in self.text_regions:
             tr.add_to_pagexml(column_xml)
+        for sub_tr in self.table_regions:
+            sub_tr.add_to_pagexml(column_xml)
 
 
 class PageXMLPage(PageXMLTextRegion):
@@ -721,11 +821,12 @@ class PageXMLPage(PageXMLTextRegion):
                  table_regions: List[PageXMLTableRegion] = None,
                  extra: List[PageXMLTextRegion] = None,
                  lines: List[PageXMLTextLine] = None,
+                 orientation: float = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="page", metadata=metadata, coords=coords, lines=lines,
                          text_regions=text_regions, table_regions=table_regions,
-                         reading_order=reading_order,
+                         orientation=orientation, reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'page'
         self.columns: List[PageXMLColumn] = columns if columns else []
@@ -833,13 +934,16 @@ class PageXMLPage(PageXMLTextRegion):
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
-        page_attrib = {'type': 'page'}
+        attributes = get_doc_attributes(self)
+        attributes['type'] = 'page'
         page_xml = add_pagexml_sub_element(parent, 'TextRegion', sub_id=self.id, custom=self.custom,
-                                           coords=self.coords, attributes=page_attrib)
+                                           coords=self.coords, attributes=attributes)
         for column in self.text_regions:
             column.add_to_pagexml(page_xml)
         for tr in self.text_regions:
             tr.add_to_pagexml(page_xml)
+        for sub_tr in self.table_regions:
+            sub_tr.add_to_pagexml(page_xml)
         for tr in self.extra:
             tr.add_to_pagexml(page_xml)
 
@@ -852,13 +956,14 @@ class PageXMLScan(PageXMLTextRegion):
                  text_regions: List[PageXMLTextRegion] = None,
                  table_regions: List[PageXMLTableRegion] = None,
                  lines: List[PageXMLTextLine] = None,
+                 orientation: float = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="scan",
                          metadata=metadata, coords=coords,
                          text_regions=text_regions, table_regions=table_regions,
                          lines=lines,
-                         reading_order=reading_order,
+                         orientation=orientation, reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'scan'
         self.pages: List[PageXMLPage] = pages if pages else []
@@ -913,11 +1018,15 @@ class PageXMLScan(PageXMLTextRegion):
         return stats
 
     def add_to_pagexml(self, scan_xml: etree.Element = None):
+        if self.orientation:
+            scan_xml.attrib['orientation'] = self.orientation
         if self.reading_order:
             xml.add_reading_order(scan_xml, self.reading_order,
                                   reading_order_attributes=self.reading_order_attributes)
         for tr in self.text_regions:
             tr.add_to_pagexml(scan_xml)
+        for sub_tr in self.table_regions:
+            sub_tr.add_to_pagexml(scan_xml)
 
 
 def sort_lines(line1: PageXMLTextLine, line2: PageXMLTextLine, as_column: bool = True):

@@ -3,6 +3,7 @@ from unittest import TestCase
 from lxml import etree
 
 from pagexml.model.coords import Coords, Baseline
+import pagexml.model.physical_document_model as pdm
 import pagexml.model.xml as xml
 
 
@@ -292,5 +293,108 @@ class TestMakeTextRegion(TestCase):
     def test_making_textregion_with_text_adds_line(self):
         tr = xml.make_pagexml_element('TextRegion', text='region text')
         text_equiv = tr.find(xml.PAGE + 'TextLine')
-        xml.prettyprint(tr)
         self.assertNotEqual(None, text_equiv)
+
+
+class TestMakeTableRegion(TestCase):
+
+    def test_can_make_tableregion_with_id(self):
+        tr = xml.make_pagexml_element('TableRegion', ele_id='tr-15')
+        self.assertEqual('tr-15', tr.attrib['id'])
+
+    def test_tableregion_has_no_table_cell(self):
+        tr = xml.make_pagexml_element('TableRegion')
+        table_cell = tr.find(xml.PAGE + 'TableCell')
+        self.assertEqual(None, table_cell)
+
+    def test_tableregion_can_have_table_cell(self):
+        tr = xml.make_pagexml_element('TableRegion')
+        cell = xml.add_pagexml_sub_element(tr, 'TableCell')
+        self.assertNotEqual(None, cell)
+
+    def test_tableregion_cannot_have_textline(self):
+        tr = xml.make_pagexml_element('TableRegion')
+        self.assertRaises(TypeError, xml.add_pagexml_sub_element, tr, 'TextLine')
+
+    def test_can_make_table_cell_with_row(self):
+        attrs = {'row': 0, 'col': 0}
+        tr = xml.make_pagexml_element('TableCell', attributes=attrs)
+        self.assertEqual(str(attrs['row']), tr.attrib['row'])
+
+    def test_can_make_table_cell_with_col(self):
+        attrs = {'row': 0, 'col': 0}
+        tr = xml.make_pagexml_element('TableCell', attributes=attrs)
+        self.assertEqual(str(attrs['col']), tr.attrib['col'])
+
+    def test_make_table_cell_adds_no_text_line(self):
+        tr = xml.make_pagexml_element('TableCell')
+        text_line = tr.find(xml.PAGE + 'TextLine')
+        self.assertEqual(None, text_line)
+
+    def test_make_table_cell_can_add_text_line(self):
+        tr = xml.make_pagexml_element('TableCell')
+        xml.add_pagexml_sub_element(tr, 'TextLine', text='first cell')
+        text_line = tr.find(xml.PAGE + 'TextLine')
+        self.assertNotEqual(None, text_line)
+
+    def test_make_table_cell_can_add_cornerpoints(self):
+        tr = xml.make_pagexml_element('TableCell')
+        xml.add_pagexml_sub_element(tr, 'CornerPts', text='0 1 2 3')
+        cp = tr.find(xml.PAGE + 'CornerPts')
+        self.assertNotEqual(None, cp)
+
+    """ skip because xml export shouldn't do this validation
+    def test_make_table_cell_cannot_add_cornerpoints_with_text(self):
+        tr = xml.make_pagexml_element('TableCell')
+        self.assertRaises(ValueError, xml.add_pagexml_sub_element, tr, 'CornerPts', text='some text')
+    """
+
+
+class TestExportTableRegion(TestCase):
+
+    def setUp(self) -> None:
+        self.line = pdm.PageXMLTextLine(doc_id='line1', text='first cell')
+        self.cell = pdm.PageXMLTableCell(doc_id='cell1', row=0, col=0,
+                                         lines=[self.line], cornerpoints="1 2 3 4")
+        self.row = pdm.PageXMLTableRow(doc_id='row1', cells=[self.cell])
+        self.table = pdm.PageXMLTableRegion(doc_id='table1', rows=[self.row])
+
+    def test_table_exports_to_page_with_table(self):
+        pagexml = self.table.to_pagexml()
+        table_region = pagexml.find(f".//{xml.PAGE + 'TableRegion'}")
+        self.assertNotEqual(None, table_region)
+
+    def test_cell_exports_to_page_with_table(self):
+        pagexml = self.cell.to_pagexml()
+        table_region = pagexml.find(f".//{xml.PAGE + 'TableRegion'}")
+        self.assertNotEqual(None, table_region)
+
+    def test_cell_exports_to_page_with_cell(self):
+        pagexml = self.cell.to_pagexml()
+        table_cell = pagexml.find(f".//{xml.PAGE + 'TableCell'}")
+        self.assertNotEqual(None, table_cell)
+
+    def test_cell_exports_to_page_with_text_line(self):
+        pagexml = self.cell.to_pagexml()
+        line = pagexml.find(f".//{xml.PAGE + 'TextLine'}")
+        self.assertNotEqual(None, line)
+
+    def test_cell_exports_to_page_with_cornerpoints(self):
+        pagexml = self.cell.to_pagexml()
+        cornerpoints = pagexml.find(f".//{xml.PAGE + 'CornerPts'}")
+        self.assertNotEqual(None, cornerpoints)
+
+    def test_row_exports_to_page_with_table(self):
+        pagexml = self.row.to_pagexml()
+        table_region = pagexml.find(f".//{xml.PAGE + 'TableRegion'}")
+        self.assertNotEqual(None, table_region)
+
+    def test_row_exports_to_page_with_cell(self):
+        pagexml = self.row.to_pagexml()
+        table_cell = pagexml.find(f".//{xml.PAGE + 'TableCell'}")
+        self.assertNotEqual(None, table_cell)
+
+    def test_row_exports_to_page_with_text_line(self):
+        pagexml = self.row.to_pagexml()
+        line = pagexml.find(f".//{xml.PAGE + 'TextLine'}")
+        self.assertNotEqual(None, line)

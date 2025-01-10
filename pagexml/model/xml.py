@@ -1,3 +1,4 @@
+import re
 from typing import Dict, Iterable, Union
 
 from lxml import etree
@@ -28,7 +29,9 @@ VALID_TAGS = {
     # Text elements
     'TextLine', 'Word',
     'Coords', 'Baseline',
-    'TextEquiv', 'TextStyle', 'Unicode', 'PlainText'
+    'TextEquiv', 'TextStyle', 'Unicode', 'PlainText',
+    # Table elements
+    'TableRegion', 'TableCell', 'CornerPts'
 }
 
 VALID_NS_TAGS = {PAGE + tag for tag in VALID_TAGS}
@@ -84,6 +87,12 @@ def make_custom_string(custom):
     return ' '.join(element_strings)
 
 
+def check_text_content(element: etree.Element, text: str):
+    if element.tag == PAGE + 'CornerPts':
+        if not re.match(r"\d+ \d+ \d+ \d+", text):
+            raise ValueError(f"CornerPts element can only have four integers as text context")
+
+
 def make_pagexml_element(name: str, ele_id: str = None, custom: Dict[str, any] = None,
                          coords: Coords = None, baseline: Baseline = None, text: str = None,
                          conf: float = None, attributes: Dict[str, any] = None):
@@ -101,6 +110,10 @@ def make_pagexml_element(name: str, ele_id: str = None, custom: Dict[str, any] =
     if baseline is not None:
         add_pagexml_baseline(element, baseline)
     if text is not None:
+        # Why check content? If someone put something in there that's not supposed
+        # to be there, that's not the problem of the XML export function. In other
+        # words, skip the line below:
+        # check_text_content(element, text=text)
         add_pagexml_text(element, coords=coords, baseline=baseline, text=text, conf=conf)
     return element
 
@@ -120,6 +133,10 @@ def is_valid_pagexml_sub_element(parent_tag: str, child_tag: str):
 
     if parent_tag == 'TextRegion':
         return child_tag in {'TextRegion', 'TextLine', 'TextEquiv', 'Coords', 'ReadingOrder'}
+    elif parent_tag == 'TableRegion':
+        return child_tag in {'TableCell', 'Coords'}
+    elif parent_tag == 'TableCell':
+        return child_tag in {'TextLine', 'Coords', 'CornerPts'}
     elif parent_tag == 'TextLine':
         return child_tag in {'Word', 'TextEquiv', 'TextStyle', 'Coords', 'Baseline', 'ReadingOrder'}
     elif parent_tag == 'Word':
@@ -202,7 +219,7 @@ def add_pagexml_text(element: etree.Element, text: str,
                      coords: Coords = None, baseline: Baseline = None,
                      conf: float = None):
     attrib = {'conf': str(conf)}
-    if element.tag in namespaced_tags(PAGE, {'TextLine', 'Word'}):
+    if element.tag in namespaced_tags(PAGE, {'TextLine', 'Word', 'CornerPts'}):
         text_element = element
     elif element.tag in namespaced_tags(PAGE, 'TextRegion'):
         text_element = add_pagexml_sub_element(element, 'TextLine', coords=coords, baseline=baseline,
@@ -216,6 +233,14 @@ def add_pagexml_text(element: etree.Element, text: str,
     unicode.text = text
     plaintext = etree.SubElement(text_equiv, PAGE + 'PlainText')
     plaintext.text = text
+
+
+def add_cornerpoints(element: etree.Element, cornerpoints: str):
+    if element.tag not in namespaced_tags(PAGE, 'TableCell'):
+        raise TypeError(f"Cannot add CornerPts to '{element.tag}' element")
+    if element.find(PAGE + 'CornerPts') is not None:
+        raise ValueError(f"Cannot add more than one CornerPts element to '{element.tag}' element")
+    add_pagexml_sub_element(element, PAGE + 'CornerPts', text=cornerpoints)
 
 
 def add_reading_order(element: etree.Element, reading_order: Dict[int, any],
