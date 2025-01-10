@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15/pagecontent.xsd">
+    <Metadata>
+        <Creator>prov=READ-COOP:name=PyLaia@TranskribusPlatform:version=2.20.0:model_id=39995:lm=none:date=07_01_2025_14:56</Creator>
+        <Created>2024-09-23T13:44:33.471747</Created>
+        <LastChange>2025-01-07T14:56:22.377+01:00</LastChange>
+        <TranskribusMetadata docId="4421891" pageId="79397898" pageNr="1" tsid="218779365" status="IN_PROGRESS" userId="106648" imgUrl="https://files.transkribus.eu/Get?id=OZGFEZBDITWJUESUIJKBAFKB&amp;fileType=view" xmlUrl="https://files.transkribus.eu/Get?id=FZAYHDYOWCKBNZLYGWPLXRVJ" imageId="64381914"/>
+    </Metadata>
+    <Page imageFilename="0001_NL-HaNA_0.00.00_1206_0338_contrast.png" imageWidth="9430" imageHeight="7208">
+        <TableRegion id="t1" custom="readingOrder {index:0;}">
+            <Coords points="4936,931 4936,6463 8674,6428 8730,900"/>
+            <TableCell row="0" col="0" colSpan="1" orientation="0.0" id="t1c1">
+                <Coords points="4936,931 4936,1083 5546,1083 5546,926"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="0" col="1" colSpan="1" orientation="0.0" id="t1c2">
+                <Coords points="5546,926 5546,1083 8728,1084 8730,900"/>
+                <TextLine id="t1c2_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5825,1042 6037,1004 6314,1061 6947,1008 7337,1050 7440,997 7489,1038 8095,1035 8095,948 7963,940 5825,951"/>
+                    <Baseline points="5847,1026 5865,1026 5954,1020 6044,1026 6133,1026 6223,1026 6312,1020 6402,1020 6491,1020 6581,1020 6670,1020 6760,1020 6849,1020 6939,1020 7028,1020 7118,1020 7208,1020 7297,1020 7387,1020 7476,1020 7566,1020 7655,1020 7745,1020 7834,1014 7924,1014 8013,1020 8103,1020"/>
+                    <TextEquiv>
+                        <Unicode>Per't engelsch snauw scheepje the Mercury.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="1" col="0" colSpan="1" orientation="0.0" id="t1c3">
+                <Coords points="4936,1083 4936,1328 5546,1328 5546,1083"/>
+                <TextLine id="t1c3_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4969,1198 5014,1201 5026,1190 5071,1190 5082,1201 5120,1201 5120,1107 5101,1107 5063,1145 5044,1133 5041,1137 5003,1099 4969,1099"/>
+                    <Baseline points="4988,1181 5077,1181 5131,1181"/>
+                    <TextEquiv>
+                        <Unicode>1-2</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="1" col="1" colSpan="1" orientation="0.0" id="t1c4">
+                <Coords points="5546,1083 5546,1328 8725,1328 8728,1084"/>
+                <TextLine id="t1c4_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,1190 8584,1186 8584,1095 8437,1129 8190,1095 8148,1133 8016,1095 7788,1133 7508,1099 7326,1133 6686,1103 6542,1141 5545,1114"/>
+                    <Baseline points="5567,1181 5638,1175 5728,1175 5817,1175 5907,1175 5996,1175 6086,1175 6175,1175 6265,1175 6354,1175 6444,1175 6533,1175 6623,1175 6712,1169 6802,1175 6891,1169 6981,1169 7070,1169 7160,1169 7249,1169 7339,1169 7428,1169 7518,1169 7607,1169 7697,1169 7786,1169 7876,1169 7965,1163 8055,1169 8144,1169 8234,1163 8323,1163 8413,1169 8502,1163 8592,1163"/>
+                    <TextEquiv>
+                        <Unicode>Een brief van den gouverneur Rijk Tulbagh en den raad aan</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c4_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5545,1285 7993,1289 7993,1220 7898,1194 7758,1194 7713,1239 7527,1194 7053,1194 7008,1239 6788,1198 6739,1243 6409,1194 6079,1201 6037,1243 5768,1198 5696,1243 5545,1220"/>
+                    <Baseline points="5567,1276 5656,1276 5746,1276 5835,1276 5925,1276 6014,1276 6104,1276 6193,1270 6283,1270 6372,1270 6462,1270 6551,1276 6641,1276 6730,1276 6820,1270 6909,1270 6999,1270 7088,1270 7178,1270 7267,1270 7357,1270 7446,1270 7536,1270 7625,1270 7715,1270 7804,1270 7894,1276 7983,1276 8001,1276"/>
+                    <TextEquiv>
+                        <Unicode>de Kamer Amsterdam in dato 26 September 1763.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="2" col="0" colSpan="1" orientation="0.0" id="t1c5">
+                <Coords points="4936,1328 4936,1599 5546,1598 5546,1328"/>
+                <TextLine id="t1c5_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4954,1467 4999,1471 5033,1440 5124,1455 5158,1421 5181,1440 5215,1444 5215,1326 5192,1326 5177,1342 5116,1334 5082,1368 5044,1372 5007,1353 4954,1361"/>
+                    <Baseline points="4976,1443 5065,1438 5155,1438 5226,1443"/>
+                    <TextEquiv>
+                        <Unicode>3-8</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="2" col="1" colSpan="1" orientation="0.0" id="t1c6">
+                <Coords points="5546,1328 5546,1598 8723,1592 8725,1328"/>
+                <TextLine id="t1c6_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5560,1448 8474,1440 8474,1387 8402,1349 8221,1383 8137,1349 7182,1383 7114,1349 7053,1391 6924,1353 6454,1357 6420,1391 6344,1357 6261,1391 6181,1357 6113,1391 5560,1361"/>
+                    <Baseline points="5579,1432 5620,1426 5710,1426 5799,1426 5889,1426 5978,1426 6068,1426 6157,1426 6247,1426 6336,1426 6426,1426 6515,1426 6605,1426 6694,1426 6784,1426 6873,1426 6963,1426 7052,1426 7142,1420 7231,1420 7321,1420 7410,1420 7500,1420 7589,1420 7679,1420 7768,1420 7858,1420 7947,1420 8037,1420 8126,1420 8216,1420 8305,1420 8395,1420 8484,1426"/>
+                    <TextEquiv>
+                        <Unicode>Een dito aan de vergadering van 17en in dato als even.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c6_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5825,1554 8361,1539 8311,1467 7857,1440 7770,1489 7493,1444 7444,1489 7095,1444 6705,1493 6496,1455 6435,1493 6193,1455 6147,1501 6079,1459 5825,1463"/>
+                    <Baseline points="5847,1539 5859,1533 5948,1527 6038,1533 6127,1533 6217,1533 6307,1533 6396,1527 6486,1527 6575,1527 6665,1527 6754,1527 6844,1527 6933,1527 7023,1527 7112,1521 7202,1521 7291,1527 7381,1521 7470,1521 7560,1521 7649,1521 7739,1521 7828,1521 7918,1521 8007,1521 8097,1521 8186,1521 8276,1521 8365,1527"/>
+                    <TextEquiv>
+                        <Unicode>Per't fransche oorlogschip le Comte d'Argenson.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="3" col="0" colSpan="1" orientation="0.0" id="t1c7">
+                <Coords points="4936,1599 4936,1838 5547,1835 5546,1598"/>
+                <TextLine id="t1c7_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,1724 4991,1724 5026,1698 5052,1694 5086,1694 5101,1709 5128,1702 5189,1709 5189,1588 5170,1588 5151,1607 5094,1603 5056,1641 5014,1599 4995,1615 4961,1615"/>
+                    <Baseline points="4982,1700 5018,1688 5107,1688 5197,1694"/>
+                    <TextEquiv>
+                        <Unicode>9-12</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="3" col="1" colSpan="1" orientation="0.0" id="t1c8">
+                <Coords points="5546,1598 5547,1835 8721,1820 8723,1592"/>
+                <TextLine id="t1c8_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5552,1706 8524,1690 8524,1607 8346,1599 8148,1633 7788,1603 7724,1637 7595,1603 7557,1641 5552,1622"/>
+                    <Baseline points="5573,1688 5579,1688 5668,1682 5758,1682 5847,1682 5937,1682 6026,1682 6116,1682 6205,1682 6295,1682 6384,1682 6474,1676 6563,1682 6653,1682 6742,1676 6832,1676 6921,1676 7011,1676 7100,1676 7190,1676 7279,1676 7369,1676 7458,1676 7548,1676 7637,1670 7727,1676 7816,1670 7906,1670 7995,1670 8085,1670 8174,1670 8264,1670 8353,1670 8443,1670 8532,1676"/>
+                    <TextEquiv>
+                        <Unicode>Een dito aan de vergadering van 17en in dato 22 October</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c8_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5568,1804 5613,1808 5621,1800 5636,1812 5662,1812 5677,1796 5704,1808 5719,1804 5738,1819 5765,1812 5784,1793 5818,1804 5814,1717 5677,1706 5568,1709"/>
+                    <Baseline points="5590,1784 5680,1784 5769,1790 5823,1790"/>
+                    <TextEquiv>
+                        <Unicode>1763.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="4" col="0" colSpan="1" orientation="0.0" id="t1c9">
+                <Coords points="4936,1838 4936,2090 5547,2090 5547,1835"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="4" col="1" colSpan="1" orientation="0.0" id="t1c10">
+                <Coords points="5547,1835 5547,2090 8718,2092 8721,1820"/>
+                <TextLine id="t1c10_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5821,1952 5988,1952 6026,1914 6072,1956 6185,1922 7000,1963 7163,1918 7447,1948 7648,1910 7902,1959 8353,1910 8641,1940 8641,1853 8603,1850 5821,1861"/>
+                    <Baseline points="5841,1939 5877,1933 5966,1933 6056,1927 6145,1927 6235,1927 6324,1927 6414,1927 6503,1927 6593,1927 6682,1927 6772,1927 6861,1927 6951,1927 7040,1927 7130,1927 7219,1927 7309,1927 7398,1927 7488,1921 7577,1921 7667,1921 7756,1927 7846,1921 7935,1921 8025,1927 8114,1921 8204,1921 8293,1921 8383,1921 8472,1921 8562,1921 8651,1927"/>
+                    <TextEquiv>
+                        <Unicode>Per de fransche scheepen le Comte d'Artois, le Conde</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c10_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5825,2050 6579,2054 6579,2005 6409,1963 6382,1982 6163,1963 6121,2005 6026,1963 5969,2005 5825,1982"/>
+                    <Baseline points="5847,2034 5937,2034 6026,2034 6116,2034 6205,2034 6295,2034 6384,2034 6474,2034 6563,2034 6587,2034"/>
+                    <TextEquiv>
+                        <Unicode>en le Massiac.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="5" col="0" colSpan="1" orientation="0.0" id="t1c11">
+                <Coords points="4936,2090 4936,2337 5547,2336 5547,2090"/>
+                <TextLine id="t1c11_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,2194 5014,2206 5037,2225 5086,2194 5139,2187 5189,2217 5242,2213 5242,2103 5204,2111 5166,2103 5147,2122 5052,2126 5010,2092 4961,2096"/>
+                    <Baseline points="4982,2195 5071,2189 5161,2189 5250,2201"/>
+                    <TextEquiv>
+                        <Unicode>13-15</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="5" col="1" colSpan="1" orientation="0.0" id="t1c12">
+                <Coords points="5547,2090 5547,2336 8715,2331 8718,2092"/>
+                <TextLine id="t1c12_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5541,2194 8588,2191 8588,2107 8236,2126 8190,2081 8145,2126 8046,2081 8001,2126 7766,2096 7527,2134 7409,2088 7296,2134 6970,2134 6924,2088 6803,2134 6746,2088 6701,2134 6303,2103 6011,2138 5890,2134 5844,2088 5787,2134 5541,2092"/>
+                    <Baseline points="5561,2183 5638,2177 5728,2177 5817,2177 5907,2183 5996,2183 6086,2177 6175,2177 6265,2183 6354,2177 6444,2177 6533,2177 6623,2177 6712,2177 6802,2177 6891,2177 6981,2177 7070,2177 7160,2177 7249,2177 7339,2177 7428,2177 7518,2177 7607,2171 7697,2177 7786,2171 7876,2171 7965,2171 8055,2171 8144,2171 8234,2171 8323,2171 8413,2165 8502,2171 8592,2177"/>
+                    <TextEquiv>
+                        <Unicode>Een dito aan de vergadering van 17en in dato 12 November</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c12_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5575,2304 5609,2304 5621,2293 5647,2316 5677,2297 5761,2316 5787,2289 5802,2304 5837,2304 5833,2232 5799,2232 5772,2213 5723,2206 5715,2213 5571,2213"/>
+                    <Baseline points="5596,2285 5686,2285 5775,2285 5841,2291"/>
+                    <TextEquiv>
+                        <Unicode>1763.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="6" col="0" colSpan="1" orientation="0.0" id="t1c13">
+                <Coords points="4936,2337 4936,2588 5547,2587 5547,2336"/>
+                <TextLine id="t1c13_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4972,2456 4999,2460 5026,2441 5044,2456 5086,2441 5139,2441 5154,2456 5185,2448 5207,2471 5242,2467 5242,2338 5166,2346 5143,2369 5098,2361 5086,2369 5075,2357 5056,2365 5026,2338 4972,2342"/>
+                    <Baseline points="4994,2440 5083,2434 5173,2440 5250,2440"/>
+                    <TextEquiv>
+                        <Unicode>16-17</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="6" col="1" colSpan="1" orientation="0.0" id="t1c14">
+                <Coords points="5547,2336 5547,2587 8713,2583 8715,2331"/>
+                <TextLine id="t1c14_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5560,2456 8266,2445 8266,2380 8160,2380 8107,2327 8050,2380 7967,2346 7929,2380 7807,2346 7770,2380 7368,2380 7334,2346 7296,2384 7118,2350 6507,2384 6458,2335 6409,2384 6303,2354 5996,2388 5890,2384 5840,2335 5730,2388 5560,2338"/>
+                    <Baseline points="5579,2434 5585,2434 5674,2428 5764,2434 5853,2428 5943,2428 6032,2434 6122,2428 6211,2428 6301,2428 6390,2428 6480,2428 6569,2428 6659,2428 6748,2428 6838,2422 6927,2422 7017,2422 7106,2422 7196,2422 7285,2428 7375,2422 7464,2422 7554,2422 7643,2422 7733,2422 7822,2422 7912,2422 8001,2422 8091,2422 8180,2422 8270,2428"/>
+                    <TextEquiv>
+                        <Unicode>Een dito aan de Kamer Amsterdam in dato als boven.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c14_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5802,2536 7883,2543 7883,2479 7553,2448 7489,2494 7428,2448 7201,2448 7156,2494 7034,2448 6943,2494 6773,2452 6644,2498 6553,2452 5802,2482"/>
+                    <Baseline points="5823,2535 5835,2535 5925,2529 6014,2529 6104,2529 6193,2529 6283,2529 6372,2529 6462,2523 6551,2523 6641,2529 6730,2523 6820,2523 6909,2523 6999,2523 7088,2523 7178,2523 7267,2523 7357,2523 7446,2523 7536,2523 7625,2523 7715,2523 7804,2529 7894,2529"/>
+                    <TextEquiv>
+                        <Unicode>Perütoengelsch schip The Royal George.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="7" col="0" colSpan="1" orientation="0.0" id="t1c15">
+                <Coords points="4936,2588 4936,2838 5547,2836 5547,2587"/>
+                <TextLine id="t1c15_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4969,2698 5010,2706 5026,2695 5037,2706 5067,2706 5090,2687 5124,2687 5139,2702 5185,2702 5204,2683 5223,2683 5223,2604 5189,2604 5170,2592 5143,2619 5094,2619 5075,2604 5048,2608 5033,2592 4969,2592"/>
+                    <Baseline points="4988,2685 5077,2685 5167,2685 5232,2691"/>
+                    <TextEquiv>
+                        <Unicode>18-23</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="7" col="1" colSpan="1" orientation="0.0" id="t1c16">
+                <Coords points="5547,2587 5547,2836 8710,2826 8713,2583"/>
+                <TextLine id="t1c16_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5552,2698 8486,2702 8486,2608 8353,2604 8092,2638 8039,2604 7675,2638 7637,2600 7557,2638 7106,2604 7068,2642 7012,2608 6974,2642 6939,2608 6454,2608 6420,2642 6341,2608 6265,2642 6178,2608 6113,2642 5552,2615"/>
+                    <Baseline points="5573,2685 5662,2679 5752,2679 5841,2679 5931,2679 6020,2679 6110,2679 6199,2679 6289,2679 6378,2679 6468,2679 6557,2679 6647,2679 6736,2679 6826,2679 6915,2679 7005,2679 7094,2679 7184,2673 7273,2673 7363,2679 7452,2673 7542,2679 7631,2673 7721,2673 7810,2673 7900,2673 7989,2673 8079,2673 8168,2673 8258,2673 8347,2679 8437,2679 8490,2685"/>
+                    <TextEquiv>
+                        <Unicode>Een dito aan de vergadering van 17en in dato 2 January</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c16_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5564,2793 5583,2793 5594,2805 5621,2793 5640,2812 5662,2812 5681,2789 5700,2801 5738,2793 5757,2812 5776,2812 5791,2797 5833,2805 5833,2736 5795,2736 5776,2717 5730,2710 5719,2698 5712,2706 5560,2714"/>
+                    <Baseline points="5585,2786 5674,2780 5764,2786 5841,2786"/>
+                    <TextEquiv>
+                        <Unicode>1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="8" col="0" colSpan="1" orientation="0.0" id="t1c17">
+                <Coords points="4936,2838 4936,2983 5547,2981 5547,2836"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="8" col="1" colSpan="1" orientation="0.0" id="t1c18">
+                <Coords points="5547,2836 5547,2981 8709,2971 8710,2826"/>
+                <TextLine id="t1c18_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5821,2949 7281,2949 7281,2880 7171,2846 7137,2880 6822,2880 6784,2842 6587,2880 6545,2842 6507,2880 6113,2884 6034,2831 5905,2884 5821,2831"/>
+                    <Baseline points="5841,2929 5931,2929 6020,2929 6110,2929 6199,2923 6289,2923 6378,2923 6468,2923 6557,2923 6647,2923 6736,2923 6826,2923 6915,2923 7005,2923 7094,2923 7184,2923 7273,2929 7291,2935"/>
+                    <TextEquiv>
+                        <Unicode>Per't vroegschip Baarsande.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="9" col="0" colSpan="1" orientation="0.0" id="t1c19">
+                <Coords points="4936,2983 4936,3141 5548,3137 5547,2981"/>
+                <TextLine id="t1c19_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4957,3100 5037,3096 5056,3115 5075,3115 5101,3089 5128,3085 5143,3100 5245,3104 5242,3005 5207,3017 5185,2994 5166,2994 5143,3017 5101,3021 5086,3036 5037,2987 5026,2998 4954,3005"/>
+                    <Baseline points="4976,3084 5065,3078 5155,3078 5244,3090 5256,3090"/>
+                    <TextEquiv>
+                        <Unicode>24-26</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="9" col="1" colSpan="1" orientation="0.0" id="t1c20">
+                <Coords points="5547,2981 5548,3137 8708,3112 8709,2971"/>
+                <TextLine id="t1c20_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,3096 5742,3138 5844,3085 6735,3093 6735,3043 6678,3013 6288,3013 6257,3043 6197,3013 6041,3043 5981,3013 5708,3013 5677,3043 5545,3017"/>
+                    <Baseline points="5567,3084 5656,3078 5746,3078 5835,3078 5925,3078 6014,3078 6104,3078 6193,3078 6283,3078 6372,3078 6462,3078 6551,3078 6641,3078 6730,3078 6742,3084"/>
+                    <TextEquiv>
+                        <Unicode>Register der papieren.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="10" col="0" colSpan="1" orientation="0.0" id="t1c21">
+                <Coords points="4936,3141 4936,3389 5548,3388 5548,3137"/>
+                <TextLine id="t1c21_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4954,3244 5029,3248 5044,3263 5063,3263 5090,3233 5109,3233 5139,3263 5189,3244 5245,3252 5242,3146 5223,3146 5200,3172 5162,3146 5139,3168 4954,3165"/>
+                    <Baseline points="4976,3228 5065,3234 5155,3234 5244,3234 5256,3234"/>
+                    <TextEquiv>
+                        <Unicode>27-38</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="10" col="1" colSpan="1" orientation="0.0" id="t1c22">
+                <Coords points="5548,3137 5548,3388 8705,3384 8708,3112"/>
+                <TextLine id="t1c22_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,3229 5746,3263 6557,3225 7004,3225 7046,3259 8577,3240 8577,3161 8501,3138 8236,3184 8186,3146 8118,3184 8076,3146 7853,3146 7815,3184 7758,3146 7599,3184 7542,3146 7417,3184 7364,3146 7296,3184 7193,3142 7038,3184 6849,3146 6807,3187 6716,3146 6659,3184 6625,3149 6591,3184 6155,3187 6022,3149 5886,3187 5761,3127 5545,3149"/>
+                    <Baseline points="5567,3228 5632,3228 5722,3228 5811,3228 5901,3228 5990,3228 6080,3228 6169,3228 6259,3222 6348,3222 6438,3222 6527,3228 6617,3222 6706,3222 6796,3228 6885,3222 6975,3228 7064,3222 7154,3222 7243,3222 7333,3222 7422,3222 7512,3222 7601,3222 7691,3222 7780,3222 7870,3222 7959,3222 8049,3222 8138,3222 8228,3222 8317,3216 8407,3222 8496,3216 8586,3222"/>
+                    <TextEquiv>
+                        <Unicode>Origineele missive van den gouverneur Rijk Tulbagh en der</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c22_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5541,3335 8569,3343 8569,3263 8414,3237 8315,3290 7932,3240 7872,3290 7819,3237 7754,3290 7550,3244 7504,3290 7383,3248 7337,3294 7174,3244 7068,3294 7004,3263 6852,3294 5541,3271"/>
+                    <Baseline points="5561,3329 5650,3329 5740,3329 5829,3329 5919,3329 6008,3329 6098,3323 6187,3329 6277,3323 6366,3329 6456,3323 6545,3323 6635,3323 6724,3323 6814,3329 6903,3323 6993,3323 7082,3329 7172,3329 7261,3323 7351,3329 7440,3323 7530,3323 7619,3323 7709,3323 7798,3329 7888,3323 7977,3323 8067,3323 8156,3323 8246,3323 8335,3323 8425,3323 8514,3323 8580,3329"/>
+                    <TextEquiv>
+                        <Unicode>raad aan de vergadering van 17en in dato 7 January 1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="11" col="0" colSpan="1" orientation="0.0" id="t1c23">
+                <Coords points="4936,3389 4936,3630 5548,3629 5548,3388"/>
+                <TextLine id="t1c23_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,3510 4999,3513 5018,3498 5029,3510 5052,3510 5082,3483 5124,3487 5158,3510 5181,3510 5200,3491 5234,3498 5238,3392 5192,3384 5143,3434 5105,3430 5086,3411 5003,3419 4984,3396 4965,3396"/>
+                    <Baseline points="4982,3490 5065,3484 5155,3478 5244,3484"/>
+                    <TextEquiv>
+                        <Unicode>39-41</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="11" col="1" colSpan="1" orientation="0.0" id="t1c24">
+                <Coords points="5548,3388 5548,3629 8702,3625 8705,3384"/>
+                <TextLine id="t1c24_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,3479 5753,3517 6125,3475 7004,3475 7046,3510 7243,3475 8577,3483 8577,3422 8505,3400 8236,3438 7986,3400 7777,3438 7705,3407 7629,3438 5545,3411"/>
+                    <Baseline points="5567,3478 5632,3478 5722,3478 5811,3478 5901,3472 5990,3472 6080,3472 6169,3472 6259,3472 6348,3472 6438,3472 6527,3472 6617,3472 6706,3472 6796,3472 6885,3472 6975,3472 7064,3472 7154,3472 7243,3472 7333,3472 7422,3472 7512,3472 7601,3472 7691,3472 7780,3472 7870,3472 7959,3466 8049,3472 8138,3472 8228,3472 8317,3466 8407,3472 8496,3466 8586,3460"/>
+                    <TextEquiv>
+                        <Unicode>Origineele missive van den gouverneur en raad aan de Ka¬</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c24_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5545,3597 7550,3597 7550,3521 7455,3494 7341,3494 7288,3544 6905,3498 6849,3547 6795,3498 6735,3544 6523,3502 6477,3544 6356,3506 6314,3544 6144,3502 5545,3525"/>
+                    <Baseline points="5567,3580 5656,3574 5746,3580 5835,3574 5925,3574 6014,3574 6104,3574 6193,3574 6283,3574 6372,3574 6462,3574 6551,3574 6641,3574 6730,3580 6820,3580 6909,3580 6999,3574 7088,3574 7178,3574 7267,3580 7357,3574 7446,3574 7536,3580 7560,3580"/>
+                    <TextEquiv>
+                        <Unicode>mer Amsterdam in dato 7 January 1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="12" col="0" colSpan="1" orientation="0.0" id="t1c25">
+                <Coords points="4936,3630 4936,3887 5548,3886 5548,3629"/>
+                <TextLine id="t1c25_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,3745 4980,3745 4999,3763 5033,3748 5075,3748 5094,3733 5128,3737 5162,3763 5245,3752 5242,3635 5207,3638 5189,3627 5147,3673 5094,3669 5063,3638 5026,3638 4980,3684 4957,3684"/>
+                    <Baseline points="4982,3729 5071,3729 5161,3735 5250,3735 5256,3735"/>
+                    <TextEquiv>
+                        <Unicode>42-49</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="12" col="1" colSpan="1" orientation="0.0" id="t1c26">
+                <Coords points="5548,3629 5548,3886 8700,3883 8702,3625"/>
+                <TextLine id="t1c26_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,3737 8467,3741 8467,3654 6697,3688 6648,3650 6545,3691 6451,3654 6318,3688 5916,3657 5882,3691 5545,3657"/>
+                    <Baseline points="5567,3729 5614,3729 5704,3729 5793,3729 5883,3729 5972,3729 6062,3723 6151,3723 6241,3729 6330,3723 6420,3723 6509,3729 6599,3729 6688,3723 6778,3723 6867,3723 6957,3723 7046,3723 7136,3723 7225,3723 7315,3723 7404,3723 7494,3723 7583,3723 7673,3723 7762,3723 7852,3723 7941,3723 8031,3723 8120,3723 8210,3723 8299,3723 8389,3723 8478,3723"/>
+                    <TextEquiv>
+                        <Unicode>Copia missive van generaal en raden aan den gouverneur</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c26_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5545,3847 8516,3832 8516,3745 8266,3790 5545,3771"/>
+                    <Baseline points="5567,3830 5656,3830 5746,3830 5835,3830 5925,3830 6014,3830 6104,3824 6193,3830 6283,3824 6372,3824 6462,3824 6551,3824 6641,3824 6730,3824 6820,3824 6909,3824 6999,3824 7088,3824 7178,3824 7267,3824 7357,3824 7446,3824 7536,3824 7625,3824 7715,3824 7804,3824 7894,3824 7983,3824 8073,3824 8162,3824 8252,3824 8341,3824 8431,3830 8520,3830 8526,3830"/>
+                    <TextEquiv>
+                        <Unicode>Rijk Tulbagh beneevens den raad in dato 18 October 1763.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="13" col="0" colSpan="1" orientation="0.0" id="t1c27">
+                <Coords points="4936,3887 4936,4041 5548,4041 5548,3886"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="13" col="1" colSpan="1" orientation="0.0" id="t1c28">
+                <Coords points="5548,3886 5548,4041 8698,4040 8700,3883"/>
+                <TextLine id="t1c28_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5560,3998 7394,3998 7394,3911 7288,3896 7133,3938 6659,3904 6621,3942 6576,3907 6534,3942 6337,3904 6265,3942 6181,3907 6106,3938 5560,3907"/>
+                    <Baseline points="5579,3979 5668,3979 5758,3973 5847,3979 5937,3979 6026,3973 6116,3979 6205,3979 6295,3979 6384,3973 6474,3979 6563,3979 6653,3979 6742,3973 6832,3973 6921,3973 7011,3973 7100,3979 7190,3973 7279,3979 7369,3985 7404,3991"/>
+                    <TextEquiv>
+                        <Unicode>Dito dito in dato 1 November 1763.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="14" col="0" colSpan="1" orientation="0.0" id="t1c29">
+                <Coords points="4936,4041 4936,4284 5548,4284 5548,4041"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="14" col="1" colSpan="1" orientation="0.0" id="t1c30">
+                <Coords points="5548,4041 5548,4284 8696,4285 8698,4040"/>
+                <TextLine id="t1c30_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5541,4142 7553,4131 7713,4165 8531,4131 8531,4086 8395,4048 8148,4055 8111,4093 8016,4048 7925,4093 7519,4093 7485,4059 7455,4089 7413,4048 7311,4089 7182,4055 7144,4093 7099,4055 7030,4093 6902,4055 6708,4089 6670,4052 6420,4055 6382,4093 6291,4055 6223,4093 6128,4055 5977,4093 5916,4055 5787,4093 5749,4055 5674,4093 5541,4055"/>
+                    <Baseline points="5561,4129 5585,4135 5674,4129 5764,4129 5853,4129 5943,4129 6032,4129 6122,4129 6211,4129 6301,4129 6390,4129 6480,4129 6569,4129 6659,4129 6748,4123 6838,4123 6927,4123 7017,4129 7106,4129 7196,4129 7285,4129 7375,4123 7464,4129 7554,4129 7643,4123 7733,4129 7822,4123 7912,4129 8001,4123 8091,4129 8180,4129 8270,4123 8359,4123 8449,4123 8538,4123"/>
+                    <TextEquiv>
+                        <Unicode>Rapport van gecommitteerde zeelieden nopens de examina¬</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c30_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5552,4233 6019,4268 7823,4249 7823,4199 7720,4161 7311,4154 7265,4199 7095,4154 6966,4199 6769,4154 6723,4199 6348,4154 6034,4158 5988,4203 5821,4154 5776,4199 5552,4177"/>
+                    <Baseline points="5573,4230 5662,4224 5752,4230 5841,4230 5931,4236 6020,4236 6110,4230 6199,4230 6289,4230 6378,4230 6468,4230 6557,4230 6647,4230 6736,4230 6826,4230 6915,4230 7005,4230 7094,4230 7184,4230 7273,4230 7363,4230 7452,4230 7542,4230 7631,4230 7721,4230 7810,4230 7828,4230"/>
+                    <TextEquiv>
+                        <Unicode>tie der journalen van het schip Baarsande.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="15" col="0" colSpan="1" orientation="0.0" id="t1c31">
+                <Coords points="4936,4284 4936,4533 5549,4533 5548,4284"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="15" col="1" colSpan="1" orientation="0.0" id="t1c32">
+                <Coords points="5548,4284 5549,4533 8693,4531 8696,4285"/>
+                <TextLine id="t1c32_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5552,4404 8528,4400 8528,4332 8459,4305 8372,4343 8239,4305 8042,4305 8004,4343 7967,4305 7891,4343 7796,4305 7671,4343 7607,4309 7569,4343 7349,4343 7311,4305 7186,4343 7102,4305 6966,4343 6826,4305 6648,4343 6507,4305 6261,4305 6223,4343 6121,4305 6064,4343 5958,4305 5829,4343 5552,4309"/>
+                    <Baseline points="5573,4385 5662,4379 5752,4379 5841,4379 5931,4379 6020,4379 6110,4379 6199,4379 6289,4379 6378,4379 6468,4379 6557,4379 6647,4379 6736,4379 6826,4379 6915,4379 7005,4379 7094,4379 7184,4379 7273,4379 7363,4379 7452,4379 7542,4379 7631,4379 7721,4379 7810,4379 7900,4379 7989,4379 8079,4379 8168,4379 8258,4379 8347,4379 8437,4379 8526,4385 8538,4385"/>
+                    <TextEquiv>
+                        <Unicode>Dito van gecommitteerdens uyt den raad van justitie die</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c32_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5545,4487 8421,4499 8421,4453 8346,4415 8061,4404 8016,4449 7872,4404 7535,4404 7387,4449 7209,4449 7167,4408 6758,4449 6382,4449 6295,4400 5734,4446 5545,4419"/>
+                    <Baseline points="5567,4481 5656,4475 5746,4481 5835,4481 5925,4481 6014,4481 6104,4481 6193,4481 6283,4481 6372,4481 6462,4481 6551,4481 6641,4481 6730,4487 6820,4481 6909,4481 6999,4481 7088,4481 7178,4481 7267,4481 7357,4481 7446,4481 7536,4481 7625,4481 7715,4481 7804,4481 7894,4481 7983,4481 8073,4481 8162,4481 8252,4475 8341,4481 8431,4493"/>
+                    <TextEquiv>
+                        <Unicode>de afgescheepte wijnen geproeft en welbevonden hebben.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="16" col="0" colSpan="1" orientation="0.0" id="t1c33">
+                <Coords points="4936,4533 4936,4891 5549,4887 5549,4533"/>
+                <TextLine id="t1c33_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,4665 5018,4654 5056,4665 5086,4639 5109,4635 5139,4665 5181,4654 5192,4665 5234,4665 5234,4567 5181,4571 5162,4552 5128,4582 5098,4582 5086,4571 5007,4571 4980,4544 4961,4544"/>
+                    <Baseline points="4982,4648 5071,4642 5161,4642 5244,4648"/>
+                    <TextEquiv>
+                        <Unicode>-</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="16" col="1" colSpan="1" orientation="0.0" id="t1c34">
+                <Coords points="5549,4533 5549,4887 8690,4865 8693,4531"/>
+                <TextLine id="t1c34_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5541,4631 5749,4669 7000,4635 7042,4673 8531,4639 8531,4593 8406,4567 7076,4567 7034,4601 6939,4567 6181,4567 6147,4601 6079,4567 5541,4567"/>
+                    <Baseline points="5561,4630 5585,4636 5674,4630 5764,4636 5853,4630 5943,4630 6032,4630 6122,4636 6211,4630 6301,4630 6390,4630 6480,4630 6569,4630 6659,4630 6748,4630 6838,4630 6927,4630 7017,4636 7106,4630 7196,4630 7285,4630 7375,4630 7464,4630 7554,4630 7643,4630 7733,4630 7822,4630 7912,4630 8001,4630 8091,4630 8180,4630 8270,4630 8359,4630 8449,4630 8538,4624"/>
+                    <TextEquiv>
+                        <Unicode>Origineele missive van den gouverneur Rijk Tulbagh bene¬</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c34_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5552,4738 8361,4753 8361,4669 8308,4662 8262,4700 8039,4662 7993,4700 5552,4673"/>
+                    <Baseline points="5573,4731 5662,4731 5752,4731 5841,4731 5931,4731 6020,4731 6110,4731 6199,4731 6289,4731 6378,4731 6468,4731 6557,4731 6647,4731 6736,4731 6826,4731 6915,4731 7005,4731 7094,4731 7184,4731 7273,4737 7363,4731 7452,4731 7542,4731 7631,4731 7721,4731 7810,4731 7900,4731 7989,4731 8079,4731 8168,4731 8258,4731 8347,4731 8371,4731"/>
+                    <TextEquiv>
+                        <Unicode>vens den raad aan de vergadering van 17en in dato 10</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c34_tl_3" custom="readingOrder {index:2;}">
+                    <Coords points="5552,4851 5924,4866 5954,4836 6007,4836 6072,4863 6261,4859 6261,4806 6155,4756 6117,4779 6034,4760 5988,4802 5947,4779 5628,4779 5602,4753 5552,4779"/>
+                    <Baseline points="5573,4833 5662,4833 5752,4833 5841,4833 5931,4839 6020,4833 6110,4833 6199,4839 6271,4839"/>
+                    <TextEquiv>
+                        <Unicode>January 1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="17" col="0" colSpan="1" orientation="0.0" id="t1c35">
+                <Coords points="4936,4891 4936,5047 5549,5044 5549,4887"/>
+                <TextLine id="t1c35_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,5014 4999,5014 5026,4995 5071,5003 5109,4988 5139,5010 5189,4999 5204,5014 5234,5014 5234,4893 5215,4893 5192,4916 5147,4912 5109,4938 5067,4900 5056,4908 5033,4889 4961,4900"/>
+                    <Baseline points="4982,4994 5071,4982 5161,4988 5244,4994"/>
+                    <TextEquiv>
+                        <Unicode>56-57</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="17" col="1" colSpan="1" orientation="0.0" id="t1c36">
+                <Coords points="5549,4887 5549,5044 8688,5030 8690,4865"/>
+                <TextLine id="t1c36_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,5003 8042,5007 8042,4942 7743,4908 6291,4938 6242,4893 6197,4938 5677,4938 5628,4889 5545,4897"/>
+                    <Baseline points="5567,4988 5656,4982 5746,4982 5835,4982 5925,4982 6014,4982 6104,4982 6193,4982 6283,4982 6372,4982 6462,4982 6551,4982 6641,4982 6730,4982 6820,4982 6909,4982 6999,4982 7088,4982 7178,4982 7267,4982 7357,4982 7446,4982 7536,4982 7625,4982 7715,4982 7804,4982 7894,4982 7983,4982 8049,4994"/>
+                    <TextEquiv>
+                        <Unicode>Dito aan de Kamer Amsterdam in dato als boven.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="18" col="0" colSpan="1" orientation="0.0" id="t1c37">
+                <Coords points="4936,5047 4936,5197 5549,5197 5549,5044"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="18" col="1" colSpan="1" orientation="0.0" id="t1c38">
+                <Coords points="5549,5044 5549,5197 8687,5197 8688,5030"/>
+                <TextLine id="t1c38_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5814,5151 7993,5158 7993,5105 7898,5067 7516,5098 7409,5060 7315,5098 7265,5060 7027,5094 6985,5056 6833,5101 6788,5063 6758,5094 6310,5067 6276,5101 6242,5067 6166,5101 5814,5067"/>
+                    <Baseline points="5835,5137 5925,5131 6014,5137 6104,5137 6193,5137 6283,5137 6372,5137 6462,5131 6551,5131 6641,5131 6730,5131 6820,5137 6909,5131 6999,5131 7088,5137 7178,5137 7267,5131 7357,5137 7446,5131 7536,5137 7625,5137 7715,5137 7804,5137 7894,5143 7983,5143 8001,5143"/>
+                    <TextEquiv>
+                        <Unicode>Per't engels snauw scheepje the Mercury.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="19" col="0" colSpan="1" orientation="0.0" id="t1c39">
+                <Coords points="4936,5197 4936,5534 5549,5533 5549,5197"/>
+                <TextLine id="t1c39_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,5317 4995,5317 5029,5295 5075,5302 5090,5287 5132,5287 5151,5302 5192,5291 5204,5302 5245,5302 5245,5200 5226,5200 5204,5223 5173,5200 5147,5223 5063,5223 5041,5200 4995,5219 4961,5219"/>
+                    <Baseline points="4982,5292 4988,5286 5077,5280 5167,5280 5256,5286"/>
+                    <TextEquiv>
+                        <Unicode>58-60</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="19" col="1" colSpan="1" orientation="0.0" id="t1c40">
+                <Coords points="5549,5197 5549,5533 8683,5531 8687,5197"/>
+                <TextLine id="t1c40_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5541,5283 5738,5317 7000,5283 7046,5321 8463,5291 8463,5238 8338,5207 8281,5245 8236,5207 8198,5245 8126,5207 8069,5245 7804,5207 7762,5249 7656,5207 7591,5249 7542,5207 7413,5245 7368,5207 7038,5245 6936,5207 6807,5245 6716,5207 6583,5245 6500,5207 6189,5207 6151,5245 6026,5207 5950,5245 5541,5207"/>
+                    <Baseline points="5561,5280 5608,5280 5698,5280 5787,5286 5877,5280 5966,5280 6056,5280 6145,5286 6235,5280 6324,5280 6414,5280 6503,5280 6593,5286 6682,5280 6772,5286 6861,5280 6951,5280 7040,5286 7130,5286 7219,5280 7309,5280 7398,5280 7488,5280 7577,5286 7667,5280 7756,5286 7846,5280 7935,5280 8025,5280 8114,5280 8204,5286 8293,5280 8383,5280 8472,5274"/>
+                    <TextEquiv>
+                        <Unicode>Origineele missive van den gouverneur R. Tulbagh bene¬</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c40_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5560,5397 8372,5408 8372,5314 8258,5351 7864,5314 7823,5355 7656,5302 7553,5355 7008,5310 6689,5355 5560,5329"/>
+                    <Baseline points="5579,5388 5668,5382 5758,5382 5847,5382 5937,5382 6026,5388 6116,5382 6205,5382 6295,5388 6384,5382 6474,5382 6563,5382 6653,5388 6742,5388 6832,5388 6921,5388 7011,5382 7100,5382 7190,5388 7279,5388 7369,5388 7458,5388 7548,5388 7637,5388 7727,5388 7816,5388 7906,5382 7995,5388 8085,5382 8174,5382 8264,5388 8353,5388 8383,5394"/>
+                    <TextEquiv>
+                        <Unicode>vens den raad aan de vergadering van 17en in dato 16</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c40_tl_3" custom="readingOrder {index:2;}">
+                    <Coords points="5541,5496 5893,5522 5958,5484 6072,5518 6109,5496 6189,5518 6250,5503 6250,5420 6151,5408 6019,5420 5988,5450 5928,5420 5541,5420"/>
+                    <Baseline points="5561,5483 5650,5483 5740,5483 5829,5483 5919,5483 6008,5483 6098,5483 6187,5483 6259,5489"/>
+                    <TextEquiv>
+                        <Unicode>January 1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="20" col="0" colSpan="1" orientation="0.0" id="t1c41">
+                <Coords points="4936,5534 4936,5789 5549,5789 5549,5533"/>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="20" col="1" colSpan="1" orientation="0.0" id="t1c42">
+                <Coords points="5549,5533 5549,5789 8681,5793 8683,5531"/>
+                <TextLine id="t1c42_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5825,5655 8482,5658 8482,5530 8395,5530 8346,5480 8236,5586 8103,5545 8058,5586 7565,5586 7508,5530 7444,5586 5901,5586 5825,5533"/>
+                    <Baseline points="5847,5638 5937,5632 6026,5632 6116,5632 6205,5632 6295,5632 6384,5632 6474,5632 6563,5632 6653,5626 6742,5632 6832,5632 6921,5626 7011,5632 7100,5632 7190,5632 7279,5626 7369,5632 7458,5632 7548,5632 7637,5632 7727,5632 7816,5632 7906,5632 7995,5632 8085,5632 8174,5632 8264,5632 8353,5632 8443,5632 8490,5638"/>
+                    <TextEquiv>
+                        <Unicode>Per de engelsche scheepen the Plassey en the Harl</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c42_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5814,5734 6523,5753 6523,5700 6466,5674 6019,5670 5973,5696 5916,5662 5814,5700"/>
+                    <Baseline points="5835,5734 5925,5734 6014,5728 6104,5728 6193,5728 6283,5734 6372,5734 6462,5734 6533,5740"/>
+                    <TextEquiv>
+                        <Unicode>of Asburnham.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="21" col="0" colSpan="1" orientation="0.0" id="t1c43">
+                <Coords points="4936,5789 4936,6216 5550,6214 5549,5789"/>
+                <TextLine id="t1c43_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,5890 5010,5897 5033,5878 5048,5893 5071,5893 5086,5878 5109,5878 5158,5901 5245,5897 5245,5810 5189,5810 5177,5799 5162,5810 5094,5810 5071,5787 5052,5787 5033,5806 5014,5795 4999,5806 4961,5806"/>
+                    <Baseline points="4982,5877 5071,5877 5161,5871 5250,5877 5256,5877"/>
+                    <TextEquiv>
+                        <Unicode>61-62</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="21" col="1" colSpan="1" orientation="0.0" id="t1c44">
+                <Coords points="5549,5789 5550,6214 8677,6202 8681,5793"/>
+                <TextLine id="t1c44_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5541,5897 8531,5886 8531,5837 8338,5806 8289,5840 8239,5795 8167,5840 8114,5787 8054,5837 7815,5806 7474,5837 7425,5787 7353,5837 6356,5802 6053,5837 5943,5833 5893,5784 5840,5833 5624,5833 5541,5787"/>
+                    <Baseline points="5561,5883 5650,5877 5740,5877 5829,5877 5919,5877 6008,5877 6098,5883 6187,5877 6277,5877 6366,5877 6456,5877 6545,5877 6635,5883 6724,5877 6814,5877 6903,5877 6993,5877 7082,5883 7172,5877 7261,5877 7351,5883 7440,5883 7530,5877 7619,5883 7709,5877 7798,5877 7888,5877 7977,5877 8067,5883 8156,5883 8246,5883 8335,5883 8425,5883 8514,5883 8538,5883"/>
+                    <TextEquiv>
+                        <Unicode>Dito dito aan de vergadering van 17en in dato 11 Febru¬</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c44_tl_2" custom="readingOrder {index:1;}">
+                    <Coords points="5552,5996 5655,6000 5685,6022 5742,5984 5791,5984 5810,6003 5837,5992 5856,6011 5893,5992 5954,5996 5973,6015 6007,5996 6045,6003 6045,5947 5935,5901 5909,5920 5814,5912 5768,5950 5719,5924 5552,5924"/>
+                    <Baseline points="5573,5984 5662,5984 5752,5984 5841,5984 5931,5978 6020,5984 6056,5984"/>
+                    <TextEquiv>
+                        <Unicode>ary 1764.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c44_tl_3" custom="readingOrder {index:2;}">
+                    <Coords points="5821,6098 6466,6117 6640,6079 7387,6121 7436,6083 7690,6144 7747,6098 8474,6091 8474,5992 8399,5988 8304,5988 8251,6041 8152,6041 8099,5988 8046,6037 7838,6037 7762,5984 7709,6037 7523,6034 7481,5992 7375,6041 7277,6007 6875,6034 6841,6000 6750,6037 6701,5988 6651,6034 5935,6037 5821,5996"/>
+                    <Baseline points="5841,6086 5931,6080 6020,6080 6110,6080 6199,6080 6289,6074 6378,6074 6468,6074 6557,6074 6647,6080 6736,6080 6826,6080 6915,6074 7005,6080 7094,6080 7184,6080 7273,6080 7363,6086 7452,6080 7542,6080 7631,6086 7721,6080 7810,6080 7900,6086 7989,6080 8079,6086 8168,6086 8258,6086 8347,6086 8437,6092 8484,6098"/>
+                    <TextEquiv>
+                        <Unicode>Per de schepen de Geertruyda, Burg, Bleyswijk, Blij-</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextLine id="t1c44_tl_4" custom="readingOrder {index:3;}">
+                    <Coords points="5821,6189 6000,6216 6075,6178 6852,6200 6852,6147 6792,6125 5821,6125"/>
+                    <Baseline points="5841,6181 5931,6175 6020,6175 6110,6181 6199,6181 6289,6181 6378,6181 6468,6181 6557,6181 6647,6181 6736,6181 6826,6181 6861,6181"/>
+                    <TextEquiv>
+                        <Unicode>dorp en Oosthuysen.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="22" col="0" colSpan="1" orientation="0.0" id="t1c45">
+                <Coords points="4936,6216 4936,6463 5550,6458 5550,6214"/>
+                <TextLine id="t1c45_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="4961,6341 5014,6344 5029,6356 5056,6356 5082,6333 5181,6344 5196,6360 5249,6348 5245,6250 5211,6250 5185,6227 5143,6269 5094,6272 5067,6254 5029,6254 4995,6223 4957,6223"/>
+                    <Baseline points="4982,6324 5071,6324 5161,6324 5250,6336 5256,6336"/>
+                    <TextEquiv>
+                        <Unicode>63-65</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+            <TableCell row="22" col="1" colSpan="1" orientation="0.0" id="t1c46">
+                <Coords points="5550,6214 5550,6458 8674,6428 8677,6202"/>
+                <TextLine id="t1c46_tl_1" custom="readingOrder {index:0;}">
+                    <Coords points="5545,6348 6754,6356 6754,6295 6670,6261 6295,6261 6261,6295 6193,6261 6041,6295 5977,6261 5545,6261"/>
+                    <Baseline points="5567,6330 5656,6330 5746,6330 5835,6330 5925,6330 6014,6330 6104,6330 6193,6336 6283,6330 6372,6330 6462,6330 6551,6330 6641,6330 6730,6336 6760,6336"/>
+                    <TextEquiv>
+                        <Unicode>Register der papieren.</Unicode>
+                    </TextEquiv>
+                </TextLine>
+                <TextEquiv>
+                    <Unicode></Unicode>
+                </TextEquiv>
+                <CornerPts>0 1 2 3</CornerPts>
+            </TableCell>
+        </TableRegion>
+    </Page>
+</PcGts>
