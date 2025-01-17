@@ -10,7 +10,7 @@ class PageXMLTestCase(unittest.TestCase):
     def test_parse_pagexml_file(self):
         file = 'data/example.xml'
         scan = parse_pagexml_file(file)
-        pretty_print_textregion(scan, print_stats=True)
+        # pretty_print_textregion(scan, print_stats=True)
         self.assertEqual(isinstance(scan, pdm.PageXMLScan), True)
 
     def test_parser_gets_correct_stats(self):

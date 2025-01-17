@@ -11,6 +11,7 @@ import numpy as np
 import pagexml.analysis.layout_stats as summarise
 import pagexml.analysis.text_stats as text_stats
 import pagexml.helper.text_helper as text_helper
+import pagexml.model.coords
 import pagexml.model.physical_document_model as pdm
 
 
@@ -100,7 +101,6 @@ def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRe
     if hasattr(doc, 'extra') and doc.extra:
         doc_text_regions.extend(doc.extra)
 
-
     if doc_text_regions:
         sub_text_regions = []
         for text_region in sorted(doc_text_regions, key=lambda x: (x.coords.top, x.coords.left)):
@@ -169,7 +169,7 @@ def merge_textregions(text_regions: List[pdm.PageXMLTextRegion],
     merged_lines = [line for tr in text_regions for line in tr.get_lines()]
     merged_lines = list(set(merged_lines))
     sorted_lines = sorted(merged_lines, key=lambda x: x.baseline.y)
-    merged_coords = pdm.parse_derived_coords(sorted_lines)
+    merged_coords = pagexml.model.coords.parse_derived_coords(sorted_lines)
     merged_tr = pdm.PageXMLTextRegion(doc_id=doc_id, doc_type='index_text_region',
                                       metadata=metadata, coords=merged_coords,
                                       lines=sorted_lines)
@@ -183,7 +183,7 @@ def horizontally_merge_lines(lines: List[pdm.PageXMLTextLine]) -> List[pdm.PageX
     horizontally_grouped_lines = horizontal_group_lines(lines)
     horizontally_merged_lines = []
     for line_group in horizontally_grouped_lines:
-        coords = pdm.parse_derived_coords(line_group)
+        coords = pagexml.model.coords.parse_derived_coords(line_group)
         baseline = pdm.Baseline([point for line in line_group for point in line.baseline.points])
         line = pdm.PageXMLTextLine(metadata=line_group[0].metadata, coords=coords, baseline=baseline,
                                    text=' '.join([line.text for line in line_group]))
@@ -530,8 +530,6 @@ def make_text_region_text(lines: List[pdm.PageXMLTextLine],
         remove_prefix_word_break = False
         for curr_line in lines[1:]:
             if curr_line.text is None or curr_line.text == '':
-                do_merge = False
-                merge_word = None
                 curr_words = []
                 prev_line_text = prev_line.text if prev_line.text else ''
             else:
@@ -581,7 +579,7 @@ def merge_lines(lines: List[pdm.PageXMLTextLine], remove_word_break: bool = Fals
     :return: a PageXML text line object
     :rtype: PageXMLTextline
     """
-    coords = pdm.parse_derived_coords(lines)
+    coords = pagexml.model.coords.parse_derived_coords(lines)
     text = ''
     for li, curr_line in enumerate(lines):
         if remove_word_break and len(text) > 0 and text.endswith(word_break_char):

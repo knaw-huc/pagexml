@@ -64,6 +64,7 @@ functionality to support a range of tasks:
 
 - reading sets of PageXML files from a archive (tar, zip) file ([tutorial](./notebooks/Demo-reading-pagexml-files-from-archive.ipynb)),
 - searching in text ([keyword in context](./notebooks/Demo-text-search-simple.ipynb), [keywords or fuzzy search](./notebooks/Demo-text-search-in-pagexml-archive.ipynb))
+- reading and working with tables ([table processing](./notebooks/Demo-table-processing.ipynb))
 - classifying physical document types in a large set of PageXML documents ([tutorial](./notebooks/Demo-analysing-scan-characteristics.ipynb)),
 - checking the quality of the HTR/OCR process ([tutorial](./notebooks/Demo-analysing-scan-characteristics-checking-quality.ipynb)),
 - comparing subsets ([tutorial](./notebooks/Demo-analysing-scan-characteristics-comparing-subsets.ipynb)),

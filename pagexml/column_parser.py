@@ -4,6 +4,7 @@ from collections import Counter
 from typing import Dict, List, Tuple
 
 import pagexml.helper.pagexml_helper as pagexml_helper
+import pagexml.model.coords as page_coords
 import pagexml.model.physical_document_model as pdm
 
 
@@ -179,7 +180,7 @@ def determine_column_type(column: pdm.PageXMLColumn) -> str:
 
 def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict, page_id: str) -> pdm.PageXMLColumn:
     """Make a new PageXMLColumn based on a set of lines, column metadata and a page_id."""
-    coords = pdm.parse_derived_coords(lines)
+    coords = page_coords.parse_derived_coords(lines)
     column = pdm.PageXMLColumn(metadata=metadata, coords=coords, lines=lines)
     column.set_derived_id(page_id)
     return column
@@ -204,7 +205,8 @@ def sort_lines_in_column_ranges(lines: List[pdm.PageXMLTextLine],
                                 column_ranges: List[Dict[str, int]],
                                 overlap_threshold: float,
                                 debug: bool = False
-                                ) -> Tuple[List[List[pdm.PageXMLTextLine]], List[pdm.PageXMLTextLine]]:
+                                ) -> Tuple[List[List[pdm.PageXMLTextLine]], List[
+    pdm.PageXMLTextLine]]:
     column_lines = [[] for _ in range(len(column_ranges))]
     extra_lines = []
     append_count = 0
@@ -228,7 +230,8 @@ def sort_lines_in_column_ranges(lines: List[pdm.PageXMLTextLine],
     return column_lines, extra_lines
 
 
-def merge_overlapping_columns(text_region: pdm.PageXMLTextRegion, columns: List[pdm.PageXMLColumn]):
+def merge_overlapping_columns(text_region: pdm.PageXMLTextRegion, columns: List[
+    pdm.PageXMLColumn]):
     # column range may have expanded with lines partially overlapping initial range
     # check which extra lines should be added to columns
     merge_sets = find_overlapping_columns(columns)
@@ -252,7 +255,7 @@ def make_column_range_columns(text_region: pdm.PageXMLTextRegion,
     for lines in column_lines:
         if len(lines) == 0:
             continue
-        coords = pdm.parse_derived_coords(lines)
+        coords = page_coords.parse_derived_coords(lines)
         column = pdm.PageXMLColumn(doc_type=copy.deepcopy(text_region.type),
                                    metadata=copy.deepcopy(text_region.metadata),
                                    coords=coords, lines=lines)
@@ -294,7 +297,7 @@ def handle_extra_lines(text_region: pdm.PageXMLTextRegion,
         if best_column is not None and pdm.is_horizontally_overlapping(line, best_column):
             best_column.lines.append(line)
             append_count += 1
-            best_column.coords = pdm.parse_derived_coords(best_column.lines)
+            best_column.coords = page_coords.parse_derived_coords(best_column.lines)
             if text_region.parent:
                 best_column.set_derived_id(text_region.parent.id)
         else:
@@ -309,7 +312,7 @@ def handle_extra_lines(text_region: pdm.PageXMLTextRegion,
     extra = None
     if len(extra_lines) > 0:
         try:
-            coords = pdm.parse_derived_coords(extra_lines)
+            coords = page_coords.parse_derived_coords(extra_lines)
         except BaseException:
             for line in extra_lines:
                 print(line.coords.box, line.text)
@@ -343,7 +346,8 @@ def handle_extra_lines(text_region: pdm.PageXMLTextRegion,
 
 def split_lines_on_column_gaps(text_region: pdm.PageXMLTextRegion,
                                gap_threshold: int = 50,
-                               overlap_threshold: float = 0.5) -> List[pdm.PageXMLColumn]:
+                               overlap_threshold: float = 0.5) -> List[
+    pdm.PageXMLColumn]:
     """Takes a PageXMLTextRegion object and tries to split the lines into columns based
     on a minimum horizontal gap (in number of pixels) between columns.
 
