@@ -30,7 +30,7 @@ xmltodict = "^0.13.0"
 shapely = "^2.0.3"
 lxml = "^5.3.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 
 [tool.poetry.group.test.dependencies]
 icecream = "^2.1.2"

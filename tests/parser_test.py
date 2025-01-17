@@ -52,6 +52,20 @@ class TestParser(unittest.TestCase):
             for line in tr.lines:
                 self.assertEqual(True, line.parent == tr)
 
+    def test_parsing_from_json_retains_table(self):
+        scan_doc = parser.parse_pagexml_file('data/example_table.xml')
+        doc_json = scan_doc.json
+        new_scan = parser.json_to_pagexml_scan(doc_json)
+        self.assertEqual(1, len(new_scan.table_regions))
+
+    def test_parsing_from_json_retains_table(self):
+        scan_doc = parser.parse_pagexml_file('data/example_table.xml')
+        table = scan_doc.table_regions[0]
+        doc_json = scan_doc.json
+        new_scan = parser.json_to_pagexml_scan(doc_json)
+        new_table = new_scan.table_regions[0]
+        self.assertEqual(table.shape, new_table.shape)
+
 
 class TestCustomParser(unittest.TestCase):
 
@@ -116,7 +130,6 @@ class TestCustomParser(unittest.TestCase):
 
     def test_parse_custom_metadata_extracts_structure(self):
         custom = parser.parse_custom_metadata({"@custom": "structure {type: resolution}"})
-        print(custom)
         self.assertEqual(True, 'structure' in custom)
         expected = {'type': 'resolution'}
         self.assertEqual(expected, custom['structure'])
@@ -125,7 +138,6 @@ class TestCustomParser(unittest.TestCase):
 
     def test_parse_custom_metadata_extracts_all_tag_types(self):
         custom = parser.parse_custom_metadata(self.element, custom_tags=['unclear'])
-        print(custom['custom_attributes'])
         tag_types = {'readingOrder', 'unclear', 'abbrev', 'textStyle', 'madeup'}
         self.assertEqual(tag_types, {attr['tag_name'] for attr in custom['custom_attributes']})
 
@@ -150,7 +162,6 @@ class TestCustomParser(unittest.TestCase):
 
     def test_parse_custom_metadata_extracts_all_tags(self):
         custom = parser.parse_custom_metadata(self.element)
-        print(custom)
         self.assertEqual(9, len(custom['custom_attributes']))
 
 

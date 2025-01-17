@@ -64,9 +64,7 @@ class TestHullCoords(unittest.TestCase):
                             ' 1216,1233 1219,1229 1219,1226 1222,1222 1222,1216 1219,1212 1219,1209 1216,1205 1216,1150'
                             ' 1219,1147 1219,1143 1216,1140')
         x = [p[0] for p in coords.points]
-        print(min(x), max(x))
         y = [p[1] for p in coords.points]
-        print(min(y), max(y))
 
         self.assertEqual(795, coords.left)
         self.assertEqual(1109, coords.top)
@@ -185,7 +183,6 @@ class TestStructureDoc(unittest.TestCase):
 
     def test_json(self):
         doc = pagexml.model.basic_document_model.StructureDoc(doc_id='doc1', doc_type='book', metadata={'title': 'The Great Gatsby'})
-        print('TEST_JSON - doc.main_type:', doc.main_type)
         json_data = doc.json
         self.assertEqual('doc1', json_data['id'])
         self.assertIn('book', json_data['type'])

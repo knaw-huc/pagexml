@@ -308,20 +308,29 @@ def parse_tableregion(table_region_dict, custom_tags: Iterable = None):
     )
     if table_region.metadata and 'type' in table_region.metadata:
         table_region.add_type(table_region.metadata['type'])
-    cells = defaultdict(list)
+    cells = []
     for child in table_region_dict:
         if child == 'TableCell':
             table_cell_dicts = table_region_dict['TableCell']
             for table_cell_dict in table_cell_dicts:
                 cell = parse_table_cell(table_cell_dict, custom_tags)
-                cells[cell.row].append(cell)
-    for row_id in cells:
-        row_coords = parse_derived_coords(cells[row_id])
-        table_row = pdm.PageXMLTableRow(doc_id=row_id, coords=row_coords, cells=cells[row_id])
-        table_row.set_as_parent(table_row.cells)
-        table_region.rows.append(table_row)
+                cells.append(cell)
+    table_region.rows = make_rows_from_cells(cells)
     table_region.set_as_parent(table_region.rows)
     return table_region
+
+
+def make_rows_from_cells(cells: List[pdm.PageXMLTableCell]) -> List[pdm.PageXMLTableRow]:
+    row_cells = defaultdict(list)
+    rows = []
+    for cell in cells:
+        row_cells[cell.row].append(cell)
+    for row_id in row_cells:
+        row_coords = parse_derived_coords(row_cells[row_id])
+        table_row = pdm.PageXMLTableRow(doc_id=row_id, coords=row_coords, cells=row_cells[row_id])
+        table_row.set_as_parent(table_row.cells)
+        rows.append(table_row)
+    return rows
 
 
 def parse_tableregion_list(tableregion_dict_list: list,
@@ -563,27 +572,33 @@ def parse_pagexml_files_from_archive(archive_file: str, ignore_errors: bool = Fa
                 raise
 
 
+def get_json_element(json_doc: dict, element_name: str, default_value: Union[None, dict, list] = None):
+    return json_doc[element_name] if element_name in json_doc else default_value
+
+
 def json_to_region_metadata(json_doc: dict):
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
-    reading_order_attributes = json_doc['reading_order_attributes'] if 'reading_order_attributes' in json_doc else {}
-    orientation = json_doc['orientation'] if 'orientation' in json_doc else None
+    reading_order = get_json_element(json_doc, 'reading_order', default_value={})
+    reading_order_attributes = get_json_element(json_doc, 'reading_order_attributes', default_value={})
+    orientation = get_json_element(json_doc, 'orientation')
     return reading_order, reading_order_attributes, orientation
 
 
 def json_to_pagexml_word(json_doc: dict) -> pdm.PageXMLWord:
-    word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                           text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None)
+    word = pdm.PageXMLWord(doc_id=json_doc['id'], doc_type=json_doc['type'],
+                           metadata=json_doc['metadata'], text=json_doc['text'],
+                           conf=json_doc['conf'] if 'conf' in json_doc else None)
     return word
 
 
 def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
     words = [json_to_pagexml_word(word) for word in json_doc['words']] if 'words' in json_doc else []
-    reading_order = json_doc['reading_order'] if 'reading_order' in json_doc else {}
+    reading_order, reading_order_attributes, orientation = json_to_region_metadata(json_doc)
     try:
         line = pdm.PageXMLTextLine(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                                    coords=pdm.Coords(json_doc['coords']), baseline=pdm.Baseline(json_doc['baseline']),
                                    text=json_doc['text'], conf=json_doc['conf'] if 'conf' in json_doc else None,
-                                   words=words, reading_order=reading_order, )
+                                   words=words, reading_order=reading_order,
+                                   reading_order_attributes=reading_order_attributes)
         return line
     except TypeError:
         print(json_doc['baseline'])
@@ -591,9 +606,9 @@ def json_to_pagexml_line(json_doc: dict) -> pdm.PageXMLTextLine:
 
 
 def json_to_pagexml_text_region(json_doc: dict) -> pdm.PageXMLTextRegion:
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in
+                    get_json_element(json_doc, 'text_regions', default_value=[])]
+    lines = [json_to_pagexml_line(line) for line in get_json_element(json_doc, 'lines', default_value=[])]
     reading_order, reading_order_attributes, orientation = json_to_region_metadata(json_doc)
 
     text_region = pdm.PageXMLTextRegion(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
@@ -604,38 +619,82 @@ def json_to_pagexml_text_region(json_doc: dict) -> pdm.PageXMLTextRegion:
     return text_region
 
 
+def json_to_pagexml_table_cell(json_doc: dict) -> pdm.PageXMLTableCell:
+    lines = [json_to_pagexml_line(table_line) for table_line in json_doc['lines']] \
+        if 'lines' in json_doc else []
+    orientation = get_json_element(json_doc, 'orientation')
+    cornerpoints = get_json_element(json_doc, 'cornerpoints')
+
+    table_cell = pdm.PageXMLTableCell(doc_id=json_doc['id'], doc_type=json_doc['type'],
+                                      metadata=json_doc['metadata'], coords=pdm.Coords(json_doc['coords']),
+                                      lines=lines, orientation=orientation, cornerpoints=cornerpoints,
+                                      col=json_doc['col'], cell_span=json_doc['cell_span'],
+                                      row_span=json_doc['row_span'])
+    pdm.set_parentage(table_cell)
+    return table_cell
+
+
+def json_to_pagexml_table_row(json_doc: dict) -> pdm.PageXMLTableRow:
+    table_cells = [json_to_pagexml_table_cell(table_cell) for table_cell in
+                   get_json_element(json_doc, 'cells', default_value=[])]
+    orientation = get_json_element(json_doc, 'orientation')
+
+    table_row = pdm.PageXMLTableRow(doc_id=json_doc['id'], doc_type=json_doc['type'],
+                                    metadata=json_doc['metadata'], coords=pdm.Coords(json_doc['coords']),
+                                    cells=table_cells, orientation=orientation)
+    pdm.set_parentage(table_row)
+    return table_row
+
+
+def json_to_pagexml_table_region(json_doc: dict) -> pdm.PageXMLTableRegion:
+    rows_json = get_json_element(json_doc, 'rows', default_value=[])
+    table_rows = [json_to_pagexml_table_row(row_json) for row_json in rows_json]
+    orientation = get_json_element(json_doc, 'orientation')
+
+    table_region = pdm.PageXMLTableRegion(doc_id=json_doc['id'], doc_type=json_doc['type'],
+                                          metadata=json_doc['metadata'], coords=pdm.Coords(json_doc['coords']),
+                                          rows=table_rows, orientation=orientation)
+    pdm.set_parentage(table_region)
+    return table_region
+
+
+def json_to_regions(json_doc: dict) -> Tuple[List[pdm.PageXMLTextRegion], List[pdm.PageXMLTableRegion]]:
+    text_regions = [json_to_pagexml_text_region(text_region) for text_region in
+                    get_json_element(json_doc, 'text_regions', default_value=[])]
+    table_regions = [json_to_pagexml_table_region(table_region) for table_region in
+                     get_json_element(json_doc, 'table_regions', default_value=[])]
+    return text_regions, table_regions
+
+
 def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
+    text_regions, table_regions = json_to_regions(json_doc)
     lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
     reading_order, reading_order_attributes, orientation = json_to_region_metadata(json_doc)
 
     column = pdm.PageXMLColumn(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
-                               coords=pdm.Coords(json_doc['coords']), text_regions=text_regions, lines=lines,
-                               orientation=orientation, reading_order=reading_order,
-                               reading_order_attributes=reading_order_attributes)
+                               coords=pdm.Coords(json_doc['coords']), orientation=orientation,
+                               reading_order=reading_order, reading_order_attributes=reading_order_attributes,
+                               text_regions=text_regions, table_regions=table_regions,
+                               lines=lines)
     pdm.set_parentage(column)
     return column
 
 
 def json_to_column_container(json_doc: dict) -> tuple:
     columns = [json_to_pagexml_column(column) for column in json_doc['columns']] if 'columns' in json_doc else []
-    text_regions = [json_to_pagexml_text_region(text_region) for text_region in json_doc['text_regions']] \
-        if 'text_regions' in json_doc else []
-    lines = [json_to_pagexml_line(line) for line in json_doc['lines']] if 'lines' in json_doc else []
-
+    text_regions, table_regions = json_to_regions(json_doc)
+    lines = [json_to_pagexml_line(line) for line in get_json_element(json_doc, 'lines', default_value=[])]
     coords = pdm.Coords(json_doc['coords']) if 'coords' in json_doc else None
-    return columns, text_regions, lines, coords
+    return columns, text_regions, table_regions, lines, coords
 
 
 def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
-    extra = [json_to_pagexml_text_region(text_region) for text_region in json_doc['extra']] \
-        if 'extra' in json_doc else []
-    columns, text_regions, lines, coords = json_to_column_container(json_doc)
+    extra = [json_to_pagexml_text_region(tr) for tr in get_json_element(json_doc, 'extra', default_value=[])]
+    columns, text_regions, table_regions, lines, coords = json_to_column_container(json_doc)
     reading_order, reading_order_attributes, orientation = json_to_region_metadata(json_doc)
     page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            coords=coords, extra=extra, columns=columns,
-                           text_regions=text_regions, lines=lines,
+                           text_regions=text_regions, table_regions=table_regions, lines=lines,
                            orientation=orientation, reading_order=reading_order,
                            reading_order_attributes=reading_order_attributes)
     pdm.set_parentage(page)
@@ -644,11 +703,11 @@ def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
 
 def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
     pages = [json_to_pagexml_page(page) for page in json_doc['pages']] if 'pages' in json_doc else []
-    columns, text_regions, lines, coords = json_to_column_container(json_doc)
+    columns, text_regions, table_regions, lines, coords = json_to_column_container(json_doc)
     reading_order, reading_order_attributes, orientation = json_to_region_metadata(json_doc)
     scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            coords=coords, pages=pages, columns=columns,
-                           text_regions=text_regions, lines=lines,
+                           text_regions=text_regions, table_regions=table_regions, lines=lines,
                            orientation=orientation, reading_order=reading_order,
                            reading_order_attributes=reading_order_attributes)
     pdm.set_parentage(scan)

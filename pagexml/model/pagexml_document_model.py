@@ -19,8 +19,8 @@ class PageXMLDoc(PhysicalStructureDoc):
                  reading_order_attributes: Dict[str, any] = None, orientation: float = None):
         if doc_type is None:
             doc_type = 'pagexml_doc'
-        super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata, reading_order=reading_order)
-        self.coords: Union[None, Coords] = coords
+        super().__init__(doc_id=doc_id, doc_type=doc_type, metadata=metadata,
+                         reading_order=reading_order, coords=coords)
         self.reading_order_attributes = reading_order_attributes
         self.orientation = orientation
         self.pagexml_type = None
@@ -36,6 +36,12 @@ class PageXMLDoc(PhysicalStructureDoc):
             return self.metadata['custom_attributes']
         else:
             return {}
+
+    @property
+    def json(self):
+        doc_json = super(PageXMLDoc, self).json
+        doc_json['reading_order_attributes'] = self.reading_order_attributes
+        return doc_json
 
     def add_to_pagexml(self, parent: etree.Element):
         return parent
@@ -332,15 +338,10 @@ class PageXMLTableRegion(PageXMLDoc):
 
     @property
     def json(self):
-        doc_json = {
-            'id': self.id,
-            'type': self.type,
-            'coords': self.coords,
-            'metadata': self.metadata,
-            'num_rows': self.shape[0],
-            'num_cols': self.shape[1],
-            'rows': [row.json for row in self.rows]
-        }
+        doc_json = super(PageXMLTableRegion, self).json
+        doc_json['num_rows'] = self.shape[0]
+        doc_json['num_cols'] = self.shape[1]
+        doc_json['rows'] = [row.json for row in self.rows]
         if self.orientation:
             doc_json['orientation'] = self.orientation
         doc_json['stats'] = self.stats
@@ -350,8 +351,8 @@ class PageXMLTableRegion(PageXMLDoc):
         attributes = {}
         if self.orientation:
             attributes['orientation'] = self.orientation
-        tr_xml = add_pagexml_sub_element(parent, 'TableRegion', sub_id=self.id, custom=self.custom,
-                                         coords=self.coords, attributes=attributes)
+        add_pagexml_sub_element(parent, 'TableRegion', sub_id=self.id, custom=self.custom,
+                                coords=self.coords, attributes=attributes)
 
     def _to_pagexml(self, page_xml: etree.Element):
         self.add_to_pagexml(page_xml)
@@ -451,13 +452,9 @@ class PageXMLTableRow(PageXMLDoc):
 
     @property
     def json(self):
-        doc_json = {
-            'id': self.id,
-            'type': self.type,
-            'metadata': self.metadata,
-            'num_cols': len(self.column_cells),
-            'cells': [cell.json for cell in self.cells]
-        }
+        doc_json = super(PageXMLTableRow, self).json
+        doc_json['num_cols'] = len(self.column_cells)
+        doc_json['cells'] = [cell.json for cell in self.cells]
         if self.orientation:
             doc_json['orientation'] = self.orientation
         doc_json['stats'] = self.stats
@@ -534,12 +531,11 @@ class PageXMLTableCell(PageXMLDoc):
 
     @property
     def json(self):
-        doc_json = {
-            'id': self.id,
-            'type': self.type,
-            'metadata': self.metadata,
-            'lines': [line.json for line in self.lines]
-        }
+        doc_json = super().json
+        doc_json['col'] = self.col
+        doc_json['cell_span'] = self.cell_span
+        doc_json['row_span'] = self.row_span
+        doc_json['lines'] = [line.json for line in self.lines]
         if self.cornerpoints:
             doc_json['cornerpoints'] = self.cornerpoints
         if self.orientation:
