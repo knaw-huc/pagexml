@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pagexml-tools"
-version = "0.7.0"
+version = "0.7.1"
 description = "Utility functions for reading PageXML files"
 authors = ["Marijn Koolen <marijn.koolen@huygens.knaw.nl>", "Bram Buitendijk <bram.buitendijk@di.huc.knaw.nl>"]
 readme = "README.md"
