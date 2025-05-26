@@ -431,23 +431,24 @@ def get_custom_tags(doc: pdm.PageXMLDoc) -> List[Dict[str, any]]:
     """
     custom_tags = []
 
-    for region in doc.text_regions:
-        for line in region.lines:
-            for tag_el in line.metadata.get("custom_tags", []):
-                tag = tag_el["type"]
-                offset = tag_el["offset"]
-                length = tag_el["length"]
+    if hasattr(doc, 'text_regions'):
+        for region in doc.text_regions:
+            for line in region.lines:
+                for tag_el in line.metadata.get("custom_tags", []):
+                    tag = tag_el["type"]
+                    offset = tag_el["offset"]
+                    length = tag_el["length"]
 
-                value = line.text[offset:offset + length]
+                    value = line.text[offset:offset + length]
 
-                custom_tags.append({
-                    "type": tag,
-                    "value": value,
-                    "region_id": region.id,
-                    "line_id": line.id,
-                    "offset": offset,
-                    "length": length,
-                })
+                    custom_tags.append({
+                        "type": tag,
+                        "value": value,
+                        "region_id": region.id,
+                        "line_id": line.id,
+                        "offset": offset,
+                        "length": length,
+                    })
 
     return custom_tags
 
@@ -599,3 +600,63 @@ def make_baseline_string(line: pdm.PageXMLTextLine):
 def make_coords_string(line: pdm.PageXMLTextLine):
     c = line.coords
     return f"{c.left: >4}-{c.right: <4}\t{c.top: >4}-{c.bottom: <4}"
+
+
+def translate_point(point: Tuple[int, int], translate_by: Tuple[int, int]) -> Tuple[int, int]:
+    """Translate a 2D point"""
+    return point[0] + translate_by[0], point[1] + translate_by[1]
+
+
+def rescale_point(point: Tuple[int, int], rescale_by: float) -> Tuple[int, int]:
+    """Rescale a 2D point"""
+    return int(point[0] * rescale_by), int(point[1] * rescale_by)
+
+
+def check_transform_is_valid(rescale_by: float = None, translate_by: Tuple[int, int] = None):
+    if rescale_by is not None:
+        if not isinstance(rescale_by, int) and not isinstance(rescale_by, float):
+            raise TypeError(f"rescale_by must be an integer, not {type(rescale_by)}")
+    if translate_by is not None:
+        if not isinstance(translate_by[0], int) or not isinstance(translate_by[1], int):
+            raise TypeError(f"translate_by must be a tuple of integers, "
+                            f"not {type(translate_by[0])}, {type(translate_by[1])}")
+
+
+def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int, int] = None,
+                         in_place: bool = False):
+    """Rescale all coordinates and baseline points of a document,
+    including all those of its child elements."""
+    check_transform_is_valid(rescale_by, translate_by)
+    if in_place:
+        new_doc = doc
+    else:
+        new_doc = copy.deepcopy(doc)
+    if new_doc.coords is None:
+        new_coords = None
+    else:
+        new_points = [point for point in doc.coords.points]
+        if rescale_by is None or rescale_by == 1.0:
+            pass
+        else:
+            new_points = [rescale_point(point, rescale_by) for point in doc.coords.points]
+        if translate_by is None or translate_by == (0, 0):
+            pass
+        else:
+            new_points = [translate_point(point, translate_by) for point in doc.coords.points]
+        new_coords = pdm.Coords(new_points)
+    for child in new_doc.children:
+        transform_doc_coords(child, rescale_by, translate_by, in_place=True)
+    new_doc.coords = new_coords
+    if hasattr(doc, 'baseline'):
+        if doc.baseline is None:
+            new_doc.baseline = None
+        else:
+            new_points = [point for point in doc.baseline.points]
+            if rescale_by is not None:
+                new_points = [rescale_point(point, rescale_by) for point in doc.baseline.points]
+            if translate_by is not None:
+                new_points = [translate_point(point, translate_by) for point in doc.baseline.points]
+            new_doc.baseline = pdm.Coords(new_points)
+    if rescale_by is not None and hasattr(doc, 'xheight') and doc.xheight is not None:
+        doc.xheight = int(doc.xheight * rescale_by)
+    return new_doc
