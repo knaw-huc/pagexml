@@ -1,9 +1,10 @@
 from __future__ import annotations
+from collections import namedtuple
 
 from typing import List, Union
 
-from pagexml.model.coords import Baseline, Coords
-from pagexml.model.basic_document_model import StructureDoc
+from pagexml.model.coords import Baseline, Coords, parse_derived_coords
+from pagexml.model.basic_document_model import StructureDoc, PhysicalStructureDoc
 from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLTextLine, PageXMLTextRegion
 from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
@@ -12,6 +13,17 @@ from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_h
 from pagexml.model.pagexml_document_model import get_vertical_diff, get_horizontal_diff
 from pagexml.model.pagexml_document_model import get_vertical_diff_ratio, get_horizontal_diff_ratio
 from pagexml.model.pagexml_document_model import PageXMLWord, PageXMLColumn, PageXMLPage, PageXMLScan
+
+
+Interval = namedtuple('Interval', ['type', 'start', 'end'])
+
+
+def within_interval(doc: PageXMLDoc, interval: Interval,
+                 overlap_threshold: float = 0.5):
+    start = max([doc.coords.left, interval.start])
+    end = min([doc.coords.right, interval.end])
+    overlap = end - start if end > start else 0
+    return overlap / doc.coords.width > overlap_threshold
 
 
 def combine_doc_types(doc_type1: Union[str, List[str], None],

@@ -613,7 +613,8 @@ def get_line_widths(pagexml_files: List[Union[str, pdm.PageXMLTextRegion]] = Non
 
 
 def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int = 50,
-                                    min_ratio: float = 0.25, debug: int = 0) -> List[int]:
+                                    min_ratio: float = 0.25, min_peak_frac: float = 0.0,
+                                    debug: int = 0) -> List[int]:
     """Find the minima in the distribution of line widths relative to the peaks in the distribution.
     These minima represent the boundaries between clusters of lines within the same line width
     intervals.
@@ -625,6 +626,10 @@ def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int =
     :param min_ratio: the minimum ratio between a peak frequency and its neighbouring minimum to determine
         if the minimum is a category boundary
     :type min_ratio: float
+    :param min_peak_frac: the minimum fraction that a frequency represents to be considered a peak
+    :type min_peak_frac: int
+    :param debug: show debug information depending on the debug level (default = 0 = no debug information)
+    :type debug: int
     :return: A list of category boundary points
     :rtype: List[int]
     """
@@ -644,33 +649,35 @@ def find_line_width_boundary_points(line_widths: List[int], line_bin_size: int =
         print(f"find_line_width_boundary_points - max_width: {max_width}")
         print(f"find_line_width_boundary_points - max_freq: {max_freq}")
 
-    for w in range(0, max_width + 1, line_bin_size):
-        f = width_freq[w]
-        if f > curr_max_freq:
+    for width in range(0, int(max_width + 1), line_bin_size):
+        freq = width_freq[width]
+        if freq > curr_max_freq:
             if debug > 0:
-                print(f'\tfreq {f} bigger than curr max: {curr_max_freq}')
-            curr_max_freq = f
-            curr_max_width = w
-        if f < prev_freq and f < curr_min_freq:
+                print(f'\tfreq {freq} bigger than curr max: {curr_max_freq}')
+            curr_max_freq = freq
+            curr_max_width = width
+        if freq < prev_freq and freq < curr_min_freq:
             if debug > 0:
-                print(f'\twidth: {w}\tfreq {f} smaller than prev freq: {prev_freq} and than curr min {curr_min_freq}')
-            curr_min_freq = f
-            curr_min_width = w
-        if f / num_lines > 0.01 and f > prev_freq and f > curr_min_freq:
+                print(f'\twidth: {width}\tfreq {freq} smaller than '
+                      f'prev freq: {prev_freq} and than curr min {curr_min_freq}')
+            curr_min_freq = freq
+            curr_min_width = width
+        if freq / num_lines > 0.01 and freq > prev_freq and freq > curr_min_freq:
             if debug > 0:
-                print(f'\twidth: {w}\tfreq {f} bigger than prev freq: {prev_freq} and than curr min {curr_min_freq}')
-                # if prev_freq > 0 and f / prev_freq > 1.2 and (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
+                print(f'\twidth: {width}\tfreq {freq} bigger than '
+                      f'prev freq: {prev_freq} and than curr min {curr_min_freq}')
                 print('\t\tRatio:', (curr_max_freq - curr_min_freq) / curr_max_freq)
             if (curr_max_freq - curr_min_freq) / curr_max_freq > min_ratio:
-                boundary_points.append((curr_min_width, curr_min_freq))
+                if freq / total_widths > min_peak_frac:
+                    boundary_points.append((curr_min_width, curr_min_freq))
                 curr_max_freq = 0
                 curr_max_width = 0
                 curr_min_freq = max_freq + 1
         if debug > 0:
-            print(f"width: {w: >5}\tfreq: {f: >8}\tprev_freq: {prev_freq: >8}"
+            print(f"width: {width: >5}\tfreq: {freq: >8}\tprev_freq: {prev_freq: >8}"
                   f"\tcurr_min_freq: {curr_min_freq: >8}"
                   f"\tcurr_max_freq: {curr_max_freq}\tboundary points: {boundary_points}")
-        prev_freq = f
+        prev_freq = freq
     return [bp[0] for bp in boundary_points]
 
 

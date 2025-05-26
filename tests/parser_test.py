@@ -4,6 +4,20 @@ import pagexml.parser as parser
 import pagexml.model.physical_document_model as pdm
 
 
+type_test_page = """
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15 http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15/pagecontent.xsd">
+  <Metadata>
+    <Creator/>
+  </Metadata>
+  <Page imageFilename="173736378X_00000051.bin.png" imageHeight="2816" imageWidth="1861" orientation="0.0">
+    <TextRegion id="r1" type="marginalia">
+      <Coords points="1442,2063 1443,2340 1577,2346 1572,2060 1572,2060"/>
+    </TextRegion>
+  </Page>
+</PcGts>
+"""
+
+
 class TestParser(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -58,13 +72,18 @@ class TestParser(unittest.TestCase):
         new_scan = parser.json_to_pagexml_scan(doc_json)
         self.assertEqual(1, len(new_scan.table_regions))
 
-    def test_parsing_from_json_retains_table(self):
+    def test_parsing_from_json_retains_table_shape(self):
         scan_doc = parser.parse_pagexml_file('data/example_table.xml')
         table = scan_doc.table_regions[0]
         doc_json = scan_doc.json
         new_scan = parser.json_to_pagexml_scan(doc_json)
         new_table = new_scan.table_regions[0]
         self.assertEqual(table.shape, new_table.shape)
+
+    def test_parsing_captures_type_attributes(self):
+        scan_doc = parser.parse_pagexml_file('dummy_filename', type_test_page)
+        tr = scan_doc.text_regions[0]
+        self.assertEqual(True, tr.attrs.get('type') == 'marginalia')
 
 
 class TestCustomParser(unittest.TestCase):
@@ -98,7 +117,7 @@ class TestCustomParser(unittest.TestCase):
     """
     def test_parse_custom_attribute_part_returns_text_with_offset(self):
         text = "this is a text"
-        attribute = parser.parse_custom_attribute_parts('offset:9; length:5', element_text=text)
+        attribute = parsers.parse_custom_attribute_parts('offset:9; length:5', element_text=text)
         attrib_text = text[9:9+5]
         self.assertEqual(True, 'text' in attribute)
         self.assertEqual(attrib_text, attribute['text'])
@@ -144,7 +163,7 @@ class TestCustomParser(unittest.TestCase):
     """
     def test_parse_custom_metadata_returns_text_with_offset(self):
         text = "this is a text"
-        custom = parser.parse_custom_metadata(self.element, element_text=text)
+        custom = parsers.parse_custom_metadata(self.element, element_text=text)
         attrib_text = text[0:4]
         unclears = [attr for attr in custom['custom_attributes'] if attr['tag_name'] == 'unclear']
         self.assertEqual(True, 'text' in unclears[0])

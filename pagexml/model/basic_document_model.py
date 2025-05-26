@@ -114,6 +114,10 @@ class PhysicalStructureDoc(StructureDoc):
         self.domain = 'physical'
 
     @property
+    def aspect_ratio(self):
+        return self.coords.width / self.coords.height
+
+    @property
     def area(self):
         """Returns the size of the area represented by the convex hull of the coordinates.
 
@@ -135,6 +139,10 @@ class PhysicalStructureDoc(StructureDoc):
         if self.coords:
             doc_json['coords'] = self.coords.points
         return doc_json
+
+    @property
+    def children(self):
+        return []
 
     def set_derived_id(self, parent_id: str):
         box_string = f"{self.coords.x}-{self.coords.y}-{self.coords.w}-{self.coords.h}"
