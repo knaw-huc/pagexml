@@ -532,7 +532,7 @@ class PageXMLTableCell(PageXMLDoc):
         self.lines: List[PageXMLTextLine] = lines if lines is not None else []
         # Initial value is concatenated text of lines, but can be overwritten by user
         # with e.g. interpreted/evaluated text
-        self.value = " ".join([line.text for line in self.lines])
+        self.value = " ".join([line.text or "" for line in self.lines])
         self.row = row
         self.col = col
         self.row_span = row_span
