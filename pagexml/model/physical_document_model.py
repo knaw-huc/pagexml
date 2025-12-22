@@ -3,12 +3,13 @@ from collections import namedtuple
 
 from typing import List, Union
 
-from pagexml.model.coords import Baseline, Coords, parse_derived_coords
+from pagexml.model.coords import Point, Baseline, Coords, parse_derived_coords, coords_as_span
 from pagexml.model.basic_document_model import StructureDoc, PhysicalStructureDoc
-from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLTextLine, PageXMLTextRegion
+from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLRegion, PageXMLEmptyRegion
+from pagexml.model.pagexml_document_model import PageXMLTextLine, PageXMLTextRegion
 from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
-from pagexml.model.pagexml_document_model import sort_lines
+from pagexml.model.pagexml_document_model import sort_lines, CHILD_PROPERTIES
 from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_horizontally_overlapping
 from pagexml.model.pagexml_document_model import get_vertical_diff, get_horizontal_diff
 from pagexml.model.pagexml_document_model import get_vertical_diff_ratio, get_horizontal_diff_ratio
@@ -19,7 +20,7 @@ Interval = namedtuple('Interval', ['type', 'start', 'end'])
 
 
 def within_interval(doc: PageXMLDoc, interval: Interval,
-                 overlap_threshold: float = 0.5):
+                    overlap_threshold: float = 0.5):
     start = max([doc.coords.left, interval.start])
     end = min([doc.coords.right, interval.end])
     overlap = end - start if end > start else 0
@@ -51,28 +52,11 @@ def combine_doc_types(doc_type1: Union[str, List[str], None],
 
 
 def set_parentage(parent_doc: StructureDoc):
-    if isinstance(parent_doc, PageXMLScan) or hasattr(parent_doc, 'pages') and parent_doc.pages:
-        parent_doc.set_as_parent(parent_doc.pages)
-        for page in parent_doc.pages:
-            set_parentage(page)
-    if isinstance(parent_doc, PageXMLPage) or hasattr(parent_doc, 'columns') and parent_doc.columns:
-        parent_doc.set_as_parent(parent_doc.columns)
-        for column in parent_doc.columns:
-            set_parentage(column)
-    if isinstance(parent_doc, PageXMLColumn) or hasattr(parent_doc, 'text_regions') and parent_doc.text_regions:
-        parent_doc.set_as_parent(parent_doc.text_regions)
-        for text_region in parent_doc.text_regions:
-            set_parentage(text_region)
-    if hasattr(parent_doc, 'lines') and parent_doc.lines:
-        parent_doc.set_as_parent(parent_doc.lines)
-        for line in parent_doc.lines:
-            set_parentage(line)
-    if hasattr(parent_doc, 'words') and parent_doc.words:
-        parent_doc.set_as_parent(parent_doc.words)
-        for word in parent_doc.words:
-            set_parentage(word)
-    if isinstance(parent_doc, PageXMLWord):
-        pass
+    for child_property in CHILD_PROPERTIES:
+        if hasattr(parent_doc, child_property) and parent_doc.__getattribute__(child_property):
+            parent_doc.set_as_parent(parent_doc.__getattribute__(child_property))
+            for child in parent_doc.__getattribute__(child_property):
+                set_parentage(child)
 
 
 def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:

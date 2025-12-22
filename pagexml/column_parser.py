@@ -1,11 +1,13 @@
 import copy
 import re
+import warnings
 from collections import Counter
 from typing import Dict, List, Tuple
 
 import pagexml.helper.pagexml_helper as pagexml_helper
 import pagexml.model.coords as page_coords
 import pagexml.model.physical_document_model as pdm
+import pagexml.parsers.column_parser as column_parser
 
 
 def within_column(line: pdm.PageXMLTextLine, column_range: Dict[str, int],
@@ -15,21 +17,6 @@ def within_column(line: pdm.PageXMLTextLine, column_range: Dict[str, int],
     end = min([line.coords.right, column_range["end"]])
     overlap = end - start if end > start else 0
     return overlap / line.coords.width > overlap_threshold
-
-
-def find_overlapping_columns(columns: List[pdm.PageXMLColumn]):
-    columns.sort()
-    merge_sets = []
-    for ci, curr_col in enumerate(columns[:-1]):
-        next_col = columns[ci + 1]
-        if pdm.is_horizontally_overlapping(curr_col, next_col):
-            for merge_set in merge_sets:
-                if curr_col in merge_set:
-                    merge_set.append(next_col)
-                    break
-            else:
-                merge_sets.append([curr_col, next_col])
-    return merge_sets
 
 
 #################################################
@@ -45,27 +32,23 @@ def compute_pixel_dist(lines: List[pdm.PageXMLTextLine]) -> Counter:
     return pixel_dist
 
 
-def new_gap_pixel_interval(pixel: int) -> dict:
-    return {"start": pixel, "end": pixel}
-
-
 def determine_freq_gap_interval(pixel_dist: Counter, gap_threshold: int) -> list:
     common_pixels = sorted([pixel for pixel, freq in pixel_dist.items()])
     gap_pixel_intervals = []
     if len(common_pixels) == 0:
         return gap_pixel_intervals
-    curr_interval = new_gap_pixel_interval(common_pixels[0])
+    curr_interval = column_parser.new_text_pixel_interval(common_pixels[0])
     prev_interval_end = 0
     for curr_index, curr_pixel in enumerate(common_pixels[:-1]):
         next_pixel = common_pixels[curr_index + 1]
         if next_pixel - curr_pixel < gap_threshold:
-            curr_interval["end"] = next_pixel
+            curr_interval.end = next_pixel
         else:
-            if curr_interval["start"] - prev_interval_end < gap_threshold:
+            if curr_interval.start - prev_interval_end < gap_threshold:
                 continue
             gap_pixel_intervals += [curr_interval]
-            prev_interval_end = curr_interval["end"]
-            curr_interval = new_gap_pixel_interval(next_pixel)
+            prev_interval_end = curr_interval.end
+            curr_interval = column_parser.new_text_pixel_interval(next_pixel)
     gap_pixel_intervals += [curr_interval]
     return gap_pixel_intervals
 
@@ -186,21 +169,6 @@ def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict, page_i
     return column
 
 
-def merge_columns(columns: List[pdm.PageXMLColumn],
-                  doc_id: str, metadata: dict) -> pdm.PageXMLColumn:
-    """Merge a list of columns into one. First, all text regions of all columns are
-    checked for spatial overlap, whereby overlapping text regions are merged.
-    Within the merged text regions, lines are sorted by baseline height."""
-    trs = [tr for col in columns for tr in col.text_regions]
-    merged_tr = pagexml_helper.merge_textregions(trs, metadata)
-    merged_coords = copy.deepcopy(merged_tr.coords)
-    merged_col = pdm.PageXMLColumn(doc_id=doc_id, doc_type='index_column',
-                                   metadata=metadata, coords=merged_coords,
-                                   text_regions=[merged_tr])
-    merged_col.set_as_parent([merged_tr])
-    return merged_col
-
-
 def sort_lines_in_column_ranges(lines: List[pdm.PageXMLTextLine],
                                 column_ranges: List[Dict[str, int]],
                                 overlap_threshold: float,
@@ -230,15 +198,15 @@ def sort_lines_in_column_ranges(lines: List[pdm.PageXMLTextLine],
     return column_lines, extra_lines
 
 
-def merge_overlapping_columns(text_region: pdm.PageXMLTextRegion, columns: List[
-    pdm.PageXMLColumn]):
+def merge_overlapping_columns(text_region: pdm.PageXMLTextRegion,
+                              columns: List[pdm.PageXMLColumn]):
     # column range may have expanded with lines partially overlapping initial range
     # check which extra lines should be added to columns
-    merge_sets = find_overlapping_columns(columns)
+    merge_sets = column_parser.find_overlapping_columns(columns)
     merge_cols = {col for merge_set in merge_sets for col in merge_set}
     non_overlapping_cols = [col for col in columns if col not in merge_cols]
     for merge_set in merge_sets:
-        merged_col = merge_columns(merge_set, "temp_id", merge_set[0].metadata)
+        merged_col = column_parser.merge_columns(merge_set, "temp_id", merge_set[0].metadata)
         if text_region.parent and text_region.parent.id:
             merged_col.set_derived_id(text_region.parent.id)
             merged_col.set_parent(text_region.parent)
@@ -346,8 +314,7 @@ def handle_extra_lines(text_region: pdm.PageXMLTextRegion,
 
 def split_lines_on_column_gaps(text_region: pdm.PageXMLTextRegion,
                                gap_threshold: int = 50,
-                               overlap_threshold: float = 0.5) -> List[
-    pdm.PageXMLColumn]:
+                               overlap_threshold: float = 0.5) -> List[pdm.PageXMLColumn]:
     """Takes a PageXMLTextRegion object and tries to split the lines into columns based
     on a minimum horizontal gap (in number of pixels) between columns.
 
@@ -361,6 +328,9 @@ def split_lines_on_column_gaps(text_region: pdm.PageXMLTextRegion,
         to horizontally overlap at least 50% of the shortest line.
     :type overlap_threshold: float
     """
+    warn_message = ("pagexml.column_parser.split_lines_on_column_gaps is deprecated. "
+                    "Please use pagexml.parser.column_parser.split_lines_on_column_gaps instead")
+    warnings.warn(warn_message, DeprecationWarning)
     column_ranges = find_column_gaps(text_region.get_lines(), gap_threshold=gap_threshold)
     column_ranges = [col_range for col_range in column_ranges if col_range["end"] - col_range["start"] >= 20]
     column_lines, extra_lines = sort_lines_in_column_ranges(text_region.get_lines(),

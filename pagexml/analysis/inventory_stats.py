@@ -1,8 +1,10 @@
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-
 import pagexml.model.physical_document_model as pdm
+
+from scipy.stats import gaussian_kde
+from scipy.signal import find_peaks
 from pagexml.analysis.layout_stats import get_line_widths, find_line_width_boundary_points
 from pagexml.helper.pagexml_helper import regions_overlap
 
@@ -49,6 +51,24 @@ def is_main_text_line(line: pdm.PageXMLTextLine, main_text_min_width: float,
     return main_text_min_width <= line.coords.width <= main_text_max_width
 
 
+def get_line_side_means(line_sides: np.array):
+    """Find peaks in the distribution of points at one side of a set of lines.
+    The sides can be beginning/left or end/right of a set of lines.
+
+    For beginning/left side of lines, the first peak is the indicator for the
+    left side of the main text column.
+    For end/right side of lines, the last peak is the indicator for the
+    right side of the main text column.
+    """
+    # Find peaks
+    kde = gaussian_kde(line_sides)
+    xgrid = np.linspace(line_sides.min(), line_sides.max())
+    pdf = kde.evaluate(xgrid)
+    peak_idxs, _ = find_peaks(pdf)
+
+    return xgrid[peak_idxs]
+
+
 def get_page_main_text_range(pages: List[pdm.PageXMLPage]):
     # split pages into even and odd (verso and recto)
     pages_even = [page for page in pages if page.metadata['page_side'] == 'even']
@@ -77,6 +97,7 @@ def get_page_main_text_range(pages: List[pdm.PageXMLPage]):
     lefts_odd = np.array([line.coords.left for line in main_text_lines_odd])
     rights_even = np.array([line.coords.right for line in main_text_lines_even])
     rights_odd = np.array([line.coords.right for line in main_text_lines_odd])
+
     if len(lefts_even) == 0 or len(lefts_odd) == 0:
         main_text_ranges = {
             'even': pdm.Interval('even', 0, 99999),
@@ -84,9 +105,16 @@ def get_page_main_text_range(pages: List[pdm.PageXMLPage]):
         }
         print(f"no left-right values for inventory {pages[0].metadata['scan_id']}")
     else:
+        left_means_even = get_line_side_means(lefts_even)
+        left_means_odd = get_line_side_means(lefts_odd)
+        right_means_even = get_line_side_means(rights_even)
+        right_means_odd = get_line_side_means(rights_odd)
+        left_means_even, left_means_odd, right_means_even, right_means_odd
         main_text_ranges = {
-            'even': pdm.Interval('even', int(lefts_even.mean()), int(rights_even.mean())),
-            'odd': pdm.Interval('odd', int(lefts_odd.mean()), int(rights_odd.mean())),
+            # 'even': pdm.Interval('even', int(lefts_even.mean()), int(rights_even.mean())),
+            # 'odd': pdm.Interval('odd', int(lefts_odd.mean()), int(rights_odd.mean())),
+            'even': pdm.Interval('even', int(left_means_even[0]), int(right_means_even[-1])),
+            'odd': pdm.Interval('odd', int(left_means_odd[0]), int(right_means_odd[-1])),
         }
     return main_text_ranges
 

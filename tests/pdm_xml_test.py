@@ -38,3 +38,12 @@ class TestPageXMLWord(TestCase):
         doc_pagexml = col.to_pagexml()
         col_xml = doc_pagexml.find(f".//{xml.PAGE + 'TextRegion'}")
         self.assertEqual('column', col_xml.attrib['type'])
+
+    def test_page_can_export_to_valid_pagexml(self) -> None:
+        coords = pdm.Coords([(10, 10), (20, 10), (20, 20), (20, 10)])
+        col = pdm.PageXMLColumn(doc_id='col-1', coords=coords)
+        page = pdm.PageXMLPage(doc_id='page-1', columns=[col])
+        page.add_child(col)
+        doc_pagexml = page.to_pagexml()
+        page_xml = doc_pagexml.find(f".//{xml.PAGE + 'TextRegion'}")
+        self.assertEqual('page', page_xml.attrib['type'])

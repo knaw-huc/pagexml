@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import List, Tuple, Union
 
 import numpy as np
 from scipy.spatial import QhullError, ConvexHull
+
+
+@dataclass
+class Point:
+
+    x: int
+    y: float
 
 
 def parse_points(points: Union[str, List[Tuple[int, int]]]) -> List[Tuple[int, int]]:
@@ -81,6 +89,15 @@ class Coords:
     def box(self):
         return {"x": self.x, "y": self.y, "w": self.w, "h": self.h}
 
+    @property
+    def box_string(self):
+        return f"{self.x}-{self.y}-{self.w}-{self.h}"
+
+    @staticmethod
+    def coords_from_box_params(x: int, y: int, w: int, h: int):
+        points = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
+        return Coords(points=points)
+
 
 class Baseline(Coords):
 
@@ -154,6 +171,10 @@ def coords_list_to_hull_coords(coords_list):
         hull_points = edges_to_hull_points(edges)
         return Coords(hull_points)
     except (IndexError, QhullError):
+        if len(set(point[0] for point in points)) == 1:
+            return Coords(points)
+        if len(set(point[1] for point in points)) == 1:
+            return Coords(points)
         print('pagexml.model.physical_document_model.coords_list_to_hull_coords - IndexError')
         print('coords in coords_list:', [coords for coords in coords_list])
         print('points derived from list of coords:', points)
@@ -185,3 +206,5 @@ def edges_to_hull_points(edges):
     return sorted_nodes
 
 
+def coords_as_span(coords: Coords):
+    return coords.left, coords.right, coords.top, coords.bottom

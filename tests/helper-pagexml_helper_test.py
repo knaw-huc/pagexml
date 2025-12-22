@@ -58,8 +58,8 @@ class TestPageXMLHelper(unittest.TestCase):
     def test_element_overlap_same_points(self):
         tr1 = make_region([(1, 1)])
         tr2 = make_region([(1, 1)])
-        self.assertEqual(True, helper.regions_overlap(tr1, tr2))
-        self.assertEqual(True, helper.regions_overlap(tr2, tr1))
+        self.assertEqual(True, helper.regions_overlap(tr1, tr2, debug=10))
+        self.assertEqual(True, helper.regions_overlap(tr2, tr1, debug=10))
 
     def test_element_overlap_different_points(self):
         tr1 = make_region([(1, 1)])

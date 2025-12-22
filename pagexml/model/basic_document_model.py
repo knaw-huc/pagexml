@@ -1,4 +1,5 @@
 from __future__ import annotations
+import re
 
 from typing import Union, List, Dict, Set, Tuple
 
@@ -146,7 +147,11 @@ class PhysicalStructureDoc(StructureDoc):
 
     def set_derived_id(self, parent_id: str):
         box_string = f"{self.coords.x}-{self.coords.y}-{self.coords.w}-{self.coords.h}"
-        self.id = f"{parent_id}-{self.main_type}-{box_string}"
+        if m := re.search(r"(-[a-z_]+-\d+-\d+-\d+-\d+)$", parent_id):
+            parent_box = m.group(1)
+            self.id = parent_id.replace(parent_box, f"-{self.main_type}-{box_string}")
+        else:
+            self.id = f"{parent_id}-{self.main_type}-{box_string}"
         # self.metadata['id'] = self.id
 
     def add_parent_id_to_metadata(self):
