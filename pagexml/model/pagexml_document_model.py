@@ -193,6 +193,11 @@ class PageXMLTextLine(PageXMLDoc):
         return sort_lines(self, other, as_column=True)
 
     @property
+    def text_height(self):
+        # Assume box cutout has top and bottom 25% around average character height
+        return self.xheight if self.xheight else self.coords.height / 2
+
+    @property
     def length(self):
         return len(self.text) if self.text is not None else 0
 
@@ -234,21 +239,28 @@ class PageXMLTextLine(PageXMLDoc):
     def num_words(self):
         return len(self.get_words())
 
-    def is_below(self, other: PageXMLTextLine) -> bool:
+    def is_below(self, other: PageXMLTextLine, direct_only: bool = True) -> bool:
         """Test if the baseline of this line is directly below the baseline of the other line."""
         # if there is no horizontal overlap, this line is not directly below the other
-        if not get_horizontal_overlap(self, other):
-            # print("NO HORIZONTAL OVERLAP")
+        if direct_only and not get_horizontal_overlap(self, other):
+            # print("pagexml.pdm - NO HORIZONTAL OVERLAP")
             return False
+        if not direct_only and not get_horizontal_overlap(self, other):
+            vertical_overlap = get_vertical_overlap(self, other)
+            min_height = min(self.text_height, other.text_height)
+            if vertical_overlap / min_height > 0.5:
+                # print("pagexml.pdm - NO HORIZONTAL OVERLAP, LINES VERTICALLY OVERLAP")
+                return False
         # if the bottom of this line is above the top of the other line, this line is above the other
         if self.baseline.bottom < other.baseline.top:
-            # print("BOTTOM IS ABOVE TOP")
+            # print("pagexml.pdm - BOTTOM OF SELF IS ABOVE TOP OF OTHER")
             return False
         # if most of this line's baseline points are not below most the other's baseline points
         # this line is not below the other
         if baseline_is_below(self.baseline, other.baseline):
-            # print("BASELINE IS BELOW")
+            # print("pagexml.pdm - BASELINE OF SELF IS BELOW BASELINE OF OTHER")
             return True
+        # print("pagexml.pdm - SELF IS ADJACENT TO OTHER")
         return False
 
     def is_next_to(self, other: PageXMLTextLine) -> bool:
@@ -1242,6 +1254,9 @@ class PageXMLScan(PageXMLRegion):
         for sub_tr in self.table_regions:
             sub_tr.add_to_pagexml(scan_xml)
 
+    def _to_pagexml(self, page_xml: etree.Element):
+        self.add_to_pagexml(page_xml)
+
 
 def sort_lines(line1: PageXMLTextLine, line2: PageXMLTextLine, as_column: bool = True):
     if get_horizontal_overlap(line1, line2):
@@ -1292,9 +1307,31 @@ def get_horizontal_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc, debug: int = 0) -
     # return min_right - max_left + 1 if min_right >= max_left else 0
 
 
+def get_line_top_bottom(line: PageXMLTextLine):
+    if has_baseline(line):
+        line_bottom = line.baseline.bottom
+        line_height = line.xheight if line.xheight else int(line.coords.height / 2)
+        line_top = line.baseline.top - line_height
+    else:
+        # assume the box cut around a line has 25% of its height below
+        # the baseline
+        line_bottom = line.coords.bottom - line.coords.height * 0.25
+        line_top = line.coords.top + line.coords.height * 0.25
+    return line_top, line_bottom
+
+
 def get_vertical_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc) -> int:
-    overlap_top = max([doc1.coords.top, doc2.coords.top])
-    overlap_bottom = min([doc1.coords.bottom, doc2.coords.bottom])
+    if doc1.coords.height == 0:
+        return 1 if doc2.coords.top <= doc1.coords.top <= doc2.coords.bottom else 0
+    if doc2.coords.height == 0:
+        return 1 if doc1.coords.top <= doc2.coords.top <= doc1.coords.bottom else 0
+    if isinstance(doc1, PageXMLTextLine) and isinstance(doc2, PageXMLTextLine):
+        doc1_top, doc1_bottom = get_line_top_bottom(doc1)
+        doc2_top, doc2_bottom = get_line_top_bottom(doc2)
+        return min(doc1_bottom, doc2_bottom) - max(doc1_top, doc2_top)
+    else:
+        overlap_top = max([doc1.coords.top, doc2.coords.top])
+        overlap_bottom = min([doc1.coords.bottom, doc2.coords.bottom])
     return overlap_bottom - overlap_top + 1 if overlap_bottom >= overlap_top else 0
 
 

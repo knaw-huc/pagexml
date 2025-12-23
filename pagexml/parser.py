@@ -147,7 +147,12 @@ def parse_custom_metadata_element_list(custom_string: str, custom_field: str) ->
 
     for match in matches:
         tag = match.group(1)
-        metadata = parse_custom_attribute_parts(match.group(2))
+        try:
+            metadata = parse_custom_attribute_parts(match.group(2))
+        except ValueError:
+            print(f"Error parsing the following field in custom attribute string and re match:"
+                  f"\n\tFIELD: {custom_field}\n\t{custom_string}\n\t{match}")
+            raise
         metadata['type'] = tag
         metadata_list.append(metadata)
 
@@ -160,7 +165,11 @@ def parse_custom_attributes(custom_string: str) -> List[Dict[str, any]]:
     matches = re.finditer(r'\b(\w+) {(.*?)}', custom_string)
     custom_attributes = []
     for match in matches:
-        attribute = parse_custom_attribute_parts(match.group(2))
+        try:
+            attribute = parse_custom_attribute_parts(match.group(2))
+        except ValueError:
+            print(f"Error parsing the following custom attribute string and re match:\n\t{custom_string}\n\t{match}")
+            raise
         attribute['tag_name'] = match.group(1)
         custom_attributes.append(attribute)
     return custom_attributes
@@ -169,12 +178,15 @@ def parse_custom_attributes(custom_string: str) -> List[Dict[str, any]]:
 def parse_custom_attribute_parts(attribute_string: str) -> Dict[str, any]:
     """Parse the string of custom attributes into a dictionary.
 
+    Examples:
+        `offset:0; length:2;strikethrough`
     Assumptions:
 
     1. attributes are always and only separated by semicolons (;)
     2. attribute key/value pairs are always separated by a colon (:)
-    3. there is no nesting of attributes. The attributes are a flat list
-    4. attribute values contain only alphanumeric characters, no punctuation
+    3. there can be valueless attributes (e.g. `strikethrough`)
+    4. there is no nesting of attributes. The attributes are a flat list
+    5. attribute values contain only alphanumeric characters, no punctuation
        or quotes, whitespace other symbols
     """
     structure_parts = attribute_string.strip().split(';')
@@ -182,10 +194,12 @@ def parse_custom_attribute_parts(attribute_string: str) -> Dict[str, any]:
     for part in structure_parts:
         if part == '':
             continue
-        field, value = part.split(':')
-
-        field = field.strip()
-        value = value.strip()
+        if ':' in part:
+            field, value = part.split(':')
+            field = field.strip()
+            value = value.strip()
+        else:
+            field, value = part, True
 
         if field in ('offset', 'length', 'index'):
             metadata[field] = int(value)

@@ -134,16 +134,26 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.Pa
     if len(vertically_sorted) > 1:
         for li, curr_line in enumerate(rest_lines):
             prev_line = horizontally_grouped_lines[-1][-1]
-            if curr_line.is_below(prev_line):
+            # print(f"prev_line: {prev_line.id} {make_coords_string(prev_line)}")
+            # print(f"curr_line: {curr_line.id} {make_coords_string(curr_line)}")
+            if curr_line.is_below(prev_line, direct_only=False):
+                # print("curr is below prev - new group")
                 horizontally_grouped_lines.append([curr_line])
             elif curr_line.is_next_to(prev_line):
+                # print(f"curr is next to prev - add to last group")
                 horizontally_grouped_lines[-1].append(curr_line)
             else:
+                # print(f"curr is not next to prev - new group")
                 horizontally_grouped_lines.append([curr_line])
     # Third, sort adjecent lines horizontally
     for line_group in horizontally_grouped_lines:
         line_group.sort(key=lambda line: line.coords.left)
     return horizontally_grouped_lines
+
+
+def horizontally_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.PageXMLTextLine]]:
+    """Wraps `horizontal_group_lines` but with more appropriate naming."""
+    return horizontal_group_lines(lines)
 
 
 def merge_sets(sets: List[Set[any]], min_overlap: int = 1) -> List[Set[any]]:

@@ -80,7 +80,16 @@ def make_custom_string(custom):
     element_strings = []
     for custom_element in custom:
         tag_fields = [field for field in custom_element if field != 'tag_name']
-        tag_string = ' '.join([f"{field}:{custom_element[field]};" for field in tag_fields])
+        # tag_string = ' '.join([f"{field}:{custom_element[field]};" for field in tag_fields])
+        field_strings = []
+        # Update 2025-12-23: allow for fields that have no value, e.g. `strikethrough`
+        for field in tag_fields:
+            if custom_element[field] is True:
+                field_string = field
+            else:
+                field_string = f"{field}:{custom_element[field]}"
+            field_strings.append(field_string)
+        tag_string = '; '.join(field_strings)
         element_string = custom_element['tag_name'] + ' {' + tag_string + '} '
         element_strings.append(element_string)
 
