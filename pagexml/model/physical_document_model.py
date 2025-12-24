@@ -9,7 +9,7 @@ from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLRegion, Page
 from pagexml.model.pagexml_document_model import PageXMLTextLine, PageXMLTextRegion
 from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
-from pagexml.model.pagexml_document_model import sort_lines, CHILD_PROPERTIES
+from pagexml.model.pagexml_document_model import has_baseline, sort_lines, CHILD_PROPERTIES
 from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_horizontally_overlapping
 from pagexml.model.pagexml_document_model import get_vertical_diff, get_horizontal_diff
 from pagexml.model.pagexml_document_model import get_vertical_diff_ratio, get_horizontal_diff_ratio
@@ -73,13 +73,6 @@ def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:
         # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
         # Note: this doesn't work for short adjacent lines within the same column
         return get_horizontal_overlap(element1, element2) > (element1.coords.w / 2)
-
-
-def has_baseline(doc: PageXMLDoc) -> bool:
-    if isinstance(doc, PageXMLTextLine):
-        return doc.baseline is not None
-    else:
-        return False
 
 
 def is_below(region1: PageXMLTextRegion, region2: PageXMLTextRegion, margin: int = 20) -> bool:
