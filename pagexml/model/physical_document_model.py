@@ -9,6 +9,7 @@ from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLRegion, Page
 from pagexml.model.pagexml_document_model import PageXMLTextLine, PageXMLTextRegion
 from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
+from pagexml.model.pagexml_document_model import get_line_top_bottom
 from pagexml.model.pagexml_document_model import has_baseline, sort_lines, CHILD_PROPERTIES
 from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_horizontally_overlapping
 from pagexml.model.pagexml_document_model import get_vertical_diff, get_horizontal_diff
@@ -102,12 +103,18 @@ def horizontal_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
 
 
 def vertical_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
-    if doc1.coords.bottom < doc2.coords.top:
+    if hasattr(doc1, 'baseline') and hasattr(doc2, 'baseline'):
+        doc1_top, doc1_bottom = get_line_top_bottom(doc1)
+        doc2_top, doc2_bottom = get_line_top_bottom(doc2)
+    else:
+        doc1_top, doc1_bottom = doc1.coords.top, doc1.coords.bottom
+        doc2_top, doc2_bottom = doc2.coords.top, doc2.coords.bottom
+    if doc1_bottom < doc2_top:
         # doc1 is above doc2
-        return doc2.coords.top - doc1.coords.bottom
-    elif doc1.coords.top > doc2.coords.bottom:
+        return doc2_top - doc1_bottom
+    elif doc1_top > doc2_bottom:
         # doc1 is below doc2
-        return doc1.coords.top - doc2.coords.bottom
+        return doc1_top - doc2_bottom
     else:
         # doc1 and doc2 vertically overlap
         return 0

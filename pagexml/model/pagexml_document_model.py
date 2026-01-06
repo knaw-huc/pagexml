@@ -263,21 +263,33 @@ class PageXMLTextLine(PageXMLDoc):
         # print("pagexml.pdm - SELF IS ADJACENT TO OTHER")
         return False
 
-    def is_next_to(self, other: PageXMLTextLine) -> bool:
+    def is_next_to(self, other: PageXMLTextLine, debug: int = 0) -> bool:
         """Test if this line is vertically aligned with the other line."""
-        if get_vertical_overlap(self, other) == 0:
-            # print("NO VERTICAL OVERLAP")
+        vertical_overlap = get_vertical_overlap(self, other)
+        min_height = min(self.text_height, other.text_height)
+        if vertical_overlap == 0:
+            if debug > 0:
+                print("NO VERTICAL OVERLAP")
             return False
         if get_horizontal_overlap(self, other) > 40:
-            # print("TOO MUCH HORIZONTAL OVERLAP", horizontal_overlap(self.coords, other.coords))
+            if debug > 0:
+                print("TOO MUCH HORIZONTAL OVERLAP", get_horizontal_overlap(self, other))
             return False
+        """
         if self.baseline.top > other.baseline.bottom + 10:
-            # print("VERTICAL BASELINE GAP TOO BIG")
+            if debug > 0:
+                print("VERTICAL BASELINE GAP TOO BIG")
             return False
         elif self.baseline.bottom < other.baseline.top - 10:
+            if debug > 0:
+                print("VERTICAL BASELINE GAP TOO BIG")
             return False
-        else:
+        """
+        if vertical_overlap / min_height > 0.5:
+            # print("pagexml.pdm - NO HORIZONTAL OVERLAP, LINES VERTICALLY OVERLAP")
             return True
+        else:
+            return False
 
     def add_to_pagexml(self, parent: etree.Element = None):
         line_xml = add_pagexml_sub_element(parent, 'TextLine', sub_id=self.id, custom=self.custom,
