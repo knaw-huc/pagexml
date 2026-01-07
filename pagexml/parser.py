@@ -147,7 +147,12 @@ def parse_custom_metadata_element_list(custom_string: str, custom_field: str) ->
 
     for match in matches:
         tag = match.group(1)
-        metadata = parse_custom_attribute_parts(match.group(2))
+        try:
+            metadata = parse_custom_attribute_parts(match.group(2))
+        except ValueError:
+            print(f"Error parsing the following field in custom attribute string and re match:"
+                  f"\n\tFIELD: {custom_field}\n\t{custom_string}\n\t{match}")
+            raise
         metadata['type'] = tag
         metadata_list.append(metadata)
 
@@ -160,7 +165,11 @@ def parse_custom_attributes(custom_string: str) -> List[Dict[str, any]]:
     matches = re.finditer(r'\b(\w+) {(.*?)}', custom_string)
     custom_attributes = []
     for match in matches:
-        attribute = parse_custom_attribute_parts(match.group(2))
+        try:
+            attribute = parse_custom_attribute_parts(match.group(2))
+        except ValueError:
+            print(f"Error parsing the following custom attribute string and re match:\n\t{custom_string}\n\t{match}")
+            raise
         attribute['tag_name'] = match.group(1)
         custom_attributes.append(attribute)
     return custom_attributes
@@ -169,12 +178,15 @@ def parse_custom_attributes(custom_string: str) -> List[Dict[str, any]]:
 def parse_custom_attribute_parts(attribute_string: str) -> Dict[str, any]:
     """Parse the string of custom attributes into a dictionary.
 
+    Examples:
+        `offset:0; length:2;strikethrough`
     Assumptions:
 
     1. attributes are always and only separated by semicolons (;)
     2. attribute key/value pairs are always separated by a colon (:)
-    3. there is no nesting of attributes. The attributes are a flat list
-    4. attribute values contain only alphanumeric characters, no punctuation
+    3. there can be valueless attributes (e.g. `strikethrough`)
+    4. there is no nesting of attributes. The attributes are a flat list
+    5. attribute values contain only alphanumeric characters, no punctuation
        or quotes, whitespace other symbols
     """
     structure_parts = attribute_string.strip().split(';')
@@ -182,10 +194,12 @@ def parse_custom_attribute_parts(attribute_string: str) -> Dict[str, any]:
     for part in structure_parts:
         if part == '':
             continue
-        field, value = part.split(':')
-
-        field = field.strip()
-        value = value.strip()
+        if ':' in part:
+            field, value = part.split(':')
+            field = field.strip()
+            value = value.strip()
+        else:
+            field, value = part, True
 
         if field in ('offset', 'length', 'index'):
             metadata[field] = int(value)
@@ -248,7 +262,7 @@ def parse_textregion(text_region_dict: dict,
             text_region.text = parse_text_equiv(text_region_dict[child])
         if child == 'TextLine':
             text_region.lines = parse_textline_list(text_region_dict['TextLine'], custom_tags)
-            text_region.set_as_parent(text_region.lines)
+            # text_region.set_as_parent(text_region.lines)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.lines)
         if child == 'TextRegion':
@@ -258,7 +272,7 @@ def parse_textregion(text_region_dict: dict,
             for tr in parse_textregion_list(text_region_dict['TextRegion'], custom_tags):
                 if tr is not None:
                     text_region.text_regions.append(tr)
-            text_region.set_as_parent(text_region.text_regions)
+            # text_region.set_as_parent(text_region.text_regions)
             if not text_region.coords:
                 text_region.coords = parse_derived_coords(text_region.text_regions)
     if text_region.coords is None:
@@ -291,6 +305,7 @@ def parse_table_cell(table_cell_dict: Dict[str, any], custom_tags: Iterable = No
         cornerpoints=parse_corner_points(table_cell_dict['CornerPts']) if 'CornerPts' in table_cell_dict else None,
         lines=lines
     )
+    # table_cell.set_as_parent(table_cell.lines)
     return table_cell
 
 
@@ -329,7 +344,7 @@ def parse_tableregion(table_region_dict, custom_tags: Iterable = None):
                 cell = parse_table_cell(table_cell_dict, custom_tags)
                 cells.append(cell)
     table_region.rows = make_rows_from_cells(cells)
-    table_region.set_as_parent(table_region.rows)
+    # table_region.set_as_parent(table_region.rows)
     return table_region
 
 
@@ -341,7 +356,7 @@ def make_rows_from_cells(cells: List[pdm.PageXMLTableCell]) -> List[pdm.PageXMLT
     for row_id in row_cells:
         row_coords = parse_derived_coords(row_cells[row_id])
         table_row = pdm.PageXMLTableRow(doc_id=row_id, coords=row_coords, cells=row_cells[row_id])
-        table_row.set_as_parent(table_row.cells)
+        # table_row.set_as_parent(table_row.cells)
         rows.append(table_row)
     return rows
 
@@ -452,6 +467,7 @@ def parse_pagexml_json(pagexml_file: str, scan_json: dict, custom_tags: Iterable
         reading_order=reading_order,
         reading_order_attributes=reading_order_attributes
     )
+    pdm.set_parentage(scan_doc)
     return scan_doc
 
 
@@ -518,7 +534,7 @@ def read_pagexml_dirs(pagexml_dirs: Union[str, List[str]]) -> List[str]:
     return pagexml_files
 
 
-def parse_pagexml_files_from_directory(pagexml_directories: List[str],
+def parse_pagexml_files_from_directory(pagexml_directories: Union[str, List[str]],
                                        show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
     """Parse PageXML files from one or more directories.
 
@@ -694,8 +710,7 @@ def json_to_pagexml_column(json_doc: dict) -> pdm.PageXMLColumn:
                                attrs=json_doc['attributes'] if 'attributes' in json_doc else None,
                                coords=pdm.Coords(json_doc['coords']), orientation=orientation,
                                reading_order=reading_order, reading_order_attributes=reading_order_attributes,
-                               text_regions=text_regions, table_regions=table_regions,
-                               lines=lines)
+                               text_regions=text_regions, table_regions=table_regions)
     pdm.set_parentage(column)
     return column
 
@@ -715,7 +730,7 @@ def json_to_pagexml_page(json_doc: dict) -> pdm.PageXMLPage:
     page = pdm.PageXMLPage(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            attrs=json_doc['attributes'] if 'attributes' in json_doc else None,
                            coords=coords, extra=extra, columns=columns,
-                           text_regions=text_regions, table_regions=table_regions, lines=lines,
+                           text_regions=text_regions, table_regions=table_regions,
                            orientation=orientation, reading_order=reading_order,
                            reading_order_attributes=reading_order_attributes)
     pdm.set_parentage(page)
@@ -729,7 +744,7 @@ def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
     scan = pdm.PageXMLScan(doc_id=json_doc['id'], doc_type=json_doc['type'], metadata=json_doc['metadata'],
                            attrs=json_doc['attributes'] if 'attributes' in json_doc else None,
                            coords=coords, pages=pages, columns=columns,
-                           text_regions=text_regions, table_regions=table_regions, lines=lines,
+                           text_regions=text_regions, table_regions=table_regions,
                            orientation=orientation, reading_order=reading_order,
                            reading_order_attributes=reading_order_attributes)
     pdm.set_parentage(scan)
@@ -737,8 +752,8 @@ def json_to_pagexml_scan(json_doc: dict) -> pdm.PageXMLScan:
 
 
 def json_to_pagexml_doc(json_doc: dict) -> pdm.PageXMLDoc:
-    if 'pagexml_doc' not in json_doc['type']:
-        raise TypeError('json_doc is not of type "pagexml_doc".')
+    # if 'pagexml_doc' not in json_doc['type']:
+    #     raise TypeError('json_doc is not of type "pagexml_doc".')
     if 'scan' in json_doc['type']:
         return json_to_pagexml_scan(json_doc)
     if 'page' in json_doc['type']:

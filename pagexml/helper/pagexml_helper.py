@@ -3,6 +3,7 @@ import gzip
 import re
 import string
 from collections import Counter
+from collections import defaultdict
 from enum import Enum
 from typing import Dict, Generator, List, Set, Tuple, Union
 
@@ -47,6 +48,10 @@ def get_region_type(element: pdm.PageXMLDoc) -> RegionType:
 def same_point(point1: Tuple[int, int], point2: Tuple[int, int]) -> bool:
     """Check if two points are the same."""
     return point1[0] == point2[0] and point1[1] == point2[1]
+
+
+def get_doc_indent_left_right(doc, doc_indent: int = 0):
+    return doc.coords.left + doc_indent, doc.coords.right - doc_indent
 
 
 def regions_overlap(region1: pdm.PageXMLDoc, region2: pdm.PageXMLDoc,
@@ -112,13 +117,14 @@ def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRe
         return []
 
 
-def horizontal_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.PageXMLTextLine]]:
+def horizontal_group_lines(lines: List[pdm.PageXMLTextLine],
+                           debug: int = 0) -> List[List[pdm.PageXMLTextLine]]:
     """Sort lines of a text region vertically as a list of lists,
     with adjacent lines grouped in inner lists."""
     if len(lines) == 0:
         return []
     # First, sort lines vertically
-    vertically_sorted = [line for line in sorted(lines, key=lambda line: line.coords.top) if line.text is not None]
+    vertically_sorted = [line for line in sorted(lines, key=lambda line: line.baseline.top) if line.text is not None]
     if len(vertically_sorted) == 0:
         # for line in lines:
         #     print(line.coords.box, line.text)
@@ -128,17 +134,37 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine]) -> List[List[pdm.Pa
     rest_lines = vertically_sorted[1:]
     if len(vertically_sorted) > 1:
         for li, curr_line in enumerate(rest_lines):
-            prev_line = horizontally_grouped_lines[-1][-1]
-            if curr_line.is_below(prev_line):
+            prev_group = horizontally_grouped_lines[-1]
+            prev_line = prev_group[-1]
+            if debug > 0:
+                print(f"prev_line: {prev_line.id} {make_coords_string(prev_line)}")
+                print(f"curr_line: {curr_line.id} {make_coords_string(curr_line)}")
+            if any(curr_line.is_below(pl, direct_only=True) for pl in prev_group):
+                if debug > 0:
+                    print("curr is directly below one of prev group - make new group")
+                horizontally_grouped_lines.append([curr_line])
+            elif curr_line.is_below(prev_line, direct_only=False):
+                if debug > 0:
+                    print("curr is below prev - make new group")
                 horizontally_grouped_lines.append([curr_line])
             elif curr_line.is_next_to(prev_line):
+                if debug > 0:
+                    print(f"curr is next to prev - add to last group")
                 horizontally_grouped_lines[-1].append(curr_line)
             else:
+                if debug > 0:
+                    print(f"curr is not next to prev - make new group")
                 horizontally_grouped_lines.append([curr_line])
     # Third, sort adjecent lines horizontally
     for line_group in horizontally_grouped_lines:
         line_group.sort(key=lambda line: line.coords.left)
     return horizontally_grouped_lines
+
+
+def horizontally_group_lines(lines: List[pdm.PageXMLTextLine],
+                             debug: int = 0) -> List[List[pdm.PageXMLTextLine]]:
+    """Wraps `horizontal_group_lines` but with more appropriate naming."""
+    return horizontal_group_lines(lines, debug=debug)
 
 
 def merge_sets(sets: List[Set[any]], min_overlap: int = 1) -> List[Set[any]]:
@@ -159,6 +185,66 @@ def merge_sets(sets: List[Set[any]], min_overlap: int = 1) -> List[Set[any]]:
         merged_sets.append(merged_set)
 
     return merged_sets
+
+
+def check_lines_are_from_same_table(lines: List[pdm.PageXMLTextLine]) -> pdm.PageXMLTableRegion:
+    first_line = lines[0]
+    first_cell = first_line.parent
+    if not isinstance(first_cell, pdm.PageXMLTableCell):
+        raise TypeError(f"parent of first line in list is not of class PageXMLTableCell, "
+                        f"but instead of {first_cell.__class__.__name__}")
+    first_row = first_cell.parent
+    if not isinstance(first_row, pdm.PageXMLTableRow):
+        raise TypeError(f"parent of cell of first line in list is not of class PageXMLTableRow, "
+                        f"but instead of {first_row.__class__.__name__}")
+    table = first_row.parent
+    if not isinstance(table, pdm.PageXMLTableRegion):
+        raise TypeError(f"parent of row of first line in list is not of class PageXMLTableRegion, "
+                        f"but instead of {table.__class__.__name__}")
+    if any(line.parent.parent.parent != table for line in lines):
+        tables = set(line.parent.parent.parent for line in lines)
+        raise ValueError(f"lines come from multiple tables: {[table.id for table in tables]}")
+    return table
+
+
+def derive_table_region_from_lines(lines: List[pdm.PageXMLTextLine]) -> pdm.PageXMLTableRegion:
+    if len(lines) < 0:
+        raise ValueError(f"cannot derive text_region from empty list of lines.")
+    table = check_lines_are_from_same_table(lines)
+    row_lines = defaultdict(lambda: defaultdict(list))
+    for line in lines:
+        row_lines[line.parent.parent][line.parent].append(copy_line(line))
+    new_table = copy_table_region(table)
+    new_table.rows = []
+    for row in row_lines:
+        new_row = copy_row(row)
+        new_row.set_derived_id(new_table.id)
+        new_row.cells = []
+        for cell in row_lines[row]:
+            new_cell = copy_cell(cell)
+            new_cell.lines = row_lines[row][cell]
+            new_cell.coords = pdm.parse_derived_coords(new_cell.lines)
+            new_cell.set_derived_id(new_row.id)
+            new_row.cells.append(new_cell)
+        new_row.coords = pdm.parse_derived_coords(new_row.cells)
+        new_table.rows.append(new_row)
+    new_table.coords = pdm.parse_derived_coords(new_table.rows)
+    new_table.set_derived_id(table.parent.id)
+    pdm.set_parentage(new_table)
+    return new_table
+
+
+def derive_text_region_from_lines(lines: List[pdm.PageXMLTextLine], parent: pdm.PageXMLRegion = None) -> pdm.PageXMLTextRegion:
+    if len(lines) < 0:
+        raise ValueError(f"cannot derive text_region from empty list of lines.")
+    lines = [copy_line(line) for line in lines]
+    coords = pdm.parse_derived_coords(lines)
+    tr = pdm.PageXMLTextRegion(metadata=copy.deepcopy(lines[0].metadata), coords=coords, lines=lines)
+    if parent:
+        tr.parent = parent
+        tr.set_derived_id(parent.id)
+        tr.set_as_parent(tr.lines)
+    return tr
 
 
 def merge_textregions(text_regions: List[pdm.PageXMLTextRegion],
@@ -630,7 +716,8 @@ def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int,
     if in_place:
         new_doc = doc
     else:
-        new_doc = copy.deepcopy(doc)
+        # new_doc = copy.deepcopy(doc)
+        new_doc = copy_pagexml_doc(doc)
     if new_doc.coords is None:
         new_coords = None
     else:
@@ -660,3 +747,148 @@ def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int,
     if rescale_by is not None and hasattr(doc, 'xheight') and doc.xheight is not None:
         doc.xheight = int(doc.xheight * rescale_by)
     return new_doc
+
+
+def copy_pagexml_doc(doc: pdm.PageXMLDoc) -> pdm.PageXMLDoc:
+    parent = doc.parent
+    doc.parent = None
+    new_doc = copy.deepcopy(doc)
+    new_doc.parent = parent
+    return new_doc
+
+
+def copy_doc(doc: pdm.PageXMLDoc) -> pdm.PageXMLDoc:
+    if isinstance(doc, pdm.PageXMLScan):
+        return copy_scan(doc)
+    if isinstance(doc, pdm.PageXMLPage):
+        return copy_page(doc)
+    if isinstance(doc, pdm.PageXMLColumn):
+        return copy_column(doc)
+    if isinstance(doc, pdm.PageXMLTextRegion):
+        return copy_text_region(doc)
+    if isinstance(doc, pdm.PageXMLTextLine):
+        return copy_line(doc)
+    if isinstance(doc, pdm.PageXMLWord):
+        return copy_word(doc)
+    if isinstance(doc, pdm.PageXMLDoc):
+        return copy.deepcopy(doc)
+    else:
+        raise TypeError(f"doc must be an instance of pdm.PageXMLDoc and its sub-classes, not {type(doc)}")
+
+
+def copy_scan(scan: pdm.PageXMLScan) -> pdm.PageXMLScan:
+    new_scan = pdm.PageXMLScan(doc_id=scan.id,
+                               doc_type=copy.deepcopy(scan.type),
+                               metadata=copy.deepcopy(scan.metadata),
+                               coords=copy.deepcopy(scan.coords),
+                               text_regions=[copy_text_region(tr) for tr in scan.text_regions])
+    new_scan.type = copy.deepcopy(scan.type)
+    return new_scan
+
+
+def copy_page(page: pdm.PageXMLPage) -> pdm.PageXMLPage:
+    new_page = pdm.PageXMLPage(doc_id=page.id,
+                               doc_type=copy.deepcopy(page.type),
+                               metadata=copy.deepcopy(page.metadata),
+                               coords=copy.deepcopy(page.coords),
+                               text_regions=[copy_text_region(tr) for tr in page.text_regions],
+                               extra=[copy_region(r) for r in page.extra],
+                               columns=[copy_column(col) for col in page.columns])
+    new_page.type = copy.deepcopy(page.type)
+    return new_page
+
+
+def copy_column(col: pdm.PageXMLColumn) -> pdm.PageXMLColumn:
+    new_col = pdm.PageXMLColumn(doc_id=col.id,
+                                doc_type=copy.deepcopy(col.type),
+                                metadata=copy.deepcopy(col.metadata),
+                                coords=copy.deepcopy(col.coords),
+                                text_regions=[copy_text_region(tr) for tr in col.text_regions])
+    new_col.type = copy.deepcopy(col.type)
+    return new_col
+
+
+def copy_region(region: pdm.PageXMLRegion) -> pdm.PageXMLRegion:
+    """
+    print(f"pagexml_helper.copy_region - region: {region.id} {region.__class__.__name__}")
+    print(f"\tPageXMLTextRegion: {isinstance(region, pdm.PageXMLTextRegion)}")
+    print(f"\tPageXMLTableRegion: {isinstance(region, pdm.PageXMLTableRegion)}")
+    print(f"\tPageXMLEmptyRegion: {isinstance(region, pdm.PageXMLEmptyRegion)}")
+    """
+    if isinstance(region, pdm.PageXMLTextRegion):
+        return copy_text_region(region)
+    if isinstance(region, pdm.PageXMLTableRegion):
+        return copy_table_region(region)
+    if isinstance(region, pdm.PageXMLEmptyRegion):
+        return copy_empty_region(region)
+    new_region = pdm.PageXMLRegion(doc_id=region.id, doc_type=copy.deepcopy(region.type),
+                                   metadata=copy.deepcopy(region.metadata), coords=copy.deepcopy(region.coords),
+                                   text_regions=[copy_text_region(tr) for tr in region.text_regions],
+                                   table_regions=[copy_table_region(tr) for tr in region.table_regions],
+                                   empty_regions=[copy_empty_region(r) for r in region.empty_regions],
+                                   orientation=region.orientation, reading_order=region.reading_order,
+                                   reading_order_attributes=region.reading_order_attributes)
+    return new_region
+
+
+def copy_empty_region(region: pdm.PageXMLEmptyRegion):
+    new_region = pdm.PageXMLEmptyRegion(doc_id=region.id, doc_type=copy.deepcopy(region.type),
+                                        metadata=copy.deepcopy(region.metadata), coords=copy.deepcopy(region.coords),
+                                        orientation=region.orientation)
+    return new_region
+
+
+def copy_text_region(tr: pdm.PageXMLTextRegion) -> pdm.PageXMLTextRegion:
+    new_tr = pdm.PageXMLTextRegion(doc_id=tr.id,
+                                   doc_type=copy.deepcopy(tr.type),
+                                   metadata=copy.deepcopy(tr.metadata),
+                                   coords=copy.deepcopy(tr.coords),
+                                   lines=[copy_line(line) for line in tr.lines],
+                                   text_regions=[copy_text_region(tr) for tr in tr.text_regions])
+    new_tr.type = copy.deepcopy(tr.type)
+    return new_tr
+
+
+def copy_table_region(tr: pdm.PageXMLTableRegion) -> pdm.PageXMLTableRegion:
+    new_tr = pdm.PageXMLTableRegion(doc_id=tr.id,
+                                    doc_type=copy.deepcopy(tr.type),
+                                    metadata=copy.deepcopy(tr.metadata),
+                                    coords=copy.deepcopy(tr.coords),
+                                    rows=[copy_row(row) for row in tr.rows])
+    new_tr.type = copy.deepcopy(tr.type)
+    return new_tr
+
+
+def copy_row(row: pdm.PageXMLTableRow) -> pdm.PageXMLTableRow:
+    new_row = pdm.PageXMLTableRow(doc_id=row.id, metadata=row.metadata, coords=row.coords,
+                                  attrs=row.attrs, cells=[copy_cell(cell) for cell in row.cells],
+                                  orientation=row.orientation)
+    return new_row
+
+
+def copy_cell(cell: pdm.PageXMLTableCell) -> pdm.PageXMLTableCell:
+    new_cell = pdm.PageXMLTableCell(doc_id=cell.id, metadata=cell.metadata, coords=cell.coords,
+                                    attrs=cell.attrs, lines=[copy_line(line) for line in cell.lines],
+                                    orientation=cell.orientation)
+    new_cell.col = cell.col
+    return new_cell
+
+
+def copy_line(line: pdm.PageXMLTextLine) -> pdm.PageXMLTextLine:
+    new_line = pdm.PageXMLTextLine(doc_id=line.id,
+                                   doc_type=copy.deepcopy(line.type),
+                                   metadata=copy.deepcopy(line.metadata),
+                                   coords=copy.deepcopy(line.coords), baseline=copy.deepcopy(line.baseline),
+                                   text=line.text,
+                                   words=[copy_word(word) for word in line.words] if line.words else None)
+    new_line.type = copy.deepcopy(line.type)
+    return new_line
+
+
+def copy_word(word: pdm.PageXMLWord) -> pdm.PageXMLWord:
+    new_word = pdm.PageXMLWord(doc_id=word.id,
+                               doc_type=copy.deepcopy(word.type),
+                               metadata=copy.deepcopy(word.metadata), conf=word.conf,
+                               coords=copy.deepcopy(word.coords), text=word.text)
+    new_word.type = copy.deepcopy(word.type)
+    return new_word

@@ -3,12 +3,14 @@ from collections import namedtuple
 
 from typing import List, Union
 
-from pagexml.model.coords import Baseline, Coords, parse_derived_coords
+from pagexml.model.coords import Point, Baseline, Coords, parse_derived_coords, coords_as_span
 from pagexml.model.basic_document_model import StructureDoc, PhysicalStructureDoc
-from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLTextLine, PageXMLTextRegion
+from pagexml.model.pagexml_document_model import PageXMLDoc, PageXMLRegion, PageXMLEmptyRegion
+from pagexml.model.pagexml_document_model import PageXMLTextLine, PageXMLTextRegion
 from pagexml.model.pagexml_document_model import PageXMLTableRegion, PageXMLTableRow, PageXMLTableCell
 from pagexml.model.pagexml_document_model import get_horizontal_overlap, get_vertical_overlap
-from pagexml.model.pagexml_document_model import sort_lines
+from pagexml.model.pagexml_document_model import get_line_top_bottom
+from pagexml.model.pagexml_document_model import has_baseline, sort_lines, CHILD_PROPERTIES
 from pagexml.model.pagexml_document_model import is_vertically_overlapping, is_horizontally_overlapping
 from pagexml.model.pagexml_document_model import get_vertical_diff, get_horizontal_diff
 from pagexml.model.pagexml_document_model import get_vertical_diff_ratio, get_horizontal_diff_ratio
@@ -19,7 +21,7 @@ Interval = namedtuple('Interval', ['type', 'start', 'end'])
 
 
 def within_interval(doc: PageXMLDoc, interval: Interval,
-                 overlap_threshold: float = 0.5):
+                    overlap_threshold: float = 0.5):
     start = max([doc.coords.left, interval.start])
     end = min([doc.coords.right, interval.end])
     overlap = end - start if end > start else 0
@@ -51,28 +53,11 @@ def combine_doc_types(doc_type1: Union[str, List[str], None],
 
 
 def set_parentage(parent_doc: StructureDoc):
-    if isinstance(parent_doc, PageXMLScan) or hasattr(parent_doc, 'pages') and parent_doc.pages:
-        parent_doc.set_as_parent(parent_doc.pages)
-        for page in parent_doc.pages:
-            set_parentage(page)
-    if isinstance(parent_doc, PageXMLPage) or hasattr(parent_doc, 'columns') and parent_doc.columns:
-        parent_doc.set_as_parent(parent_doc.columns)
-        for column in parent_doc.columns:
-            set_parentage(column)
-    if isinstance(parent_doc, PageXMLColumn) or hasattr(parent_doc, 'text_regions') and parent_doc.text_regions:
-        parent_doc.set_as_parent(parent_doc.text_regions)
-        for text_region in parent_doc.text_regions:
-            set_parentage(text_region)
-    if hasattr(parent_doc, 'lines') and parent_doc.lines:
-        parent_doc.set_as_parent(parent_doc.lines)
-        for line in parent_doc.lines:
-            set_parentage(line)
-    if hasattr(parent_doc, 'words') and parent_doc.words:
-        parent_doc.set_as_parent(parent_doc.words)
-        for word in parent_doc.words:
-            set_parentage(word)
-    if isinstance(parent_doc, PageXMLWord):
-        pass
+    for child_property in CHILD_PROPERTIES:
+        if hasattr(parent_doc, child_property) and parent_doc.__getattribute__(child_property):
+            parent_doc.set_as_parent(parent_doc.__getattribute__(child_property))
+            for child in parent_doc.__getattribute__(child_property):
+                set_parentage(child)
 
 
 def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:
@@ -89,13 +74,6 @@ def in_same_column(element1: PageXMLDoc, element2: PageXMLDoc) -> bool:
         # check if the two lines have a horizontal overlap that is more than 50% of the width of line 1
         # Note: this doesn't work for short adjacent lines within the same column
         return get_horizontal_overlap(element1, element2) > (element1.coords.w / 2)
-
-
-def has_baseline(doc: PageXMLDoc) -> bool:
-    if isinstance(doc, PageXMLTextLine):
-        return doc.baseline is not None
-    else:
-        return False
 
 
 def is_below(region1: PageXMLTextRegion, region2: PageXMLTextRegion, margin: int = 20) -> bool:
@@ -125,12 +103,19 @@ def horizontal_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
 
 
 def vertical_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
-    if doc1.coords.bottom < doc2.coords.top:
+    if hasattr(doc1, 'baseline') and hasattr(doc2, 'baseline'):
+        doc1_top, doc1_bottom = get_line_top_bottom(doc1)
+        doc2_top, doc2_bottom = get_line_top_bottom(doc2)
+        return abs(doc1_bottom - doc2_bottom)
+    else:
+        doc1_top, doc1_bottom = doc1.coords.top, doc1.coords.bottom
+        doc2_top, doc2_bottom = doc2.coords.top, doc2.coords.bottom
+    if doc1_bottom < doc2_top:
         # doc1 is above doc2
-        return doc2.coords.top - doc1.coords.bottom
-    elif doc1.coords.top > doc2.coords.bottom:
+        return doc2_top - doc1_bottom
+    elif doc1_top > doc2_bottom:
         # doc1 is below doc2
-        return doc1.coords.top - doc2.coords.bottom
+        return doc1_top - doc2_bottom
     else:
         # doc1 and doc2 vertically overlap
         return 0

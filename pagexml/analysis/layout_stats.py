@@ -303,7 +303,8 @@ def get_text_heights(line: pdm.PageXMLTextLine, step: int = 50,
             height[x] = int_base[x] - int_above[x]
 
     if len(height) == 0:
-        print()
+        if debug > 1:
+            print(f"layout_stats.get_text_heights - no text, no height")
         return None
     return np.array(list(height.values()))
 

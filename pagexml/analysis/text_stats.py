@@ -962,7 +962,7 @@ def get_words_per_line(lines: List[pdm.PageXMLTextLine], use_re_word_boundaries:
     return words_per_line
 
 
-def get_doc_words(pagexml_doc: pdm.PageXMLTextRegion, use_re_word_boundaries: bool = False) -> List[str]:
+def get_doc_words(pagexml_doc: pdm.PageXMLRegion, use_re_word_boundaries: bool = False) -> List[str]:
     """Return a list of words that are part of a PageXML pagexml_doc object.
 
     :param pagexml_doc: a PageXML document object
