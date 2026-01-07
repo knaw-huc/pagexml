@@ -1074,6 +1074,12 @@ class PageXMLPage(PageXMLRegion):
         derived_coords = parse_derived_coords([self] + self.extra + self.columns + self.text_regions)
         self.coords = derived_coords
 
+    @property
+    def regions(self):
+        regions = [region for col in self.columns for region in col.get_regions()]
+        regions.extend(region for region in self.extra)
+        return sorted(regions)
+
     def get_textual_regions(self):
         text_regions = [tr for col in self.columns for tr in col.get_textual_regions()]
         text_regions.extend([r for r in self.extra if is_textual_region(r)])
