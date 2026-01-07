@@ -160,7 +160,7 @@ def adjust_page_left(page: pdm.PageXMLPage, indent: int = 0):
 
 
 def split_scan_pages_with_separation_point(scan: pdm.PageXMLScan, separation_point: int,
-                                           doc_indent: int = 0):
+                                           doc_indent: int = 0, debug: int = 0):
     """Split the text lines of a scan into verso and recto pages using a separation
     (and an optional line indentation).
 
@@ -171,35 +171,39 @@ def split_scan_pages_with_separation_point(scan: pdm.PageXMLScan, separation_poi
     trs_verso, trs_recto, trs_mid = sort_docs_on_separation_point(trs, separation_point,
                                                                   doc_indent=doc_indent)
     trs_mid_lines = [line for tr in trs_mid for line in tr.lines]
-    """
-    print(f"\nscan_parser.split_scan_pages_with_separation_points - BEFORE extending")
-    for region in trs_verso:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"verso region: {region.id} {region.__class__.__name__}")
-    for region in trs_mid:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"mid region: {region.id} {region.__class__.__name__}")
-    for region in trs_recto:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"recto region: {region.id} {region.__class__.__name__}")
-    """
+    if debug > 2:
+        print(f"\nscan_parser.split_scan_pages_with_separation_points - BEFORE extending")
+        print(f"    stats verso - trs: {len(trs_verso)}\tlines: {len([line for tr in trs_verso for line in tr.lines])}")
+        print(f"    stats recto - trs: {len(trs_recto)}\tlines: {len([line for tr in trs_recto for line in tr.lines])}")
+        print(f"    stats mid - trs: {len(trs_mid)}\tlines: {len([line for tr in trs_mid for line in tr.lines])}")
+        for region in trs_verso:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"verso region: {region.id} {region.__class__.__name__}")
+        for region in trs_mid:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"mid region: {region.id} {region.__class__.__name__}")
+        for region in trs_recto:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"recto region: {region.id} {region.__class__.__name__}")
     lines_verso, lines_recto, lines_mid = sort_docs_on_separation_point(trs_mid_lines, separation_point,
                                                                         doc_indent=doc_indent)
     trs_verso.extend(group_lines_by_parent_regions(lines_verso))
     trs_recto.extend(group_lines_by_parent_regions(lines_recto))
     trs_mid = group_lines_by_parent_regions(lines_mid)
-    """
-    print(f"\nscan_parser.split_scan_pages_with_separation_points - AFTER extending")
-    for region in trs_verso:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"verso region: {region.id} {region.__class__.__name__}")
-    for region in trs_mid:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"mid region: {region.id} {region.__class__.__name__}")
-    for region in trs_recto:
-        print(f"scan_parser.split_scan_pages_with_separation_points - "
-              f"recto region: {region.id} {region.__class__.__name__}")
-    """
+    if debug > 2:
+        print(f"\nscan_parser.split_scan_pages_with_separation_points - AFTER extending")
+        print(f"    stats verso - trs: {len(trs_verso)}\tlines: {len([line for tr in trs_verso for line in tr.lines])}")
+        print(f"    stats recto - trs: {len(trs_recto)}\tlines: {len([line for tr in trs_recto for line in tr.lines])}")
+        print(f"    stats mid - trs: {len(trs_mid)}\tlines: {len([line for tr in trs_mid for line in tr.lines])}")
+        for region in trs_verso:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"verso region: {region.id} {region.__class__.__name__}")
+        for region in trs_mid:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"mid region: {region.id} {region.__class__.__name__}")
+        for region in trs_recto:
+            print(f"scan_parser.split_scan_pages_with_separation_points - "
+                  f"recto region: {region.id} {region.__class__.__name__}")
     page_verso = initialize_pagexml_page(scan, 'verso', scan.coords.left, separation_point)
     page_recto = initialize_pagexml_page(scan, 'recto', separation_point, scan.coords.right)
     columns_verso = group_regions_by_column(trs_verso)

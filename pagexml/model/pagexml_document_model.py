@@ -1049,16 +1049,9 @@ class PageXMLPage(PageXMLRegion):
 
     def get_lines(self, ignore_reading_order: bool = False):
         lines = []
-        # First, add lines from columns
-        for column in sorted(self.columns):
-            trs = column.regions
-            for tr in trs:
-                lines += tr.get_lines(ignore_reading_order=ignore_reading_order)
-        # Second, add lines from text_regions
         all_regions = self.get_regions(ignore_reading_order=ignore_reading_order)
-        all_regions.extend(self.extra)
         for tr in all_regions:
-            if isinstance(tr, PageXMLTextRegion) or isinstance(tr, PageXMLTableRegion):
+            if hasattr(tr, 'get_lines'):
                 lines += tr.get_lines()
         return lines
 
