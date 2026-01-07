@@ -333,7 +333,8 @@ class PageXMLRegion(PageXMLDoc):
             for row in table.rows:
                 if len(row) < table.num_columns:
                     row.pad_columns(table.num_columns)
-        for region in self.regions:
+        regions = self.text_regions + self.table_regions + self.empty_regions
+        for region in regions:
             region.set_parent(self)
 
     def __repr__(self):

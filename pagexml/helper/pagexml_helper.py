@@ -134,10 +134,15 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine],
     rest_lines = vertically_sorted[1:]
     if len(vertically_sorted) > 1:
         for li, curr_line in enumerate(rest_lines):
-            prev_line = horizontally_grouped_lines[-1][-1]
+            prev_group = horizontally_grouped_lines[-1]
+            prev_line = prev_group[-1]
             if debug > 0:
                 print(f"prev_line: {prev_line.id} {make_coords_string(prev_line)}")
                 print(f"curr_line: {curr_line.id} {make_coords_string(curr_line)}")
+            if any(curr_line.is_below(pl, direct_only=True) for pl in prev_group):
+                if debug > 0:
+                    print("curr is below prev - new group")
+                horizontally_grouped_lines.append([curr_line])
             if curr_line.is_below(prev_line, direct_only=False):
                 if debug > 0:
                     print("curr is below prev - new group")

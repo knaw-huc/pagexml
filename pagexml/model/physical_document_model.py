@@ -106,6 +106,7 @@ def vertical_distance(doc1: PageXMLDoc, doc2: PageXMLDoc):
     if hasattr(doc1, 'baseline') and hasattr(doc2, 'baseline'):
         doc1_top, doc1_bottom = get_line_top_bottom(doc1)
         doc2_top, doc2_bottom = get_line_top_bottom(doc2)
+        return abs(doc1_bottom - doc2_bottom)
     else:
         doc1_top, doc1_bottom = doc1.coords.top, doc1.coords.bottom
         doc2_top, doc2_bottom = doc2.coords.top, doc2.coords.bottom
