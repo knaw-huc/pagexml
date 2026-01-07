@@ -141,11 +141,11 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine],
                 print(f"curr_line: {curr_line.id} {make_coords_string(curr_line)}")
             if any(curr_line.is_below(pl, direct_only=True) for pl in prev_group):
                 if debug > 0:
-                    print("curr is below prev - new group")
+                    print("curr is directly below one of prev group - make new group")
                 horizontally_grouped_lines.append([curr_line])
-            if curr_line.is_below(prev_line, direct_only=False):
+            elif curr_line.is_below(prev_line, direct_only=False):
                 if debug > 0:
-                    print("curr is below prev - new group")
+                    print("curr is below prev - make new group")
                 horizontally_grouped_lines.append([curr_line])
             elif curr_line.is_next_to(prev_line):
                 if debug > 0:
@@ -153,7 +153,7 @@ def horizontal_group_lines(lines: List[pdm.PageXMLTextLine],
                 horizontally_grouped_lines[-1].append(curr_line)
             else:
                 if debug > 0:
-                    print(f"curr is not next to prev - new group")
+                    print(f"curr is not next to prev - make new group")
                 horizontally_grouped_lines.append([curr_line])
     # Third, sort adjecent lines horizontally
     for line_group in horizontally_grouped_lines:
