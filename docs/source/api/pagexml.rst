@@ -1,5 +1,5 @@
-API
-===
+pagexml package
+===============
 
 .. automodule:: pagexml
    :members:
@@ -15,7 +15,6 @@ Subpackages
    pagexml.analysis
    pagexml.helper
    pagexml.model
-   pagexml.plotting
 
 Submodules
 ----------
@@ -24,11 +23,4 @@ Submodules
    :maxdepth: 4
 
    pagexml.column_parser
-   pagexml.pagexml_tools
    pagexml.parser
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
