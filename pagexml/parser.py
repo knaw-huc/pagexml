@@ -4,6 +4,7 @@ import os
 import re
 from collections import defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Generator, Iterable, List, Tuple, Union
 from xml.parsers import expat
 
@@ -520,21 +521,21 @@ def parse_pagexml_files(pagexml_files: List[str],
                 raise
 
 
-def read_pagexml_dirs(pagexml_dirs: Union[str, List[str]]) -> List[str]:
+def read_pagexml_dirs(pagexml_dirs: Union[Union[str, Path], List[Union[str, Path]]]) -> List[str]:
     """Return a list of all (Page)XML files within a list of directories.
 
     :param pagexml_dirs: a list of directories containing PageXML files.
     :type pagexml_dirs: Union[str, List[str]]
     """
     pagexml_files = []
-    if isinstance(pagexml_dirs, str):
+    if not isinstance(pagexml_dirs, list):
         pagexml_dirs = [pagexml_dirs]
     for pagexml_dir in pagexml_dirs:
         pagexml_files += glob.glob(pagexml_dir + "**/*.xml", recursive=True)
     return pagexml_files
 
 
-def parse_pagexml_files_from_directory(pagexml_directories: Union[str, List[str]],
+def parse_pagexml_files_from_directory(pagexml_directories: Union[Union[str, Path], List[Union[str, Path]]],
                                        show_progress: bool = False) -> Generator[pdm.PageXMLScan, None, None]:
     """Parse PageXML files from one or more directories.
 
@@ -545,7 +546,7 @@ def parse_pagexml_files_from_directory(pagexml_directories: Union[str, List[str]
     :return: a generator that yields a tuple of archived file name and content
     :rtype: Generator[Tuple[str, str], None, None]
     """
-    if isinstance(pagexml_directories, str):
+    if not isinstance(pagexml_directories, list):
         pagexml_directories = [pagexml_directories]
     for pagexml_directory in pagexml_directories:
         # print('dir:', pagexml_directory)
