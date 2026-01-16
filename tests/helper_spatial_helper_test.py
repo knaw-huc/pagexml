@@ -20,6 +20,7 @@ class TestSpatialHelper(TestCase):
         self.region4 = pdm.PageXMLTextRegion(doc_id='r4', coords=self.coords4)
         self.coords5 = pdm.Coords([(100, 200), (200, 200), (200, 300), (100, 300)])
         self.region5 = pdm.PageXMLTextRegion(doc_id='r5', coords=self.coords5)
+        self.line = pdm.PageXMLTextLine(coords=pdm.Coords([(100, 100), (200, 100)]))
 
     def test_region_1_and_2_overlap(self):
         self.assertEqual(True, spatial_helper.regions_poly_overlap(self.region1, self.region2))
@@ -64,12 +65,12 @@ class TestSpatialHelper(TestCase):
         self.assertEqual('below', spatial_helper.get_relative_vloc(self.region1, self.region5))
 
     def test_make_neighour_regions_region_1(self):
-        neighbours = spatial_helper.make_region_neighbours(self.region1, self.region_main)
+        neighbours = spatial_helper.make_region_neighbours(self.region1, self.region_main, self.region_main)
         self.assertEqual(4, len(neighbours))
 
     def test_make_empty_regions_region_1(self):
         empty_regions = spatial_helper.make_empty_regions(self.region1, debug=1)
-        self.assertEqual(0, len(empty_regions))
+        self.assertEqual(1, len(empty_regions))
 
     def test_make_empty_regions_region_main_with_region_1(self):
         self.region_main.text_regions = [self.region1]
@@ -95,3 +96,8 @@ class TestSpatialHelper(TestCase):
                 if overlap:
                     print(f"OVERLAP: {r1.coords.box_string} - {r2.coords.box_string}")
                 self.assertEqual(False, overlap)
+
+    def test_make_empty_regions_region_main_with_line(self):
+        self.region_main.text_regions = [self.line]
+        empty_regions = spatial_helper.make_empty_regions(self.region_main, debug=1)
+        self.assertEqual(1, len(empty_regions))

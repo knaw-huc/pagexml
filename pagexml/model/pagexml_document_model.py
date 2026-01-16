@@ -241,16 +241,27 @@ class PageXMLTextLine(PageXMLDoc):
 
     def is_below(self, other: PageXMLTextLine, direct_only: bool = True) -> bool:
         """Test if the baseline of this line is directly below the baseline of the other line."""
-        # if there is no horizontal overlap, this line is not directly below the other
-        if direct_only and not get_horizontal_overlap(self, other):
-            # print("pagexml.pdm - NO HORIZONTAL OVERLAP")
+        self_top, self_bottom = get_line_top_bottom(self)
+        other_top, other_bottom = get_line_top_bottom(other)
+        vertical_overlap = min(self_bottom, other_bottom) - max(self_top, other_top)
+        horizontal_overlap = get_horizontal_overlap(self, other)
+        min_height = min(self_bottom - self_top, other_bottom - other_top)
+
+        if vertical_overlap / min_height > 0.5:
+            # print("pagexml.pdm - SELF IS ADJACENT TO OTHER")
             return False
-        if not direct_only and not get_horizontal_overlap(self, other):
-            vertical_overlap = get_vertical_overlap(self, other)
-            min_height = min(self.text_height, other.text_height)
-            if vertical_overlap / min_height > 0.5:
-                # print("pagexml.pdm - NO HORIZONTAL OVERLAP, LINES VERTICALLY OVERLAP")
-                return False
+
+        # if there is no horizontal overlap, this line is not directly below the other
+        if direct_only and horizontal_overlap == 0:
+            # print("pagexml.pdm - NO HORIZONTAL OVERLAP, NOT DIRECTLY BELOW")
+            return False
+
+        return self_top > other_top
+        """
+        if has_baseline(self) and has_baseline(other):
+            return baseline_is_below(self.baseline, other.baseline)
+        else:
+            sc, oc = self.coords, other.coords
         # if the bottom of this line is above the top of the other line, this line is above the other
         if self.baseline.bottom < other.baseline.top:
             # print("pagexml.pdm - BOTTOM OF SELF IS ABOVE TOP OF OTHER")
@@ -260,8 +271,8 @@ class PageXMLTextLine(PageXMLDoc):
         if baseline_is_below(self.baseline, other.baseline):
             # print("pagexml.pdm - BASELINE OF SELF IS BELOW BASELINE OF OTHER")
             return True
-        # print("pagexml.pdm - SELF IS ADJACENT TO OTHER")
         return False
+        """
 
     def is_next_to(self, other: PageXMLTextLine, debug: int = 0) -> bool:
         """Test if this line is vertically aligned with the other line."""
@@ -1321,14 +1332,14 @@ def get_horizontal_overlap(doc1: PageXMLDoc, doc2: PageXMLDoc, debug: int = 0) -
 
 def get_line_top_bottom(line: PageXMLTextLine):
     if has_baseline(line):
-        line_bottom = line.baseline.bottom
         line_height = line.xheight if line.xheight else int(line.coords.height / 2)
         line_top = line.baseline.top - line_height
+        line_bottom = line.baseline.bottom
     else:
         # assume the box cut around a line has 25% of its height below
         # the baseline
-        line_bottom = line.coords.bottom - line.coords.height * 0.25
         line_top = line.coords.top + line.coords.height * 0.25
+        line_bottom = line.coords.bottom - line.coords.height * 0.25
     return line_top, line_bottom
 
 

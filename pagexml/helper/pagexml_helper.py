@@ -117,14 +117,22 @@ def sort_regions_in_reading_order(doc: pdm.PageXMLDoc) -> List[pdm.PageXMLTextRe
         return []
 
 
-def horizontal_group_lines(lines: List[pdm.PageXMLTextLine],
+def horizontal_group_lines(lines: List[pdm.PageXMLTextLine], text_only: bool = True,
                            debug: int = 0) -> List[List[pdm.PageXMLTextLine]]:
     """Sort lines of a text region vertically as a list of lists,
     with adjacent lines grouped in inner lists."""
+    if text_only is True:
+        lines = [line for line in lines if line.text is not None]
     if len(lines) == 0:
         return []
     # First, sort lines vertically
-    vertically_sorted = [line for line in sorted(lines, key=lambda line: line.baseline.top) if line.text is not None]
+    if all(line.baseline is not None for line in lines):
+        vertically_sorted = [line for line in sorted(lines, key=lambda line: line.baseline.top)]
+    elif all(line.coords is not None for line in lines):
+        vertically_sorted = [line for line in sorted(lines, key=lambda line: line.coords.top)]
+    else:
+        missing = [line.id for line in lines if line.coords is None]
+        raise AttributeError(f"Cannot horizontally group lines because some lines have no coordinates:\n\t{missing}")
     if len(vertically_sorted) == 0:
         # for line in lines:
         #     print(line.coords.box, line.text)

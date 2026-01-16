@@ -165,6 +165,12 @@ def split_scan_pages_with_separation_point(scan: pdm.PageXMLScan, separation_poi
     (and an optional line indentation).
 
     """
+    if separation_point > scan.coords.width:
+        # if the separation point is higher than the width of the scan,
+        # there is no recto page, only a verso page. Set the separation
+        # point to the width of the scan so that the page will have the
+        # same dimensions.
+        separation_point = scan.coords.width
     trs = [pagexml_helper.copy_region(tr) for tr in scan.get_regions()]
     for tr in trs:
         tr.parent = scan
@@ -226,7 +232,7 @@ def split_scan_pages_with_separation_point(scan: pdm.PageXMLScan, separation_poi
                          f"error of this function. ")
     adjust_page_left(page_verso)
     adjust_page_left(page_recto)
-    if scan.coords.width < separation_point:
+    if scan.coords.width <= separation_point:
         return page_verso, None
     else:
         return page_verso, page_recto

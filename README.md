@@ -74,6 +74,31 @@ functionality to support a range of tasks:
 - reinterpreting and restructuring text regions and lines ([tutorial](./notebooks/Demo-restructuring-documents.ipynb)),
 - turning physical structure into logical structure,
 
+### Using PageXML-tools in R:
+
+```aiignore
+#Python
+# run in CMD (Command) first (first time only): 
+py -m pip install pagexml-tools
+# Install and start Python 3.11 in background 
+```
+
+```aiignore
+# R
+# run in different window in R first time only! 
+install.packages("reticulate")
+# run in different window in R first: 
+library(reticulate)
+# run in different window in R next: 
+py_require(c("pagexml-tools")) 
+
+# Import PageXML file parser:
+
+from pagexml.parser import parse_pagexml_file
+```
+
+Thanks to Milan van Lange for this R example.
+
 ----
 
 [USAGE](https://pagexml.readthedocs.io/en/latest/) |

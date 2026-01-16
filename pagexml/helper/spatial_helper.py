@@ -148,7 +148,16 @@ def get_regions_horizontal_over_line(line: pdm.Coords,
     return [tr for tr in text_regions if line_and_region_align_horizontally(line, tr)]
 
 
-def make_empty_region(left: int, top: int, right: int, bottom: int, region_id: str):
+def make_empty_region(left: int, top: int, right: int, bottom: int, region_id: str,
+                      context_doc: pdm.PageXMLRegion):
+    if left < context_doc.coords.left:
+        left = context_doc.coords.left
+    if top < context_doc.coords.top:
+        top = context_doc.coords.top
+    if right > context_doc.coords.right:
+        right = context_doc.coords.right
+    if bottom > context_doc.coords.bottom:
+        bottom = context_doc.coords.bottom
     coords = pdm.Coords([
         (left, top), (right, top), (right, bottom), (left, bottom)
     ])
@@ -156,7 +165,7 @@ def make_empty_region(left: int, top: int, right: int, bottom: int, region_id: s
 
 
 def make_region_neighbours(inner_region: pdm.PageXMLRegion, outer_region: pdm.PageXMLRegion,
-                           debug: int = 0):
+                           context_doc: pdm.PageXMLRegion, debug: int = 0):
     neighbour_regions = []
     ic = inner_region.coords
     oc = outer_region.coords
@@ -164,56 +173,74 @@ def make_region_neighbours(inner_region: pdm.PageXMLRegion, outer_region: pdm.Pa
         print(f"inner.coords: {ic.box}")
         print(f"outer.coords: {oc.box}")
     # check if we need to make an above region
-    if inner_region.coords.top > outer_region.coords.top:
-        above_region = make_empty_region(oc.left, oc.top, oc.right, ic.top, region_id=f'above_{inner_region.id}')
-        neighbour_regions.append(above_region)
-    # check if we need to make a below region
-    if inner_region.coords.bottom < outer_region.coords.bottom:
-        below_region = make_empty_region(oc.left, ic.bottom, oc.right, oc.bottom, region_id=f'below_{inner_region.id}')
-        neighbour_regions.append(below_region)
-    # check if we need to make a left region
-    if inner_region.coords.left > outer_region.coords.left:
-        left_region = make_empty_region(oc.left, ic.top, ic.left, ic.bottom, region_id=f'left_{inner_region.id}')
-        neighbour_regions.append(left_region)
-    # check if we need to make a right region
-    if inner_region.coords.right < outer_region.coords.right:
-        right_region = make_empty_region(ic.right, ic.top, oc.right, ic.bottom, region_id=f'right_{inner_region.id}')
-        neighbour_regions.append(right_region)
+    try:
+        if ic.top > oc.top:
+            above_region = make_empty_region(oc.left, oc.top, oc.right, ic.top,
+                                             region_id=f'above_{inner_region.id}', context_doc=context_doc)
+            neighbour_regions.append(above_region)
+        # check if we need to make a below region
+        if ic.bottom < oc.bottom:
+            below_region = make_empty_region(oc.left, ic.bottom, oc.right, oc.bottom,
+                                             region_id=f'below_{inner_region.id}', context_doc=context_doc)
+            neighbour_regions.append(below_region)
+        # check if we need to make a left region
+        if ic.left > oc.left:
+            left_region = make_empty_region(oc.left, ic.top, ic.left, ic.bottom,
+                                            region_id=f'left_{inner_region.id}', context_doc=context_doc)
+            neighbour_regions.append(left_region)
+        # check if we need to make a right region
+        if ic.right < oc.right:
+            right_region = make_empty_region(ic.right, ic.top, oc.right, ic.bottom,
+                                             region_id=f'right_{inner_region.id}', context_doc=context_doc)
+            neighbour_regions.append(right_region)
+    except BaseException:
+        print(f"inner_region: {inner_region.id}, outer_region: {outer_region.id},")
+        print(f"ValueError: inner_coords: {ic.box} outer_coords: {oc.box}")
+        raise
+    for nr in neighbour_regions:
+        nr.set_derived_id(context_doc.id)
     return neighbour_regions
 
 
 def make_empty_regions(doc: pdm.PageXMLTextRegion, debug: int = 0):
-    if len(doc.lines) > 0:
-        return []
-    if len(doc.text_regions) == 0:
-        return []
+    lines = doc.get_lines()
     empty_region = make_empty_region(doc.coords.left, doc.coords.top,
                                      doc.coords.right, doc.coords.bottom,
-                                     f"empty_{doc.id}")
+                                     f"empty_{doc.id}", doc)
+    if len(doc.get_textual_regions()) == 0 and len(doc.get_lines()) == 0:
+        return [empty_region]
+    if len(doc.get_textual_regions()) == 0 and len(doc.get_lines()) > 0:
+        non_overlapping_regions = [pdm.PageXMLTextRegion(lines=doc.get_lines(), coords=pdm.parse_derived_coords([doc]))]
+    else:
+        non_overlapping_regions: List[pdm.PageXMLRegion] = [tr for tr in doc.get_textual_regions()]
     region_exists = set()
     candidate_regions = [empty_region]
-    non_overlapping_regions: List[pdm.PageXMLRegion] = [tr for tr in doc.text_regions]
     region_exists.add(empty_region.coords.box_string)
     empty_regions = []
     if debug > 0:
-        print(f"initial doc: {doc.id}, candidate_regions: {len(candidate_regions)}, empty: {len(empty_regions)}")
+        print(f"make_empty_regions - initial doc: {doc.id}, candidate_regions: {len(candidate_regions)}, empty: {len(empty_regions)}")
     while len(candidate_regions) > 0:
         candidate_region = candidate_regions.pop(0)
         overlapping_regions = [tr for tr in non_overlapping_regions if regions_box_overlap(tr, candidate_region, debug=debug)]
         if len(overlapping_regions) == 0:
             if debug > 0:
                 cr = candidate_region
-                print(f"adding empty region: {cr.id} {cr.coords.box_string}")
+                print(f"make_empty_regions - adding empty region: {cr.id} {cr.coords.box_string}")
             empty_regions.append(candidate_region)
             non_overlapping_regions.append(candidate_region)
         else:
             tr = overlapping_regions[0]
-            new_regions = make_region_neighbours(tr, candidate_region)
+            try:
+                new_regions = make_region_neighbours(tr, candidate_region, doc)
+            except BaseException:
+                print(f"ValueError: doc {doc.id}, tr {tr.id}, candidate_region {candidate_region.id}")
+                raise
             candidate_regions.extend(new_regions)
         if debug > 0:
-            print(f"current candidate: {candidate_region.id}, {candidate_region.coords.box_string} "
-                  f"candidate_regions: {len(candidate_regions)}, "
-                  f"empty: {len(empty_regions)}")
+            print(f"make_empty_regions - current candidate: {candidate_region.id}, {candidate_region.coords.box_string} "
+                  f"    candidate_regions: {len(candidate_regions)}, "
+                  f"    empty: {len(empty_regions)}")
             for cr in candidate_regions:
                 print(f"\tcandidate: {cr.id}\t{cr.coords.box_string}")
+    empty_regions = [er for er in empty_regions if er.area > 0]
     return empty_regions
