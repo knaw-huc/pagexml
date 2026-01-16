@@ -65,7 +65,7 @@ class TestSpatialHelper(TestCase):
         self.assertEqual('below', spatial_helper.get_relative_vloc(self.region1, self.region5))
 
     def test_make_neighour_regions_region_1(self):
-        neighbours = spatial_helper.make_region_neighbours(self.region1, self.region_main)
+        neighbours = spatial_helper.make_region_neighbours(self.region1, self.region_main, self.region_main)
         self.assertEqual(4, len(neighbours))
 
     def test_make_empty_regions_region_1(self):
