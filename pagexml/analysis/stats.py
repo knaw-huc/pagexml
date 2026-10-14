@@ -180,12 +180,16 @@ def get_doc_stats(docs: Union[pdm.PageXMLRegion, List[pdm.PageXMLRegion]],
                 docs_stats[field].extend(regions_stats[field])
         else:
             doc_stats.update(doc.stats)
+            if 'text_regions' not in doc_stats:
+                doc_stats['text_regions'] = 0
             doc_line_stats = get_doc_line_stats(doc, line_width_boundary_points=line_width_boundary_points,
                                                 line_bin_width=line_bin_width, max_bin=max_bin)
             doc_word_stats = get_doc_word_stats(doc, stop_words=stop_words, max_word_length=max_word_length,
                                                 use_re_word_boundaries=use_re_word_boundaries)
             doc_stats.update(doc_word_stats)
             doc_stats.update(doc_line_stats)
+            # print(f"{doc.id}\tfields: {len(doc_stats)}\tline: {len(doc_line_stats)}\tword: {len(doc_word_stats)}")
+            # print(f"doc.stats: {doc.stats}")
             for field in doc_stats:
                 docs_stats[field].append(doc_stats[field])
     return docs_stats
