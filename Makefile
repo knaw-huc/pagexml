@@ -1,8 +1,14 @@
-.PHONY: docs docs-source help clean tests install publish version-update-patch version-update-minor version-update-major
+.PHONY: docs docs-source help clean test install publish version-update-patch version-update-minor version-update-major
 
 all: help
 
-
+SHELL = /bin/bash
+RED = \033[1;31m
+GREEN = \033[1;32m
+YELLOW = \033[1;33m
+BLUE = \033[1;34m
+RESET = \033[0m
+TAG=pagexml-tools
 
 docs:
 	cd docs && rm -rf generated && make clean && make html
@@ -13,7 +19,7 @@ apidoc-doc-source:
 clean:
 	cd docs && rm -rf generated && make clean
 
-tests:
+test:
 	poetry run python -m unittest tests/*_test.py
 
 poetry.lock: pyproject.toml
@@ -38,16 +44,16 @@ version-update-major:
 	poetry run version major
 
 help:
-	@echo "make-tools for pagexml-tools"
+	@echo -e "make-tools for $(GREEN)$(TAG)$(RESET)"
 	@echo
-	@echo "Please use \`make <target>', where <target> is one of:"
-	@echo "  install                to install the necessary requirements"
-	@echo "  apidoc-source          to build or update the apidoc source files in docs/source/api"
-	@echo "  docs                   to build or update the documentation pages in docs/_build"
-	@echo "  clean                  to remove all generated files and directories"
-	@echo "  tests                  to run the unit tests in tests/"
-	@echo "  version-update-patch   to update the project version to the next patch version"
-	@echo "  version-update-minor   to update the project version to the next minor version"
-	@echo "  version-update-major   to update the project version to the next major version"
-	@echo "  publish                to publish to pypi"
-	@echo "  docs/requirements.txt  to update the requirements.txt based on poetry.lock (required by readthedocs)"
+	@echo -e "Please use \`$(YELLOW)make <target>$(RESET)', where $(YELLOW)<target>$(RESET) is one of:"
+	@echo -e "  $(BLUE)install$(RESET)               - to install the necessary requirements"
+	@echo -e "  $(BLUE)apidoc-source$(RESET)         - to build or update the apidoc source files in docs/source/api"
+	@echo -e "  $(BLUE)docs$(RESET)                  - to build or update the documentation pages in docs/_build"
+	@echo -e "  $(BLUE)clean$(RESET)                 - to remove all generated files and directories"
+	@echo -e "  $(BLUE)test$(RESET)                  - to run the unit tests in tests/"
+	@echo -e "  $(BLUE)version-update-patch$(RESET)  - to update the project version to the next patch version"
+	@echo -e "  $(BLUE)version-update-minor$(RESET)  - to update the project version to the next minor version"
+	@echo -e "  $(BLUE)version-update-major$(RESET)  - to update the project version to the next major version"
+	@echo -e "  $(BLUE)publish$(RESET)               - to publish to pypi"
+	@echo -e "  $(BLUE)docs/requirements.txt$(RESET) - to update the requirements.txt based on poetry.lock (required by readthedocs)"
