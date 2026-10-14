@@ -1,5 +1,5 @@
 import glob
-import json
+import orjson as json
 import os
 import re
 from collections import defaultdict

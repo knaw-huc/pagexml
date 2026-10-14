@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import json
 import csv
 from typing import Union, List, Dict, Set
 
+import orjson as json
 from lxml import etree
-from pagexml.model.basic_document_model import PhysicalStructureDoc
-from pagexml.model.coords import Coords, Baseline, baseline_is_below, parse_derived_coords
-from pagexml.model.xml import make_empty_pagexml, add_pagexml_sub_element
-import pagexml.model.xml as xml
 
+import pagexml.model.xml as xml
+from pagexml.model.basic_document_model import PhysicalStructureDoc
+from pagexml.model.coords import Coords, Baseline, parse_derived_coords
+from pagexml.model.xml import make_empty_pagexml, add_pagexml_sub_element
 
 CHILD_PROPERTIES = [
     'pages', 'columns',
@@ -755,12 +755,20 @@ class PageXMLTableRow(PageXMLRegion):
 
 class PageXMLTableCell(PageXMLRegion):
 
-    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
-                 metadata: Dict[str, any] = None, coords: Coords = None,
+    def __init__(self,
+                 doc_id: str = None,
+                 doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None,
+                 coords: Coords = None,
                  attrs: Dict[str, any] = None,
-                 row: int = None, col: int = None, row_span: int = None, cell_span: int = None,
-                 header: bool = None, cornerpoints: Union[List[int], str] = None,
-                 lines: List[PageXMLTextLine] = None, orientation: float = None):
+                 row: int = None,
+                 col: int = None,
+                 row_span: int = None,
+                 cell_span: int = None,
+                 header: bool = None,
+                 cornerpoints: Union[List[int], str] = None,
+                 lines: List[PageXMLTextLine] = None,
+                 orientation: float = None):
         super().__init__(doc_id=doc_id, doc_type="table_cell", attrs=attrs, metadata=metadata,
                          coords=coords, reading_order=None,
                          reading_order_attributes=None, orientation=orientation)
@@ -857,15 +865,26 @@ class PageXMLTableCell(PageXMLRegion):
 
 class PageXMLTextRegion(PageXMLRegion):
 
-    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
-                 metadata: Dict[str, any] = None, coords: Coords = None,
+    def __init__(self,
+                 doc_id: str = None,
+                 doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None,
+                 coords: Coords = None,
                  attrs: Dict[str, any] = None,
                  text_regions: List[PageXMLTextRegion] = None,
-                 lines: List[PageXMLTextLine] = None, text: str = None,
-                 orientation: float = None, reading_order: Dict[int, str] = None,
-                 reading_order_attributes: Dict[str, any] = None):
-        super().__init__(doc_id=doc_id, doc_type="text_region", attrs=attrs, metadata=metadata,
-                         coords=coords, reading_order=reading_order, orientation=orientation,
+                 lines: List[PageXMLTextLine] = None,
+                 text: str = None,
+                 orientation: float = None,
+                 reading_order: Dict[int, str] = None,
+                 reading_order_attributes: Dict[str, any] = None
+                 ):
+        super().__init__(doc_id=doc_id,
+                         doc_type="text_region",
+                         attrs=attrs,
+                         metadata=metadata,
+                         coords=coords,
+                         reading_order=reading_order,
+                         orientation=orientation,
                          text_regions=text_regions,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'text_region'
@@ -977,8 +996,11 @@ class PageXMLTextRegion(PageXMLRegion):
 
 class PageXMLColumn(PageXMLRegion):
 
-    def __init__(self, doc_id: str = None, doc_type: Union[str, List[str]] = None,
-                 metadata: Dict[str, any] = None, coords: Coords = None,
+    def __init__(self,
+                 doc_id: str = None,
+                 doc_type: Union[str, List[str]] = None,
+                 metadata: Dict[str, any] = None,
+                 coords: Coords = None,
                  attrs: Dict[str, any] = None,
                  text_regions: List[PageXMLTextRegion] = None,
                  table_regions: List[PageXMLTableRegion] = None,

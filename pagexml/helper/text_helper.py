@@ -29,7 +29,9 @@ def get_bbox(doc: pdm.PageXMLDoc):
 def get_line_format_json(page_doc: pdm.PageXMLTextRegion,
                          use_outer_textregions: bool = False,
                          add_bounding_box: bool = False) -> Generator[Dict[str, any], None, None]:
-    if page_doc.num_text_regions == 0 and page_doc.num_lines > 0:
+    if 'text_regions' not in page_doc.stats:
+        trs = [page_doc]
+    elif page_doc.stats['text_regions'] == 0 and page_doc.stats['lines'] > 0:
         trs = [page_doc]
     elif use_outer_textregions is True:
         trs = page_doc.text_regions
