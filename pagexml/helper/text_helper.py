@@ -2,7 +2,7 @@ import gzip
 import re
 from typing import Dict, Generator, Iterable, List, Set, Tuple, Union
 
-from fuzzy_search.similarity import SkipgramSimilarity
+from fuzzy_search.analysis.similarity import SkipgramSimilarity
 
 import pagexml.model.physical_document_model as pdm
 import pagexml.parser as parser

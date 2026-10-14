@@ -161,10 +161,13 @@ def determine_column_type(column: pdm.PageXMLColumn) -> str:
         raise TypeError('unknown column type')
 
 
-def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict, page_id: str) -> pdm.PageXMLColumn:
+def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict[str, any], 
+                        page_id: str) -> pdm.PageXMLColumn:
     """Make a new PageXMLColumn based on a set of lines, column metadata and a page_id."""
     coords = page_coords.parse_derived_coords(lines)
-    column = pdm.PageXMLColumn(metadata=metadata, coords=coords, lines=lines)
+    tr = pdm.PageXMLTextRegion(metadata=copy.deepcopy(metadata), 
+                               coords=copy.deepcopy(coords), lines=lines)
+    column = pdm.PageXMLColumn(metadata=metadata, coords=coords, text_regions=[tr])
     column.set_derived_id(page_id)
     return column
 
@@ -224,9 +227,12 @@ def make_column_range_columns(text_region: pdm.PageXMLTextRegion,
         if len(lines) == 0:
             continue
         coords = page_coords.parse_derived_coords(lines)
+        tr = pdm.PageXMLTextRegion(doc_type=copy.deepcopy(text_region.type),
+                                   metadata=copy.deepcopy(text_region.metadata),
+                                   coords=copy.deepcopy(coords), lines=lines)
         column = pdm.PageXMLColumn(doc_type=copy.deepcopy(text_region.type),
                                    metadata=copy.deepcopy(text_region.metadata),
-                                   coords=coords, lines=lines)
+                                   coords=coords, text_regions=[tr])
         if text_region.parent and text_region.parent.id:
             column.set_derived_id(text_region.parent.id)
             column.set_parent(text_region.parent)

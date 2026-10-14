@@ -7,11 +7,11 @@ import pagexml.model.physical_document_model as pdm
 
 
 def compute_text_pixel_dist(lines: List[pdm.PageXMLTextLine],
-                            use_height: bool = False) -> Counter:
+                            use_height: bool = False) -> Counter[int]:
     """Count how many lines are above each horizontal pixel coordinate.
     Use `use_height` to use the height of lines in pixels instead of the
     number of lines."""
-    pixel_dist = Counter()
+    pixel_dist: Counter[int] = Counter()
     for line in lines:
         if line.coords is None and line.baseline is None:
             continue
