@@ -716,7 +716,7 @@ def check_transform_is_valid(rescale_by: float = None, translate_by: Tuple[int, 
                             f"not {type(translate_by[0])}, {type(translate_by[1])}")
 
 
-def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int, int] = None,
+def transform_doc_coords(doc: pdm.PageXMLDoc, rescale_by: float = 1.0, translate_by: Tuple[int, int] = (0, 0),
                          in_place: bool = False):
     """Rescale all coordinates and baseline points of a document,
     including all those of its child elements."""
@@ -726,18 +726,18 @@ def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int,
     else:
         # new_doc = copy.deepcopy(doc)
         new_doc = copy_pagexml_doc(doc)
-    if new_doc.coords is None:
+    if doc.coords is None:
         new_coords = None
     else:
         new_points = [point for point in doc.coords.points]
         if rescale_by is None or rescale_by == 1.0:
             pass
         else:
-            new_points = [rescale_point(point, rescale_by) for point in doc.coords.points]
+            new_points = [rescale_point(point, rescale_by) for point in new_points]
         if translate_by is None or translate_by == (0, 0):
             pass
         else:
-            new_points = [translate_point(point, translate_by) for point in doc.coords.points]
+            new_points = [translate_point(point, translate_by) for point in new_points]
         new_coords = pdm.Coords(new_points)
     for child in new_doc.children:
         transform_doc_coords(child, rescale_by, translate_by, in_place=True)
@@ -748,9 +748,9 @@ def transform_doc_coords(doc, rescale_by: float = None, translate_by: Tuple[int,
         else:
             new_points = [point for point in doc.baseline.points]
             if rescale_by is not None:
-                new_points = [rescale_point(point, rescale_by) for point in doc.baseline.points]
+                new_points = [rescale_point(point, rescale_by) for point in new_points]
             if translate_by is not None:
-                new_points = [translate_point(point, translate_by) for point in doc.baseline.points]
+                new_points = [translate_point(point, translate_by) for point in new_points]
             new_doc.baseline = pdm.Coords(new_points)
     if rescale_by is not None and hasattr(doc, 'xheight') and doc.xheight is not None:
         doc.xheight = int(doc.xheight * rescale_by)
@@ -789,7 +789,9 @@ def copy_scan(scan: pdm.PageXMLScan) -> pdm.PageXMLScan:
                                doc_type=copy.deepcopy(scan.type),
                                metadata=copy.deepcopy(scan.metadata),
                                coords=copy.deepcopy(scan.coords),
-                               text_regions=[copy_text_region(tr) for tr in scan.text_regions])
+                               text_regions=[copy_text_region(tr) for tr in scan.text_regions],
+                               table_regions=[copy_table_region(tr) for tr in scan.table_regions],
+                               empty_regions=[copy_empty_region(er) for er in scan.empty_regions])
     new_scan.type = copy.deepcopy(scan.type)
     return new_scan
 
@@ -800,6 +802,8 @@ def copy_page(page: pdm.PageXMLPage) -> pdm.PageXMLPage:
                                metadata=copy.deepcopy(page.metadata),
                                coords=copy.deepcopy(page.coords),
                                text_regions=[copy_text_region(tr) for tr in page.text_regions],
+                               table_regions=[copy_table_region(tr) for tr in page.table_regions],
+                               empty_regions=[copy_empty_region(er) for er in page.empty_regions],
                                extra=[copy_region(r) for r in page.extra],
                                columns=[copy_column(col) for col in page.columns])
     new_page.type = copy.deepcopy(page.type)
@@ -811,7 +815,9 @@ def copy_column(col: pdm.PageXMLColumn) -> pdm.PageXMLColumn:
                                 doc_type=copy.deepcopy(col.type),
                                 metadata=copy.deepcopy(col.metadata),
                                 coords=copy.deepcopy(col.coords),
-                                text_regions=[copy_text_region(tr) for tr in col.text_regions])
+                                text_regions=[copy_text_region(tr) for tr in col.text_regions],
+                                table_regions=[copy_table_region(tr) for tr in col.table_regions],
+                                empty_regions=[copy_empty_region(er) for er in col.empty_regions])
     new_col.type = copy.deepcopy(col.type)
     return new_col
 
