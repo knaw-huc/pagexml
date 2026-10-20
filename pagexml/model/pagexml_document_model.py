@@ -1191,8 +1191,8 @@ class PageXMLPage(PageXMLRegion):
             stats['table_regions'] += sum(col.num_table_regions for col in self.columns)
         if self.extra:
             stats['extra'] = len(self.extra)
-            stats['text_regions'] += sum(tr.num_text_regions for tr in self.trumns)
-            stats['table_regions'] += sum(tr.num_table_regions for tr in self.trumns)
+            stats['text_regions'] += sum(tr for tr in self.extra if isinstance(tr, PageXMLTextRegion))
+            stats['table_regions'] += sum(tr for tr in self.extra if isinstance(tr, PageXMLTableRegion))
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
