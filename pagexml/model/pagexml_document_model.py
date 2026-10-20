@@ -1182,8 +1182,8 @@ class PageXMLPage(PageXMLRegion):
             "lines": len(lines),
             "words": sum([len(line.get_words()) for line in lines]),
             "chars": sum(line.length for line in lines),
-            "text_regions": len(self.num_text_regions),
-            "table_regions": len(self.num_table_regions)
+            "text_regions": self.num_text_regions,
+            "table_regions": self.num_table_regions
         }
         if self.columns:
             stats['columns'] = len(self.columns)
@@ -1191,8 +1191,8 @@ class PageXMLPage(PageXMLRegion):
             stats['table_regions'] += sum(col.num_table_regions for col in self.columns)
         if self.extra:
             stats['extra'] = len(self.extra)
-            stats['text_regions'] += sum(tr for tr in self.extra if isinstance(tr, PageXMLTextRegion))
-            stats['table_regions'] += sum(tr for tr in self.extra if isinstance(tr, PageXMLTableRegion))
+            stats['text_regions'] += len([tr for tr in self.extra if isinstance(tr, PageXMLTextRegion)])
+            stats['table_regions'] += len([tr for tr in self.extra if isinstance(tr, PageXMLTableRegion)])
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
