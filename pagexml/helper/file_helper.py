@@ -2,7 +2,7 @@ import os
 import tarfile
 import zipfile
 from tarfile import TarFile
-from typing import Dict, Generator, IO, List, Literal, Tuple, Union
+from typing import Dict, Generator, IO, List, Literal, Tuple, Union, Any
 from zipfile import ZipFile
 
 import py7zr
@@ -80,7 +80,7 @@ def read_tar_handle(archive_fname: str, archive_handle: TarFile, filenames_only:
 
 def read_inner_archive(archived_filename: str, archived_file_ext: str,
                        archived_file_handle: Union[IO[bytes], bytes],
-                       file_info: Dict[str, any], filenames_only: bool = False):
+                       file_info: Dict[str, Any], filenames_only: bool = False):
     # print('archived_file_ext:', archived_file_ext)
     archiver, read_mode = get_archiver_mode(archived_filename)
     # print('archiver:', archiver, '\tread_mode:', read_mode)
