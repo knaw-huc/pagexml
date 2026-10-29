@@ -1,5 +1,4 @@
 import glob
-import orjson as json
 import os
 import re
 from collections import defaultdict
@@ -8,14 +7,15 @@ from pathlib import Path
 from typing import Dict, Generator, Iterable, List, Tuple, Union
 from xml.parsers import expat
 
+import orjson as json
 import xmltodict
 from dateutil.parser import parse as date_parse
 from tqdm import tqdm
 
 import pagexml.model.physical_document_model as pdm
 from pagexml.helper.file_helper import read_page_archive_file
-from pagexml.model.physical_document_model import Baseline, Coords
 from pagexml.model.coords import parse_derived_coords
+from pagexml.model.physical_document_model import Baseline, Coords
 
 
 def parse_coords(coords: dict) -> Union[Coords, None]:
@@ -103,7 +103,7 @@ def parse_textline(textline: dict, custom_tags: Iterable = None) -> pdm.PageXMLT
             words=parse_line_words(textline),
         )
     except ValueError as err:
-        message = f'Error parsing TextLine:\n{json.dumps(textline, indent=4)}\n{err}'
+        message = f'Error parsing TextLine:\n{json.dumps(textline)}\n{err}'
         raise ValueError(message)
 
 
