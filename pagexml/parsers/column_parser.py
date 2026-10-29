@@ -105,11 +105,11 @@ def merge_columns(columns: List[pdm.PageXMLColumn], doc_id: str, metadata: dict,
         tr = pagexml_helper.derive_text_region_from_lines(sorted_lines)
         merged_col = derive_column_from_regions(tr, debug=debug)
     else:
-        merged_trs = [tr for col in columns for tr in col.text_regions]
+        merged_trs = [tr for col in columns for tr in col.regions]
         sorted_trs = sorted(merged_trs, key=lambda x: x.coords.y)
         merged_col = derive_column_from_regions(sorted_trs, debug=debug)
     if doc_id:
-        merged_col.doc_id = doc_id
+        merged_col.id = doc_id
     if metadata:
         merged_col.metadata = metadata
 

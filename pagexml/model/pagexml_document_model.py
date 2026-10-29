@@ -12,7 +12,7 @@ from pagexml.model.coords import Coords, Baseline, parse_derived_coords
 from pagexml.model.xml import make_empty_pagexml, add_pagexml_sub_element
 
 CHILD_PROPERTIES = [
-    'pages', 'columns',
+    'pages', 'columns', 'extra', 
     'text_regions', 'table_regions', 'empty_regions',
     'rows', 'cells', 'lines', 'words'
 ]
@@ -365,7 +365,7 @@ class PageXMLRegion(PageXMLDoc):
 
     @property
     def regions(self):
-        regions = []
+        regions: List[PageXMLRegion] = []
         regions.extend(self.text_regions)
         regions.extend(self.table_regions)
         regions.extend(self.empty_regions)
@@ -444,7 +444,7 @@ class PageXMLRegion(PageXMLDoc):
         for text_region in self.text_regions:
             text_regions.add(text_region)
             if text_region.text_regions:
-                text_regions += text_region.get_all_text_regions()
+                text_regions.update(text_region.get_all_text_regions())
         return text_regions
 
     def get_inner_text_regions(self) -> List[PageXMLTextRegion]:
@@ -467,7 +467,7 @@ class PageXMLRegion(PageXMLDoc):
     def get_textual_regions(self):
         return [region for region in self.regions if is_textual_region(region)]
 
-    def get_regions(self, ignore_reading_order: bool = False) -> List[PageXMLDoc]:
+    def get_regions(self, ignore_reading_order: bool = False) -> List[PageXMLRegion]:
         all_regions = self.regions
         if self.reading_order and not ignore_reading_order:
             ordered_regions = [tr for tr in all_regions if tr.id in self.reading_order]
@@ -480,7 +480,7 @@ class PageXMLRegion(PageXMLDoc):
         return all_regions
 
     def get_lines(self, ignore_reading_order: bool = False):
-        lines = []
+        lines: List[PageXMLTextLine] = []
         for tr in self.get_textual_regions():
             lines.extend(tr.get_lines())
         return lines
@@ -1077,7 +1077,7 @@ class PageXMLPage(PageXMLRegion):
         self.set_as_parent(self.extra)
         if doc_type:
             self.add_type(doc_type)
-        if coords is None:
+        if coords is None and (self.columns or self.extra or self.regions):
             self.coords = parse_derived_coords(self.columns + self.regions + self.extra)
 
     def get_lines(self, ignore_reading_order: bool = False):
@@ -1105,6 +1105,8 @@ class PageXMLPage(PageXMLRegion):
     def regions(self):
         regions = [region for col in self.columns for region in col.get_regions()]
         regions.extend(region for region in self.extra)
+        if self.text_regions:
+            regions.extend(self.text_regions)
         return sorted(regions)
 
     def get_textual_regions(self):
@@ -1179,18 +1181,18 @@ class PageXMLPage(PageXMLRegion):
         stats = {
             "lines": len(lines),
             "words": sum([len(line.get_words()) for line in lines]),
-            "chars": sum(line.length for line in lines)
+            "chars": sum(line.length for line in lines),
+            "text_regions": self.num_text_regions,
+            "table_regions": self.num_table_regions
         }
         if self.columns:
             stats['columns'] = len(self.columns)
-            stats['text_regions'] = sum(col.num_text_regions for col in self.columns)
-            stats['table_regions'] = sum(col.num_table_regions for col in self.columns)
+            stats['text_regions'] += sum(col.num_text_regions for col in self.columns)
+            stats['table_regions'] += sum(col.num_table_regions for col in self.columns)
         if self.extra:
             stats['extra'] = len(self.extra)
-        if self.text_regions:
-            stats['text_regions'] += self.num_text_regions
-        if self.table_regions:
-            stats['table_regions'] += self.num_table_regions
+            stats['text_regions'] += len([tr for tr in self.extra if isinstance(tr, PageXMLTextRegion)])
+            stats['table_regions'] += len([tr for tr in self.extra if isinstance(tr, PageXMLTableRegion)])
         return stats
 
     def add_to_pagexml(self, parent: etree.Element = None):
@@ -1198,7 +1200,7 @@ class PageXMLPage(PageXMLRegion):
         attributes['type'] = 'page'
         page_xml = add_pagexml_sub_element(parent, 'TextRegion', sub_id=self.id, custom=self.custom,
                                            coords=self.coords, attributes=attributes)
-        for column in self.text_regions:
+        for column in self.columns:
             column.add_to_pagexml(page_xml)
         for tr in self.text_regions:
             tr.add_to_pagexml(page_xml)
@@ -1219,12 +1221,14 @@ class PageXMLScan(PageXMLRegion):
                  pages: List[PageXMLPage] = None, columns: List[PageXMLColumn] = None,
                  text_regions: List[PageXMLTextRegion] = None,
                  table_regions: List[PageXMLTableRegion] = None,
+                 empty_regions: List[PageXMLEmptyRegion] = None,
                  orientation: float = None,
                  reading_order: Dict[int, str] = None,
                  reading_order_attributes: Dict[str, any] = None):
         super().__init__(doc_id=doc_id, doc_type="scan", attrs=attrs,
                          metadata=metadata, coords=coords,
                          text_regions=text_regions, table_regions=table_regions,
+                         empty_regions=empty_regions,
                          orientation=orientation, reading_order=reading_order,
                          reading_order_attributes=reading_order_attributes)
         self.main_type = 'scan'
