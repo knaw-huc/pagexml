@@ -161,11 +161,11 @@ def determine_column_type(column: pdm.PageXMLColumn) -> str:
         raise TypeError('unknown column type')
 
 
-def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict[str, any], 
+def make_derived_column(lines: List[pdm.PageXMLTextLine], metadata: dict[str, any],
                         page_id: str) -> pdm.PageXMLColumn:
     """Make a new PageXMLColumn based on a set of lines, column metadata and a page_id."""
     coords = page_coords.parse_derived_coords(lines)
-    tr = pdm.PageXMLTextRegion(metadata=copy.deepcopy(metadata), 
+    tr = pdm.PageXMLTextRegion(metadata=copy.deepcopy(metadata),
                                coords=copy.deepcopy(coords), lines=lines)
     column = pdm.PageXMLColumn(metadata=metadata, coords=coords, text_regions=[tr])
     column.set_derived_id(page_id)

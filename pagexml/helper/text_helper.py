@@ -69,9 +69,9 @@ def make_list(var) -> list:
 
 class LineReader(Iterable):
 
-    def __init__(self, pagexml_files: Union[str, List[str]] = None,
-                 pagexml_docs: Union[pdm.PageXMLDoc, List[
-                     pdm.PageXMLDoc]] = None,
+    def __init__(self,
+                 pagexml_files: Union[str, List[str]] = None,
+                 pagexml_docs: Union[pdm.PageXMLDoc, List[pdm.PageXMLDoc]] = None,
                  pagexml_line_files: Union[str, List[str]] = None,
                  line_file_headers: List[str] = None,
                  has_headers: bool = True,
@@ -178,7 +178,7 @@ class LineReader(Iterable):
 
 def transform_box_to_coords(box_string: str) -> pdm.Coords:
     x, y, w, h = [int(part) for part in box_string.split(',')]
-    points = [(x, y), (x+w, y), (x+w, y+h), (x, y+h)]
+    points = [(x, y), (x + w, y), (x + w, y + h), (x, y + h)]
     return pdm.Coords(points)
 
 
@@ -220,7 +220,7 @@ def read_pagexml_docs_from_line_file(line_files: Union[str, List[str]], has_head
             # print(f'creating tr with id {curr_tr.id} and appending to doc with id {curr_doc.id}')
             # print(curr_tr.coords)
         line = pdm.PageXMLTextLine(doc_id=line_dict['line_id'],
-                                                                    text=line_dict['text'], coords=line_coords)
+                                   text=line_dict['text'], coords=line_coords)
         curr_tr.add_child(line)
         # print('curr_doc:', curr_doc.id, '\tline doc_id:', line_dict['doc_id'])
         # print('curr_tr:', curr_tr.id, '\tline textregion_id:', line_dict['textregion_id'])

@@ -1,10 +1,11 @@
 from __future__ import annotations
-import re
 
+import re
 from typing import Union, List, Dict, Set, Tuple
 
-from pagexml.model.coords import Coords, points_to_hull_edges, edges_to_hull_points
 from shapely import Polygon
+
+from pagexml.model.coords import Coords, points_to_hull_edges, edges_to_hull_points
 
 
 class StructureDoc:
@@ -106,7 +107,8 @@ class PhysicalStructureDoc(StructureDoc):
                  metadata: Dict[str, any] = None,
                  coords: Coords = None,
                  reading_order: Dict[int, str] = None):
-        super().__init__(doc_id=doc_id, doc_type='physical_structure_doc', metadata=metadata, reading_order=reading_order)
+        super().__init__(doc_id=doc_id, doc_type='physical_structure_doc', metadata=metadata,
+                         reading_order=reading_order)
         self.coords: Union[None, Coords] = coords
         self._area = None
         if doc_type:
@@ -172,7 +174,7 @@ class EmptyRegionDoc(PhysicalStructureDoc):
             self.main_type = 'empty'
 
 
-def poly_area(points: Union[List[Tuple[int, int]], Coords, PhysicalStructureDoc],
+def poly_area(points: Union[List[Tuple[int, int]], Coords, PhysicalStructureDoc, None],
               debug: int = 0):
     """Compute the surface area of a polygon represented by a set of Points."""
     if isinstance(points, PhysicalStructureDoc):
